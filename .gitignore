@@ -1,0 +1,52 @@
+# ---- Terraform ---------------------------------------------------------------
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+tfplan
+tfplan.bin
+plan.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Real variable files hold project IDs / billing account IDs. Only the templates and
+# the dummy offline-plan values are committed.
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+!envs/dev/offline.tfvars
+
+# Module lock files are not committed (only the root module envs/dev pins providers).
+modules/**/.terraform.lock.hcl
+
+# Provider download cache used by CI and local runs.
+.terraform-plugin-cache/
+
+# ---- Local tooling -------------------------------------------------------------
+.tools/
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*-credentials.json
+service-account*.json
+
+# ---- Python (kill-switch function tests) ---------------------------------------
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.zip
+
+# ---- Editors / OS ----------------------------------------------------------------
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,18 @@
+# Keep LF everywhere: CI runs on Linux and terraform fmt / opa fmt / terraform-docs all
+# emit LF. CRLF checkouts on Windows would show up as whole-file diffs.
+* text=auto eol=lf
+
+*.tf      text eol=lf
+*.tfvars  text eol=lf
+*.hcl     text eol=lf
+*.rego    text eol=lf
+*.sh      text eol=lf
+*.py      text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.md      text eol=lf
+*.json    text eol=lf
+
+*.png binary
+*.jpg binary
+*.zip binary

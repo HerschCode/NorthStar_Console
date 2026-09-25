@@ -1,0 +1,54 @@
+# terraform-docs configuration. Regenerate every README's generated block with:
+#   scripts/gen-docs.sh
+# CI fails if the committed READMEs differ from what this produces, so the tables cannot drift
+# from the code. Text outside the BEGIN/END markers is hand-written and never touched.
+
+formatter: "markdown table"
+
+version: ">= 0.24.0"
+
+sections:
+  show:
+    - requirements
+    - providers
+    - resources
+    - inputs
+    - outputs
+
+content: |-
+  {{ .Requirements }}
+
+  {{ .Providers }}
+
+  {{ .Resources }}
+
+  {{ .Inputs }}
+
+  {{ .Outputs }}
+
+output:
+  file: README.md
+  mode: inject
+  template: |-
+    <!-- BEGIN_TF_DOCS -->
+    {{ .Content }}
+    <!-- END_TF_DOCS -->
+
+sort:
+  enabled: true
+  by: required
+
+settings:
+  anchor: true
+  color: false
+  default: true
+  description: true
+  escape: true
+  hide-empty: true
+  html: false
+  indent: 2
+  lockfile: false
+  read-comments: true
+  required: true
+  sensitive: true
+  type: true
