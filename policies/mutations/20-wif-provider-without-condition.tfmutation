@@ -1,0 +1,17 @@
+# root: bootstrap
+# expect: WIF-001
+# what: a second GitHub provider is added to the pool with no attribute condition, so ANY
+#       repository on GitHub could exchange a token for Google credentials.
+resource "google_iam_workload_identity_pool_provider" "mutation" {
+  project                            = var.project_id
+  workload_identity_pool_id          = "github"
+  workload_identity_pool_provider_id = "rogue-oidc"
+
+  attribute_mapping = {
+    "google.subject" = "assertion.sub"
+  }
+
+  oidc {
+    issuer_uri = "https://token.actions.githubusercontent.com"
+  }
+}

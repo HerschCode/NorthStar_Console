@@ -1,0 +1,16 @@
+# root: bootstrap
+# expect: UNK-001
+# what: a principalSet is built from the pool's computed `name`, so the member is "known after
+#       apply" and no plan check can see who the grant is really for. The gate fails closed
+#       instead of waving it through. (The wif_github module avoids this on purpose by building the
+#       string from its inputs.)
+resource "google_iam_workload_identity_pool" "mutation" {
+  project                   = var.project_id
+  workload_identity_pool_id = "rogue-pool"
+}
+
+resource "google_service_account_iam_member" "mutation" {
+  service_account_id = "projects/${var.project_id}/serviceAccounts/gh-deploy-gateway@${var.project_id}.iam.gserviceaccount.com"
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.mutation.name}/attribute.repository/HerschCode/some-repo"
+}

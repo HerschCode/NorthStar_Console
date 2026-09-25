@@ -1,0 +1,8 @@
+# root: bootstrap
+# expect: IAM-001
+# what: the Terraform apply identity hits a permission error and is given Owner.
+resource "google_project_iam_member" "mutation" {
+  project = var.project_id
+  role    = "roles/owner"
+  member  = "serviceAccount:gh-tf-apply@${var.project_id}.iam.gserviceaccount.com"
+}

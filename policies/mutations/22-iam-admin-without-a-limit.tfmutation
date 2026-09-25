@@ -1,0 +1,9 @@
+# root: bootstrap
+# expect: IAM-004
+# what: a deployer is given projectIamAdmin with no condition, which is Owner with extra steps
+#       (it can grant itself any role).
+resource "google_project_iam_member" "mutation" {
+  project = var.project_id
+  role    = "roles/resourcemanager.projectIamAdmin"
+  member  = "serviceAccount:gh-deploy-gateway@${var.project_id}.iam.gserviceaccount.com"
+}

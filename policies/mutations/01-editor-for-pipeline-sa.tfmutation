@@ -1,0 +1,8 @@
+# root: dev
+# expect: IAM-001
+# what: the pipeline job hits a permission error and someone "just gives it Editor".
+resource "google_project_iam_member" "mutation" {
+  project = var.project_id
+  role    = "roles/editor"
+  member  = "serviceAccount:pipeline-sa@${var.project_id}.iam.gserviceaccount.com"
+}

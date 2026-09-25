@@ -1,0 +1,9 @@
+# root: dev
+# expect: COST-001
+# what: a Serverless VPC Access connector, an always-on paid resource (the cost table says avoid it).
+resource "google_vpc_access_connector" "mutation" {
+  name          = "rogue-connector"
+  region        = var.region
+  network       = "default"
+  ip_cidr_range = "10.8.0.0/28"
+}

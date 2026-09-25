@@ -1,0 +1,13 @@
+# root: dev
+# expect: GCS-001
+# what: a bucket "to share a file" that is public and does not enforce public-access prevention.
+resource "google_storage_bucket" "mutation" {
+  name     = "${var.project_id}-share"
+  location = "US"
+}
+
+resource "google_storage_bucket_iam_member" "mutation" {
+  bucket = google_storage_bucket.mutation.name
+  role   = "roles/storage.objectViewer"
+  member = "allUsers"
+}

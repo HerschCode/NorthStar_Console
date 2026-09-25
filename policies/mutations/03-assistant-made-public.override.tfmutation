@@ -1,0 +1,8 @@
+# root: dev
+# expect: RUN-001
+# what: someone opens the private assistant to the internet "to test it from a browser", setting
+#       both keys the module demands, so only the policy layer can stop it.
+module "run_assistant" {
+  invoker_members = ["allUsers"]
+  allow_public    = true
+}

@@ -1,0 +1,16 @@
+# root: dev
+# expect: RUN-002
+# what: a new service turns the IAM invoker check off entirely (public with no IAM record of it).
+resource "google_cloud_run_v2_service" "mutation" {
+  name                 = "rogue-service"
+  location             = var.region
+  invoker_iam_disabled = true
+  deletion_protection  = false
+
+  template {
+    service_account = "gateway-sa@${var.project_id}.iam.gserviceaccount.com"
+    containers {
+      image = "us-docker.pkg.dev/cloudrun/container/hello"
+    }
+  }
+}
