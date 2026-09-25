@@ -125,8 +125,9 @@ Version 1 is a placeholder; `latest` now resolves to your value. Optionally disa
 ## 8. Ship the apps
 
 Each app repository has a manual `deploy.yml` and, for the two that call another service, the
-`AUTH_MODE=google_id_token` client code, in the pull requests listed in
-[app-integration.md](app-integration.md#status). Merge those first, then, in each repository:
+`AUTH_MODE=google_id_token` client code, on the branches listed in
+[app-integration.md](app-integration.md#status). Open a pull request from each and merge them first,
+then, in each repository:
 
 1. Settings > Secrets and variables > Actions > **Variables**: add the variables that
    `terraform output github_repository_variables` printed for it (`GCP_PROJECT_ID`, `GCP_REGION`,

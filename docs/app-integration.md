@@ -11,15 +11,16 @@ deploy and the first real 403 are still ahead (see [runbook.md](runbook.md)).
 
 ## Status
 
-| Repository | Pull request | What it changes | State |
+| Repository | Branch | What it changes | State |
 |---|---|---|---|
-| [`llm-security-gateway`](https://github.com/HerschCode/llm-security-gateway) (P3) | PR_P3 | `AUTH_MODE=google_id_token` for calls to operations-assistant; manual `deploy.yml`; deployment notes | Written. 49 new tests; the whole suite passes locally (428 passed, 1 skipped, 26 expected failures that were already there). Not run on Cloud Run |
-| [`operations-assistant`](https://github.com/HerschCode/operations-assistant) (P2) | PR_P2 | `AUTH_MODE=google_id_token` for calls to operations-performance and for its `/health` probe; manual `deploy.yml`; deployment notes | Written. 54 new tests; the whole suite passes locally (304). Not run on Cloud Run |
-| [`operations-performance`](https://github.com/HerschCode/operations-performance) (P1) | PR_P1 | Manual `deploy.yml` that also updates the pipeline job; a pointer from `docs/cloud-architecture.md`. No code change: it only receives calls | Written. Workflow linted with actionlint; never run |
+| [`llm-security-gateway`](https://github.com/HerschCode/llm-security-gateway) (P3) | [`feat/google-id-token-auth`](https://github.com/HerschCode/llm-security-gateway/tree/feat/google-id-token-auth) | `AUTH_MODE=google_id_token` for calls to operations-assistant; manual `deploy.yml`; deployment notes | Written. 49 new tests; the whole suite passes locally (428 passed, 1 skipped, 26 expected failures that were already there). Not run on Cloud Run |
+| [`operations-assistant`](https://github.com/HerschCode/operations-assistant) (P2) | [`feat/google-id-token-auth`](https://github.com/HerschCode/operations-assistant/tree/feat/google-id-token-auth) | `AUTH_MODE=google_id_token` for calls to operations-performance and for its `/health` probe; manual `deploy.yml`; deployment notes | Written. 54 new tests; the whole suite passes locally (304). Not run on Cloud Run |
+| [`operations-performance`](https://github.com/HerschCode/operations-performance) (P1) | [`ci/manual-deploy-workflow`](https://github.com/HerschCode/operations-performance/tree/ci/manual-deploy-workflow) | Manual `deploy.yml` that also updates the pipeline job; a pointer from `docs/cloud-architecture.md`. No code change: it only receives calls | Written. Workflow linted with actionlint; never run |
 
-Each pull request also carries the repository's own CI (`Tests`, `lint`, `security`); those run on
-GitHub and are the check on the code itself. What is *not* proven by anything yet is listed at the
-end of this page.
+**The branches are pushed but no pull request is open yet**, so the repositories' own CI (`Tests`,
+`lint`, `security`) has not run on these changes; opening the pull requests is what runs it, and it is
+the check on the code itself that this page cannot make. What is *not* proven by anything yet is listed
+at the end of this page.
 
 ## The contract: `AUTH_MODE`
 
@@ -69,7 +70,7 @@ metadata server hands a real revision a token.
 
 | Change | State |
 |---|---|
-| Authenticate to the assistant with an ID token (`gateway/adapters/operations_assistant_adapter.py`) | Done, in the pull request |
+| Authenticate to the assistant with an ID token (`gateway/adapters/operations_assistant_adapter.py`) | Done, on the branch |
 | Use the protected route (`OPS_ASSISTANT_CHAT_PATH=/chat`) | Terraform sets it. The `401 -> /demo/chat` fallback is off in `google_id_token` mode and unchanged in the default mode |
 | Drop the static secret | Terraform provisions no `OPS_ASSISTANT_API_KEY`, and `google_id_token` mode never sends one. The code path stays for the default mode |
 | **Log decisions as JSON on stdout** | **Not done.** `gateway/logging_schema.py` appends to `logs/gateway.jsonl`, which Cloud Run discards. Also `print(json.dumps({**asdict(record), "severity": "WARNING" if record.decision == "block" else "INFO"}), flush=True)`. The block-rate alert counts `jsonPayload.decision = "block"`, so without this it never fires |
@@ -85,7 +86,7 @@ than second-guessing it.
 
 | Change | State |
 |---|---|
-| Authenticate to the performance API (`src/tools/client.py`) and probe `/health` with the same token (`src/api/dependencies.py`) | Done, in the pull request |
+| Authenticate to the performance API (`src/tools/client.py`) and probe `/health` with the same token (`src/api/dependencies.py`) | Done, on the branch |
 | Rely on IAM for inbound auth | Terraform leaves `API_KEY` unset. The app *fails open* when it is unset, which is only safe because IAM is in front. **Not done:** an explicit fail-closed switch, so a misdeployed copy refuses instead. Name it something other than `AUTH_MODE`, which is about outbound calls |
 | LLM keys | Already read from the environment; Terraform injects them from Secret Manager (`GROQ_API_KEY` by default). Nothing to change |
 | Vector store | **Not done.** Chroma writes to a local directory and Cloud Run instances are ephemeral and scale to zero: build the index into the image (run `scripts.index_documents` in CI) or the first request after a cold start sees an empty store. `docs/deployment.md` in that repository already flags this |

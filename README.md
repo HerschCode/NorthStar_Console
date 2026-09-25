@@ -84,14 +84,20 @@ failures" rather than those exact numbers.
 
 **Not verified, because it needs a live project:** the apply itself; the credentialed halves of
 [`plan.yml`](.github/workflows/plan.yml), [`apply.yml`](.github/workflows/apply.yml) and the apps'
-`deploy.yml` (everything after their `preflight`, which is a no-op until the repository variables
-exist); the HTTP-403 verification in [docs/cloud-security.md](docs/cloud-security.md#5-verification); the
-uptime checks, alerts and log metric on real traffic; and seven specific assumptions listed in
-[docs/runbook.md](docs/runbook.md#assumptions-to-confirm-on-first-apply). The application side is
-written but has not run on Cloud Run: the ID-token calls are implemented behind
-`AUTH_MODE=google_id_token` and unit-tested with Google mocked, in the pull requests listed in
-[docs/app-integration.md](docs/app-integration.md); the JSON decision log the block-rate alert needs is
-not done.
+`deploy.yml` (everything after their `preflight` job); the HTTP-403 verification in
+[docs/cloud-security.md](docs/cloud-security.md#5-verification); the uptime checks, alerts and log
+metric on real traffic; and seven specific assumptions listed in
+[docs/runbook.md](docs/runbook.md#assumptions-to-confirm-on-first-apply).
+
+**Not verified yet, and cheap to:** `plan.yml` and `apply.yml` are designed to pass their `preflight`
+green and skip everything else until the repository variables exist, but that has not been *observed*
+on GitHub: it takes a pull request (for `plan`) and a manual dispatch (for `apply`), neither of which
+has been done.
+
+**The application side** is written but has not run on Cloud Run. The ID-token calls are implemented
+behind `AUTH_MODE=google_id_token` and unit-tested with Google mocked, on the branches listed in
+[docs/app-integration.md](docs/app-integration.md); no pull request is open, so the apps' own CI has
+not run on them. The JSON decision log the block-rate alert needs is not done.
 
 **Deliberately not built:** the optional automatic billing cut-off. It cannot be validated without a
 live billing account and it is destructive; the reasons and the permission it would really need are
@@ -136,7 +142,7 @@ conftest test plan.json -p policies        # FAIL ... [RUN-001] ... lets anyone 
 | [docs/cloud-security.md](docs/cloud-security.md) | Threat model, identity map, removed secrets, policy rules, verification, defence in depth with the gateway's LLM firewall, residual risks |
 | [docs/runbook.md](docs/runbook.md) | Create the project, apply in order (budget first), verify the 403s, tear down and prove nothing billable is left |
 | [docs/cost.md](docs/cost.md) | What is free, what this actually uses, what is deliberately avoided (prices read on 2026-09-24) |
-| [docs/app-integration.md](docs/app-integration.md) | The `AUTH_MODE` contract the apps implement, the status of each app's pull request, and the manual deploy workflow they share |
+| [docs/app-integration.md](docs/app-integration.md) | The `AUTH_MODE` contract the apps implement, the status of each app's branch, and the manual deploy workflow they share |
 | [docs/tour.md](docs/tour.md) | One page: the rules that matter most and the attack each prevents, the design choices, and the questions worth being ready for |
 
 ## The applications
@@ -144,6 +150,6 @@ conftest test plan.json -p policies        # FAIL ... [RUN-001] ... lets anyone 
 [`operations-performance`](https://github.com/HerschCode/operations-performance) (analytics API, the data
 layer) → [`operations-assistant`](https://github.com/HerschCode/operations-assistant) (LLM agent that uses it as
 tools) → [`llm-security-gateway`](https://github.com/HerschCode/llm-security-gateway) (the firewall in front).
-Each has a pull request (listed in [docs/app-integration.md](docs/app-integration.md#status)) that adds a
+Each has a branch (listed in [docs/app-integration.md](docs/app-integration.md#status)) that adds a
 manual deploy workflow and a note linking back here, and, for the two that call another service, the
-`AUTH_MODE=google_id_token` client code.
+`AUTH_MODE=google_id_token` client code. No pull request is open yet.
