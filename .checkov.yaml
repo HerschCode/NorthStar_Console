@@ -1,0 +1,30 @@
+# checkov configuration. Run from the repository root:
+#   checkov --config-file .checkov.yaml
+#
+# Per-resource suppressions live next to the code they excuse (`# checkov:skip=ID: reason`), so a
+# reviewer sees the justification where the risk is. Only project-wide decisions are listed here.
+
+framework:
+  - terraform
+
+# Scan the two root modules; checkov resolves the local modules they call, so every module
+# resource is checked in the context of how it is really used.
+directory:
+  - envs
+
+quiet: true
+compact: true
+download-external-modules: false
+skip-download: true # never phone home for policy updates: results depend only on the pinned version
+
+skip-check:
+  # Customer-managed encryption keys (CMEK) for BigQuery datasets/tables and Artifact Registry.
+  # A deliberate, project-wide decision: everything is encrypted at rest with Google-managed keys.
+  # Cost is NOT the reason (Cloud KMS includes 100 free active key versions a month). The reasons
+  # are that it protects nothing sensitive here (public benchmark data and container images), and
+  # that it adds a failure mode and extra IAM surface: a disabled or destroyed key makes the data
+  # unreadable, and each service agent needs cryptoKeyEncrypterDecrypter on the key. Revisit
+  # before storing regulated data.
+  - CKV_GCP_80 # BigQuery table CMEK
+  - CKV_GCP_81 # BigQuery dataset CMEK
+  - CKV_GCP_84 # Artifact Registry repository CMEK

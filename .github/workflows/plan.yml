@@ -1,0 +1,140 @@
+name: plan
+
+# The credentialed plan: what would this pull request change in the real project? Runs as the
+# read-only plan identity via workload identity federation (no keys).
+#
+# It is a deliberate NO-OP until the bootstrap root has been applied and the repository variables
+# below exist: the `preflight` job succeeds (green) with an annotation saying what is missing, and
+# the `plan` job is skipped. It also never runs for a pull request from a fork (a fork gets no OIDC
+# token and must not see project data). The credential-free checks are in ci.yml and always run.
+#
+# Required repository VARIABLES (not secrets; none of them is sensitive). `terraform output
+# github_repository_variables` in envs/bootstrap prints them:
+#   GCP_PROJECT_ID  GCP_PROJECT_NUMBER  GCP_REGION  GCP_WIF_PROVIDER
+#   GCP_TF_PLAN_SA  GCP_TF_STATE_BUCKET  NEON_HOST
+# Optional: ALERT_EMAILS (JSON list, default []), USE_HTTP_STARTUP_PROBES, PIPELINE_SCHEDULE_PAUSED
+
+on:
+  pull_request:
+    paths:
+      - "envs/dev/**"
+      - "modules/**"
+      - "policies/**"
+      - ".github/workflows/plan.yml"
+
+permissions:
+  contents: read
+  id-token: write # mint the OIDC token for workload identity federation
+  pull-requests: write # post the plan as a comment
+
+concurrency:
+  group: plan-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TF_IN_AUTOMATION: "1"
+  CHECKPOINT_DISABLE: "1"
+  TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+  TF_VAR_project_number: ${{ vars.GCP_PROJECT_NUMBER }}
+  TF_VAR_region: ${{ vars.GCP_REGION || 'us-central1' }}
+  TF_VAR_neon_host: ${{ vars.NEON_HOST }}
+  TF_VAR_alert_emails: ${{ vars.ALERT_EMAILS || '[]' }}
+  TF_VAR_use_http_startup_probes: ${{ vars.USE_HTTP_STARTUP_PROBES || 'false' }}
+  TF_VAR_pipeline_schedule_paused: ${{ vars.PIPELINE_SCHEDULE_PAUSED || 'true' }}
+
+jobs:
+  preflight:
+    name: preflight (are cloud credentials configured?)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+          PLAN_SA: ${{ vars.GCP_TF_PLAN_SA }}
+          STATE_BUCKET: ${{ vars.GCP_TF_STATE_BUCKET }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          if [ "$HEAD_REPO" != "$GITHUB_REPOSITORY" ]; then
+            echo "::notice title=plan skipped::Pull request from a fork: forks get no cloud identity. The credential-free checks in ci.yml still ran."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          missing=""
+          [ -n "$PROJECT_ID" ]   || missing="$missing GCP_PROJECT_ID"
+          [ -n "$WIF_PROVIDER" ] || missing="$missing GCP_WIF_PROVIDER"
+          [ -n "$PLAN_SA" ]      || missing="$missing GCP_TF_PLAN_SA"
+          [ -n "$STATE_BUCKET" ] || missing="$missing GCP_TF_STATE_BUCKET"
+          if [ -n "$missing" ]; then
+            echo "::notice title=plan skipped (expected until the first apply)::Repository variables not set:$missing. Nothing was planned. See docs/runbook.md, step 5."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  plan:
+    name: terraform plan (read-only identity)
+    needs: preflight
+    if: ${{ needs.preflight.outputs.configured == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned tools
+        run: |
+          bash scripts/install-tools.sh terraform conftest
+          echo "$PWD/.tools/bin" >> "$GITHUB_PATH"
+
+      - name: Authenticate to Google Cloud (workload identity federation, no keys)
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_TF_PLAN_SA }}
+
+      - name: terraform init
+        working-directory: envs/dev
+        run: |
+          terraform init -input=false -no-color \
+            -backend-config="bucket=${{ vars.GCP_TF_STATE_BUCKET }}" \
+            -backend-config="prefix=northstar/dev"
+
+      # -lock=false: a plan never needs to hold the state lock, and the plan identity only has
+      # read access to the state bucket, so it could not create the lock object anyway.
+      - name: terraform plan
+        id: plan
+        working-directory: envs/dev
+        run: |
+          terraform plan -input=false -no-color -lock=false -out=tfplan.bin
+          terraform show -no-color tfplan.bin > plan.txt
+          terraform show -json tfplan.bin > plan.json
+
+      - name: Policy gate on the real plan
+        working-directory: envs/dev
+        run: conftest test plan.json -p ../../policies --no-color
+
+      - name: Comment the plan on the pull request
+        if: ${{ always() && steps.plan.outcome == 'success' }}
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            let text = fs.readFileSync('envs/dev/plan.txt', 'utf8');
+            const limit = 60000;
+            if (text.length > limit) text = text.slice(0, limit) + '\n... (truncated)';
+            const marker = '<!-- northstar-plan -->';
+            const body = `${marker}\n### Terraform plan (envs/dev)\n\n<details><summary>Show plan</summary>\n\n\`\`\`\n${text}\n\`\`\`\n</details>`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }

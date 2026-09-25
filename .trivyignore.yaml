@@ -1,0 +1,10 @@
+# Project-wide Trivy suppressions. Per-resource ones live next to the code they excuse
+# (`#trivy:ignore:<id>`), so a reviewer sees the reasoning where the risk is.
+
+misconfigurations:
+  - id: AVD-GCP-0078
+    statement: >-
+      No Cloud Storage bucket is managed by Terraform, so there is no resource to attach this to.
+      Trivy raises it for the Terraform state bucket that the IAM bindings in envs/bootstrap refer
+      to by name. That bucket is created by hand (docs/runbook.md, step 3) and the runbook enables
+      object versioning on it explicitly, which is what keeps state history recoverable.

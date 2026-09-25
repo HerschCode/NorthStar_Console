@@ -1,0 +1,139 @@
+name: ci
+
+# Everything here runs with NO cloud credentials: the plan is computed offline against an empty
+# state (scripts/offline-plan.sh), so a pull request from anyone, including a fork, can be checked
+# safely. The credentialed plan is a separate workflow (plan.yml) that only runs for branches of
+# this repository.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TF_IN_AUTOMATION: "1"
+  CHECKPOINT_DISABLE: "1"
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
+  # tflint downloads its ruleset from GitHub releases; an authenticated call avoids rate limits.
+  GITHUB_TOKEN: ${{ github.token }}
+
+jobs:
+  terraform:
+    name: fmt, validate, module tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned tools
+        run: |
+          bash scripts/install-tools.sh terraform
+          echo "$PWD/.tools/bin" >> "$GITHUB_PATH"
+          mkdir -p "$TF_PLUGIN_CACHE_DIR"
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -no-color
+      - name: terraform validate (every module and both roots)
+        run: |
+          set -e
+          for dir in modules/* envs/*; do
+            echo "::group::validate $dir"
+            (cd "$dir" && terraform init -backend=false -input=false -no-color >/dev/null && terraform validate -no-color)
+            echo "::endgroup::"
+          done
+      - name: Module unit tests (mocked provider, no credentials)
+        run: |
+          set -e
+          for dir in modules/*; do
+            [ -d "$dir/tests" ] || continue
+            echo "::group::test $dir"
+            (cd "$dir" && terraform init -backend=false -input=false -no-color >/dev/null && terraform test -no-color)
+            echo "::endgroup::"
+          done
+
+  tflint:
+    name: tflint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned tools
+        run: |
+          bash scripts/install-tools.sh tflint
+          echo "$PWD/.tools/bin" >> "$GITHUB_PATH"
+      - run: tflint --init
+      - run: tflint --recursive --no-color
+
+  security:
+    name: checkov and trivy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned tools
+        run: |
+          bash scripts/install-tools.sh checkov trivy
+          echo "$PWD/.tools/bin" >> "$GITHUB_PATH"
+      - name: checkov (IaC, both roots and the modules they call)
+        run: checkov --config-file .checkov.yaml
+      - name: trivy (IaC misconfiguration)
+        run: trivy config . --skip-check-update
+      - name: trivy (committed secrets)
+        run: trivy fs --scanners secret --skip-check-update .
+
+  policy:
+    name: policy-as-code
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned tools
+        run: |
+          bash scripts/install-tools.sh terraform conftest
+          echo "$PWD/.tools/bin" >> "$GITHUB_PATH"
+          mkdir -p "$TF_PLUGIN_CACHE_DIR"
+      - name: Rego formatting
+        run: conftest fmt policies --check
+      - name: Policy unit tests
+        run: conftest verify -p policies --no-color
+      - name: The real roots must satisfy their own policies (offline plans)
+        run: |
+          set -e
+          for root in bootstrap dev; do
+            bash scripts/offline-plan.sh "$root" "$RUNNER_TEMP/$root.json"
+            conftest test "$RUNNER_TEMP/$root.json" -p policies --no-color
+          done
+      - name: The identity map in docs/cloud-security.md matches the plans
+        run: python3 scripts/identity-map.py "$RUNNER_TEMP/bootstrap.json" "$RUNNER_TEMP/dev.json" --check docs/cloud-security.md
+      - name: Mutation tests (bad changes must be blocked, using real plans)
+        run: bash scripts/policy-mutation-tests.sh
+
+  docs:
+    name: generated docs up to date
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned tools
+        run: |
+          bash scripts/install-tools.sh terraform-docs
+          echo "$PWD/.tools/bin" >> "$GITHUB_PATH"
+      - run: bash scripts/gen-docs.sh --check
+      - name: Every policy rule is documented
+        run: bash scripts/check-rule-docs.sh
