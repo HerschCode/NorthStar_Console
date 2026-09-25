@@ -59,11 +59,12 @@ flowchart LR
 
 ## What is verified, and what is not
 
-**Verified offline, with no cloud credentials.** Every row is proven by a job in
-[`ci.yml`](.github/workflows/ci.yml), which runs on GitHub-hosted runners with no secrets on every push
-and pull request, and is reproducible on a laptop with `bash scripts/check.sh`. The last column links
-to the job that does the checking, and `scripts/check-verified-table.py` (run by CI itself) fails if a
-link stops pointing at a real job or a counted number stops matching the repository.
+**Verified with no cloud credentials.** Every row is proven by a job on GitHub-hosted runners with no
+secrets: those in [`ci.yml`](.github/workflows/ci.yml) run on every push and pull request and are
+reproducible on a laptop with `bash scripts/check.sh`; the last row is proven by the `preflight` jobs
+of [`plan.yml`](.github/workflows/plan.yml) and [`apply.yml`](.github/workflows/apply.yml). The last
+column links to the job that does the checking, and `scripts/check-verified-table.py` (run by CI itself)
+fails if a link stops pointing at a real job or a counted number stops matching the repository.
 
 | What | Result | Proven by (CI job) |
 |---|---|---|
@@ -77,6 +78,7 @@ link stops pointing at a real job or a counted number stops matching the reposit
 | Policy mutation tests (real plans) | baseline passes; 20 of 20 bad changes blocked by the named rule | [`ci` › `policy`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L96) |
 | Generated docs | module READMEs and the identity map match the code, every rule is documented, and this table's links and counts are true | [`ci` › `docs`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L143) and [`ci` › `policy`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L96) |
 | Workflow syntax | actionlint, with shellcheck on every `run:` block | [`ci` › `workflows`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L128) |
+| Credential-gated workflows skip cleanly | With no cloud credentials configured, `plan` (on [a pull request](https://github.com/HerschCode/northstar-infra/actions/runs/36164780881)) and `apply` (by [manual dispatch on main](https://github.com/HerschCode/northstar-infra/actions/runs/36164780238)) pass their `preflight` job green with a notice naming the missing variables, and skip the credentialed job. Nothing goes red | [`plan` › `preflight`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/plan.yml#L46) and [`apply` › `preflight`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/apply.yml#L43) |
 
 The counts of tests, mutations and rules are checked against the repository; the other totals
 (resources per plan, checkov's pass count) are from the run before the first push, and CI enforces "no
@@ -89,15 +91,11 @@ failures" rather than those exact numbers.
 metric on real traffic; and seven specific assumptions listed in
 [docs/runbook.md](docs/runbook.md#assumptions-to-confirm-on-first-apply).
 
-**Not verified yet, and cheap to:** `plan.yml` and `apply.yml` are designed to pass their `preflight`
-green and skip everything else until the repository variables exist, but that has not been *observed*
-on GitHub: it takes a pull request (for `plan`) and a manual dispatch (for `apply`), neither of which
-has been done.
-
 **The application side** is written but has not run on Cloud Run. The ID-token calls are implemented
-behind `AUTH_MODE=google_id_token` and unit-tested with Google mocked, on the branches listed in
-[docs/app-integration.md](docs/app-integration.md); no pull request is open, so the apps' own CI has
-not run on them. The JSON decision log the block-rate alert needs is not done.
+behind `AUTH_MODE=google_id_token` and unit-tested with Google mocked. The three pull requests listed
+in [docs/app-integration.md](docs/app-integration.md) are open, mergeable, and their own CI is green on
+Python 3.12 (the `test` jobs ran the new tests). The JSON decision log the block-rate alert needs is
+not done.
 
 **Deliberately not built:** the optional automatic billing cut-off. It cannot be validated without a
 live billing account and it is destructive; the reasons and the permission it would really need are
@@ -150,6 +148,6 @@ conftest test plan.json -p policies        # FAIL ... [RUN-001] ... lets anyone 
 [`operations-performance`](https://github.com/HerschCode/operations-performance) (analytics API, the data
 layer) → [`operations-assistant`](https://github.com/HerschCode/operations-assistant) (LLM agent that uses it as
 tools) → [`llm-security-gateway`](https://github.com/HerschCode/llm-security-gateway) (the firewall in front).
-Each has a branch (listed in [docs/app-integration.md](docs/app-integration.md#status)) that adds a
-manual deploy workflow and a note linking back here, and, for the two that call another service, the
-`AUTH_MODE=google_id_token` client code. No pull request is open yet.
+Each has an open pull request (listed in [docs/app-integration.md](docs/app-integration.md#status)) that
+adds a manual deploy workflow and a note linking back here, and, for the two that call another service,
+the `AUTH_MODE=google_id_token` client code.

@@ -118,7 +118,7 @@ Design rules the map follows:
 
 The "after" column for the app-to-app calls depends on the app-side changes in
 [app-integration.md](app-integration.md). The ID-token calls are written and unit-tested behind
-`AUTH_MODE=google_id_token` (on the branches linked there) but have not run against Cloud Run, and the
+`AUTH_MODE=google_id_token` (pull requests linked there) but have not run against Cloud Run, and the
 `GOOGLE_APPLICATION_CREDENTIALS` cleanup in operations-performance's docs is not done.
 
 ## 4. Policy-as-code
