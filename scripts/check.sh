@@ -7,6 +7,7 @@
 #
 # 1 fmt  2 validate  3 module unit tests  4 tflint  5 checkov  6 trivy (IaC + secrets)
 # 7 policy unit tests  8 policy mutation tests (real plans)  9 generated docs up to date
+# 10 workflow syntax (actionlint)  11 the README's verified table points at real CI jobs
 #
 # Environment:
 #   TF_PLUGIN_DIR  optional local provider mirror (terraform init -plugin-dir), avoids the registry.
@@ -82,6 +83,8 @@ fi
 step "generated docs"           bash scripts/gen-docs.sh --check
 step "policy rules documented"  bash scripts/check-rule-docs.sh
 step "identity map current"     identity_map_current
+step "workflow syntax"          actionlint -no-color
+step "verified table"           py scripts/check-verified-table.py
 
 echo
 if [ "${#failures[@]}" -eq 0 ]; then

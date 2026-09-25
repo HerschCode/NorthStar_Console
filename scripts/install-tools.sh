@@ -5,7 +5,7 @@
 #   scripts/install-tools.sh                    # everything
 #   scripts/install-tools.sh terraform conftest # just these
 #
-# Tools: terraform tflint conftest trivy terraform-docs checkov
+# Tools: terraform tflint conftest trivy terraform-docs checkov actionlint
 # Environment:
 #   TOOLS_DIR   install directory (default: <repo>/.tools/bin, which is git-ignored)
 #
@@ -133,6 +133,15 @@ install_terraform_docs() {
   unpack "$f" "$tmp/terraform-docs" && install_bin "$tmp/terraform-docs" terraform-docs
 }
 
+install_actionlint() {
+  have_version actionlint "$ACTIONLINT_VERSION" && { echo "actionlint $ACTIONLINT_VERSION already installed"; return; }
+  echo "actionlint $ACTIONLINT_VERSION"
+  local base="https://github.com/rhysd/actionlint/releases/download/v$ACTIONLINT_VERSION"
+  local ext=tar.gz; [ "$os" = windows ] && ext=zip
+  local f; f="$(fetch_verified "$base/actionlint_${ACTIONLINT_VERSION}_${os}_${arch}.$ext" "$base/actionlint_${ACTIONLINT_VERSION}_checksums.txt")"
+  unpack "$f" "$tmp/actionlint" && install_bin "$tmp/actionlint" actionlint
+}
+
 # checkov is a Python package with a large dependency tree. It goes into its own venv (system
 # Pythons on current Linux distributions refuse global pip installs) and is exposed through a
 # two-line wrapper, so it behaves the same on Linux, macOS and Git Bash.
@@ -152,7 +161,7 @@ install_checkov() {
 }
 
 tools=("$@")
-[ "${#tools[@]}" -gt 0 ] || tools=(terraform tflint conftest trivy terraform-docs checkov)
+[ "${#tools[@]}" -gt 0 ] || tools=(terraform tflint conftest trivy terraform-docs checkov actionlint)
 
 for t in "${tools[@]}"; do
   case "$t" in
@@ -162,6 +171,7 @@ for t in "${tools[@]}"; do
     trivy)          install_trivy ;;
     terraform-docs) install_terraform_docs ;;
     checkov)        install_checkov ;;
+    actionlint)     install_actionlint ;;
     *) die "unknown tool: $t" ;;
   esac
 done

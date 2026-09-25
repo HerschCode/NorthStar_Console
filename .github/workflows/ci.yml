@@ -122,6 +122,21 @@ jobs:
       - name: Mutation tests (bad changes must be blocked, using real plans)
         run: bash scripts/policy-mutation-tests.sh
 
+  workflows:
+    name: workflow syntax
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned tools
+        run: |
+          bash scripts/install-tools.sh actionlint
+          echo "$PWD/.tools/bin" >> "$GITHUB_PATH"
+      # The runner image ships shellcheck, which actionlint then applies to every run: block.
+      - run: actionlint -no-color
+
   docs:
     name: generated docs up to date
     runs-on: ubuntu-24.04
@@ -137,3 +152,5 @@ jobs:
       - run: bash scripts/gen-docs.sh --check
       - name: Every policy rule is documented
         run: bash scripts/check-rule-docs.sh
+      - name: The README's verified table points at real CI jobs and true counts
+        run: python3 scripts/check-verified-table.py
