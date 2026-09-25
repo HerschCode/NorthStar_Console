@@ -33,7 +33,7 @@ module "run_gateway" {
 
   env = {
     GATEWAY_LITE            = "0"
-    EMBEDDING_BACKEND       = "tfidf"
+    EMBEDDING_BACKEND       = "none"               # the gateway's own default and its Render setting: layer 2 is off by design
     AUTH_MODE               = "google_id_token"    # outbound auth: an ID token, not a static key (default is api_key)
     OPS_ASSISTANT_URL       = local.urls.assistant # also the audience of the ID token it must mint
     OPS_ASSISTANT_CHAT_PATH = "/chat"              # the authenticated route, not the public keyless /demo/chat
