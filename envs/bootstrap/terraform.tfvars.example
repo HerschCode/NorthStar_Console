@@ -1,0 +1,17 @@
+# Copy to terraform.tfvars (git-ignored) and fill in. See docs/runbook.md for how to obtain each value.
+
+project_id         = "your-project-id"
+project_number     = "123456789012" # gcloud projects describe <project-id> --format='value(projectNumber)'
+billing_account_id = "0123AB-4567CD-89EF01" # gcloud billing accounts list
+region             = "us-central1"
+
+# Alerts at 100 / 400 / 800 on an 800 budget, in the billing account's currency.
+currency_code = "INR"
+budget_amount = 800
+alert_amounts = [100, 400, 800]
+
+github_owner = "HerschCode"
+# github_repos = { infra = "northstar-infra", gateway = "llm-security-gateway", assistant = "operations-assistant", performance = "operations-performance" }
+
+# State bucket for the dev root (a different bucket from this root's own state).
+dev_state_bucket = "your-project-id-tfstate-dev"
