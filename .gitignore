@@ -20,7 +20,7 @@ terraform.rc
 *.tfvars
 *.tfvars.json
 !*.tfvars.example
-!envs/dev/offline.tfvars
+!envs/*/offline.tfvars
 
 # Module lock files are not committed (only the root module envs/dev pins providers).
 modules/**/.terraform.lock.hcl

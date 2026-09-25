@@ -75,8 +75,8 @@ link stops pointing at a real job or a counted number stops matching the reposit
 | Trivy (IaC and secrets) | 0 findings; suppressions justified in place | [`ci` › `security`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L77) |
 | Policy unit tests | 104 passing | [`ci` › `policy`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L96) |
 | Policy mutation tests (real plans) | baseline passes; 20 of 20 bad changes blocked by the named rule | [`ci` › `policy`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L96) |
-| Generated docs | module READMEs and the identity map match the code, every rule is documented, and this table's links and counts are true | [`ci` › `docs`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L140) and [`ci` › `policy`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L96) |
-| Workflow syntax | actionlint, with shellcheck on every `run:` block | [`ci` › `workflows`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L125) |
+| Generated docs | module READMEs and the identity map match the code, every rule is documented, and this table's links and counts are true | [`ci` › `docs`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L143) and [`ci` › `policy`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L96) |
+| Workflow syntax | actionlint, with shellcheck on every `run:` block | [`ci` › `workflows`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L128) |
 
 The counts of tests, mutations and rules are checked against the repository; the other totals
 (resources per plan, checkov's pass count) are from the run before the first push, and CI enforces "no
