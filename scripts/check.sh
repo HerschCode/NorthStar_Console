@@ -66,6 +66,13 @@ identity_map_current() {
   rc=$?; rm -rf "$tmp"; return "$rc"
 }
 
+# The code as it stands must pass its own policy gate (the same gate that stops a bad pull request).
+real_roots_pass_the_gate() {
+  local tmp rc=0; tmp="$(mktemp -d)"
+  for root in bootstrap dev; do bash scripts/plan-and-gate.sh "$root" "$tmp/$root.json" || rc=1; done
+  rm -rf "$tmp"; return "$rc"
+}
+
 step "terraform fmt"            terraform fmt -check -recursive -no-color
 step "terraform validate"       each_dir validate_dir modules/* envs/*
 step "module unit tests"        each_dir test_dir modules/*
@@ -75,6 +82,7 @@ step "trivy IaC"                trivy config . --skip-check-update --quiet
 step "trivy secrets"            trivy fs --scanners secret --skip-check-update --quiet .
 step "rego format"              conftest fmt policies --check
 step "policy unit tests"        conftest verify -p policies --no-color
+step "real roots pass the gate" real_roots_pass_the_gate
 if [ "$quick" = "quick" ]; then
   echo; echo "=== policy mutation tests: skipped (quick) ==="
 else

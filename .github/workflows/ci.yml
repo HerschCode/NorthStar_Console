@@ -110,17 +110,20 @@ jobs:
         run: conftest fmt policies --check
       - name: Policy unit tests
         run: conftest verify -p policies --no-color
+      # ci-annotate.sh repeats a failing step's output as an annotation: GitHub hides raw logs from
+      # signed-out visitors, even on a public repository, but anyone can read annotations.
       - name: The real roots must satisfy their own policies (offline plans)
         run: |
-          set -e
           for root in bootstrap dev; do
-            bash scripts/offline-plan.sh "$root" "$RUNNER_TEMP/$root.json"
-            conftest test "$RUNNER_TEMP/$root.json" -p policies --no-color
+            bash scripts/ci-annotate.sh "the $root plan must pass the policy gate" \
+              bash scripts/plan-and-gate.sh "$root" "$RUNNER_TEMP/$root.json"
           done
       - name: The identity map in docs/cloud-security.md matches the plans
-        run: python3 scripts/identity-map.py "$RUNNER_TEMP/bootstrap.json" "$RUNNER_TEMP/dev.json" --check docs/cloud-security.md
+        run: |
+          bash scripts/ci-annotate.sh "the identity map in docs/cloud-security.md is stale" \
+            python3 scripts/identity-map.py "$RUNNER_TEMP/bootstrap.json" "$RUNNER_TEMP/dev.json" --check docs/cloud-security.md
       - name: Mutation tests (bad changes must be blocked, using real plans)
-        run: bash scripts/policy-mutation-tests.sh
+        run: bash scripts/ci-annotate.sh "a policy mutation test failed" bash scripts/policy-mutation-tests.sh
 
   workflows:
     name: workflow syntax
@@ -149,8 +152,8 @@ jobs:
         run: |
           bash scripts/install-tools.sh terraform-docs
           echo "$PWD/.tools/bin" >> "$GITHUB_PATH"
-      - run: bash scripts/gen-docs.sh --check
+      - run: bash scripts/ci-annotate.sh "generated docs are stale" bash scripts/gen-docs.sh --check
       - name: Every policy rule is documented
-        run: bash scripts/check-rule-docs.sh
+        run: bash scripts/ci-annotate.sh "a policy rule is not documented" bash scripts/check-rule-docs.sh
       - name: The README's verified table points at real CI jobs and true counts
-        run: python3 scripts/check-verified-table.py
+        run: bash scripts/ci-annotate.sh "the README's verified table is stale" python3 scripts/check-verified-table.py
