@@ -1,0 +1,20 @@
+# Copy to terraform.tfvars (git-ignored) and fill in. See docs/runbook.md for how to obtain each value.
+
+project_id     = "your-project-id"
+project_number = "123456789012" # gcloud projects describe <project-id> --format='value(projectNumber)'
+region         = "us-central1"
+
+# Neon Postgres. Only the non-secret connection details go here; the two role passwords are added
+# to Secret Manager with `gcloud secrets versions add` after the first apply.
+neon_host     = "ep-your-endpoint.us-east-2.aws.neon.tech"
+neon_database = "operations_performance"
+
+alert_emails = ["you@example.com"]
+
+# LLM key(s) the assistant may use: secret ID => environment variable.
+# llm_secrets    = { "groq-api-key" = "GROQ_API_KEY" }
+# agent_provider = "groq"
+
+# Flip these once each app repo has deployed a real image:
+# use_http_startup_probes  = true
+# pipeline_schedule_paused = false
