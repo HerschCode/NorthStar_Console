@@ -10,7 +10,7 @@ fits with the gateway's own LLM firewall, and what is *not* protected.
 > policy gate passes on those plans, and 20 deliberately bad changes are each blocked (see
 > [Policy-as-code](#policy-as-code)). **Nothing has been applied to a live project yet**, so the
 > [Verification](#verification) commands are written but their output is still to be captured.
-> [runbook.md](runbook.md#assumptions-to-confirm-on-first-apply) lists the six assumptions a live
+> [runbook.md](runbook.md#assumptions-to-confirm-on-first-apply) lists the seven assumptions a live
 > apply would confirm.
 
 ## 1. Threat model
@@ -117,7 +117,9 @@ Design rules the map follows:
 | Deploys from a Git-connected host or a developer's own credentials | GitHub Actions through **workload identity federation**: no stored key, pinned to a repository and branch, with a Trivy gate. |
 
 The "after" column for the app-to-app calls depends on the app-side changes in
-[app-integration.md](app-integration.md), which are not made yet.
+[app-integration.md](app-integration.md). The ID-token calls are written and unit-tested behind
+`AUTH_MODE=google_id_token` (pull requests linked there) but have not run against Cloud Run, and the
+`GOOGLE_APPLICATION_CREDENTIALS` cleanup in operations-performance's docs is not done.
 
 ## 4. Policy-as-code
 

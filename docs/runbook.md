@@ -124,9 +124,20 @@ Version 1 is a placeholder; `latest` now resolves to your value. Optionally disa
 
 ## 8. Ship the apps
 
-In each app repository, add the deploy workflow from [app-integration.md](app-integration.md) and
-make the small code changes described there (ID-token calls instead of API keys, JSON logs). When a
-real image is live:
+Each app repository has a manual `deploy.yml` and, for the two that call another service, the
+`AUTH_MODE=google_id_token` client code, in the pull requests listed in
+[app-integration.md](app-integration.md#status). Merge those first, then, in each repository:
+
+1. Settings > Secrets and variables > Actions > **Variables**: add the variables that
+   `terraform output github_repository_variables` printed for it (`GCP_PROJECT_ID`, `GCP_REGION`,
+   `GCP_WIF_PROVIDER`, `GCP_DEPLOY_SA`). The workflow does nothing until they exist.
+2. Actions > deploy > **Run workflow**, on `main`. Deploy backwards along the call chain:
+   operations-performance, then operations-assistant, then llm-security-gateway.
+3. Before the gateway, make the remaining changes marked *Not done* in
+   [app-integration.md](app-integration.md) that you care about: above all the JSON decision log on
+   stdout (the block-rate alert cannot fire without it) and a slimmer operations-assistant image.
+
+When a real image is live:
 
 ```hcl
 # envs/dev/terraform.tfvars
@@ -242,3 +253,6 @@ Written from documentation, not observed. Each is cheap to check and, if wrong, 
 5. **`secret_data_wo` placeholder versions** are created and can be disabled without Terraform complaining.
 6. **The conditional `projectIamAdmin` grant** (`modifiedGrantsByRole`) lets the apply identity grant
    `roles/bigquery.jobUser` and nothing else. The syntax is copied from Google's documentation.
+7. **The deploy identities' roles are enough for `gcloud run deploy` on an existing service**
+   (`run.developer` on the service, `iam.serviceAccountUser` on its runtime account,
+   `artifactregistry.writer`). The first deploy names any permission that is missing.
