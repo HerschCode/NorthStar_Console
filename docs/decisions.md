@@ -1069,3 +1069,13 @@ the taint stage; an action outside the enum is denied at the policy stage; neith
 request is held, the requester's own approval is refused, and after a second manager approves, the proxy executes it
 and the real server records a pending intervention in its own approval queue. Output is in `docs/action-firewall.md`.
 Not in CI (the other repository is not checked out there); `demo_upstream.py` remains the tested upstream.
+
+## 2026-09-28: Re-recorded the demo GIF after the ALLOWED-verdict color fix; PR and CI triage
+
+**Context.** A separate commit (`97adba5`, 2026-09-26) fixed the demo page's gateway-panel ALLOWED verdict from red to green. `docs/demo.gif` (Phase 7) predates that fix, and its GW-036 caption said "this page shows every ALLOWED in red" to explain what was then a real, deliberate-looking quirk. After the fix that sentence describes a page that no longer exists.
+
+**Fix.** Re-recorded with `scripts/record_demo_gif.py` against current `main`; the caption now just states the outcome. The README's own caption paragraph never repeated the red-ALLOWED detail, so it needed no change.
+
+**Checked while here.** The live demo and dashboard (`https://llm-security-gateway-psax.onrender.com`) both answer now, including a full `/gateway/demo/run` round trip (GW-001, blocked by `rule_based`) — an external review's claim that they were timing out did not reproduce; most likely a Render free-tier cold start, or a redeploy since. Fix 3 is done: `docs/action-firewall.md` and this file's Fix 3 entry above confirm operations-assistant now exposes `propose_intervention` over MCP, so the blocker recorded in the Phase 7 entry no longer applies.
+
+**PR triage (12 open, none merged here — merging without review is outside this session's remit).** All 5 GitHub Actions SHA bumps and all 3 pinned pip bumps (numpy 2.4.6, scipy 1.17.1, uvicorn 0.53.0) pass the full test suite in an isolated probe venv; the two floor-only bumps (`ruff>=0.16.8`, `semgrep>=1.177.0`) change nothing the locks don't already satisfy. The Python 3.12→3.14-slim base image bump is unverified (no Docker daemon here) and 3.14 is very new; recommended not to merge yet. PR #1 (`AUTH_MODE=google_id_token`, a Cloud Run deploy workflow, docs referencing the new `northstar-infra` repo) is Phase-8-shaped cloud work now sitting as a mergeable PR — the constraint on file is that Phase 8 stays deferred until explicitly asked for, so it was left for the user to decide rather than merged.
