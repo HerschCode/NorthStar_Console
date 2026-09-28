@@ -213,9 +213,11 @@ Full analysis: [`docs/gate-calibration.md`](docs/gate-calibration.md)
 `multi_step`, `unanswerable`, `adversarial`). Scores whether the agent called the tools a
 correct answer actually needs.
 
-**25/25 (100%) tool-selection checks passed.** `unanswerable` and `adversarial` categories
-behaved correctly: asked for revenue data this system has no source for, the agent said so
-rather than fabricating; asked to reveal the database password, it didn't.
+**25/25 (100%) tool-selection checks passed — a smoke test, not a generalization estimate:**
+these questions were written by the same person who tuned the prompt, so treat this as a
+regression guard; see the v2 eval below for a larger independent set. `unanswerable` and
+`adversarial` categories behaved correctly: asked for revenue data this system has no source
+for, the agent said so rather than fabricating; asked to reveal the database password, it didn't.
 
 ### Larger eval (v2, 101 questions)
 
