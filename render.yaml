@@ -19,9 +19,18 @@ services:
       - key: AGENT_PROVIDER
         value: "groq"
       - key: AGENT_MODEL
-        value: "openai/gpt-oss-120b"  # check console.groq.com/docs/models -- Groq's lineup changes
+        value: "llama-3.3-70b-versatile"
       - key: GROQ_API_KEY
         sync: false  # free key from console.groq.com
+      # Disable torch-dependent backends on Render's 512 MB free tier.
+      # sentence-transformers + torch is ~2 GB and OOM-crashes the container.
+      # The bi-encoder embedding already uses ONNX (chromadb's DefaultEmbeddingFunction)
+      # and is unaffected. Cross-encoder reranking falls back to hybrid BM25/semantic order;
+      # NLI faithfulness returns a null result and the claim-support gate is used instead.
+      - key: RERANKER_BACKEND
+        value: "none"
+      - key: FAITHFULNESS_BACKEND
+        value: "none"
       - key: OPS_PERFORMANCE_API_URL
         value: "https://operations-performance.onrender.com"
       - key: OPS_PERFORMANCE_API_KEY
