@@ -17,6 +17,11 @@ copy-pasting strings that can drift.
 Because every value is derived from inputs, all of them are **known at plan time**. That is what
 lets the policy checks see who each IAM grant is for on a first plan, before anything exists.
 
+The URLs have a second job: they are the **audience** of the Google ID token that one service
+presents to another (`AUTH_MODE=google_id_token` in the application repositories, see
+[docs/app-integration.md](../../docs/app-integration.md)), so `envs/dev` hands exactly these values
+to the callers as `OPS_ASSISTANT_URL` and `OPS_PERFORMANCE_API_URL`.
+
 ## Usage
 
 ```hcl
