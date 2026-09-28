@@ -6,6 +6,17 @@ dependency versions). Outside Actions this file does nothing.
 """
 import os
 
+# Suppress stdout decision logs during the test suite so pytest's captured
+# output stays clean.  Set the env var before any test module imports the
+# logger (conftest.py loads first); also directly clear the module-level flag
+# in case the module was already imported during collection.
+os.environ.setdefault("GATEWAY_LOG_STDOUT", "0")
+try:
+    import gateway.logging_schema as _ls
+    _ls._LOG_STDOUT = False
+except ImportError:
+    pass
+
 _MAX_ANNOTATIONS = 10          # GitHub shows at most 10 error annotations per step
 _reported = 0
 
