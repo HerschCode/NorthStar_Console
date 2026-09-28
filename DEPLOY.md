@@ -149,9 +149,10 @@ and Cloud Run IAM answers 403 to everyone else.
 - `.github/workflows/deploy.yml` builds the image, scans it with Trivy, pushes it to Artifact Registry
   and rolls the service over to it. Manual dispatch only, from `main`, and a no-op until the
   repository variables that Terraform prints exist. It has not been run against a real project yet.
-- Not done yet: the decision log goes to `logs/gateway.jsonl`, which Cloud Run discards, while the
-  block-rate alert in northstar-infra counts `jsonPayload.decision="block"` on stdout. A JSON line on
-  stdout is needed for that alert to fire.
+- Every decision record is also written to stdout as one JSON line (`gateway/logging_schema.py`, on by
+  default; `GATEWAY_LOG_STDOUT=0` to suppress, e.g. in tests), not just to `logs/gateway.jsonl`, which
+  Cloud Run discards. Cloud Logging parses a JSON stdout line into `jsonPayload`, so the block-rate
+  alert in northstar-infra can filter on `jsonPayload.decision="block"`.
 - `TRUSTED_PROXY_HOPS` is unset (as on Render), so the per-IP limit treats Google's front end as one
   client until the real `X-Forwarded-For` chain has been verified.
 
@@ -164,6 +165,7 @@ and Cloud Run IAM answers 403 to everyone else.
 | `GATEWAY_LITE` | gateway | no (default `0`) | `1` opts into a smaller ensemble (rule-based + embedding only). No longer needed for RAM — layer 3 is served torch-free either way, see `docs/decisions.md` |
 | `EMBEDDING_BACKEND` | gateway | no (default `none`) | Layer 2 is **disabled by default** (the TF-IDF layer added nothing on our corpus, see `docs/ensemble-ablation.md`). `tfidf` re-enables it as an ablation; `sentence_transformer` swaps in a real MiniLM embedding (needs `pip install sentence-transformers`, pulls in torch, ~9 ms). Any other value is rejected at startup |
 | `PORT` | gateway | no (default `8000`) | Render sets this automatically |
+| `GATEWAY_LOG_STDOUT` | gateway | no (default `1`) | Each decision record is also printed to stdout as one JSON line, for platforms with an ephemeral filesystem. `0` suppresses it; `logs/gateway.jsonl` is still written either way |
 | `OPS_ASSISTANT_URL` | gateway | only for the real-P2 backend | e.g. `http://operations-assistant:8001`; if unset the backend is not registered |
 | `OPS_ASSISTANT_CHAT_PATH` | gateway | no (default `/chat`) | set to `/demo/chat` to use P2's keyless public endpoint instead of the API-key one. A 401 on `/chat` auto-falls-back to `/demo/chat` regardless |
 | `OPS_ASSISTANT_API_KEY` | gateway | only if using `/chat` | `X-API-Key` value; must equal operations-assistant's `API_KEY` |
