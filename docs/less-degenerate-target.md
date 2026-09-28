@@ -48,3 +48,9 @@ supplier-history features are recomputed from the new label.
 - The deployed model still uses the configured target; changing what "breach" means would change
   API semantics and is a product decision, not an evaluation one.
 - Percentile targets are a modelling choice for testing, not a real contractual SLA.
+
+## Regenerated 2026-09-28 (zero-duration cases excluded)
+104 truncated cases with zero measured duration were labelled "not breached"; they are now excluded (2,896 cases,
+580 held out). Holdout ROC-AUC, all features: p50 LR 0.879 / RF 0.876; p75 LR 0.841 / RF 0.870 -> **0.84-0.88**
+(was 0.83-0.89). Creation-time only: 0.62-0.67 (was 0.51-0.65). Configured target: RF 0.972, 15 negatives of 580.
+Reproduce: `python -m scripts.target_sensitivity`. Tables above are the previous run.

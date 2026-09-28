@@ -46,3 +46,10 @@ LR creation-only at p50 dips to 0.46–0.50, i.e. ±0.05 of noise is normal here
 
 One split, one seed; the bootstrap covers test-set sampling only, not training variance or a
 different split. Test sets are 520–600 cases. Nothing here changes the deployed model.
+
+## Regenerated 2026-09-28 (zero-duration cases excluded)
+RF, first k events vs creation-only on the same rows (gain, 95% CI):
+p50 k=2 0.671 vs 0.674 (-0.004 [-0.031, +0.022], no gain); k=3 0.673 vs 0.615 (+0.058); k=5 0.670 vs 0.637 (+0.032).
+p75 k=2 0.697 vs 0.667 (+0.030); k=3 0.696 vs 0.652 (+0.045); k=5 0.725 vs 0.692 (+0.033).
+Absolute early-warning quality: **0.67-0.73** (was 0.62-0.76). The conclusion stands and is a little weaker: first
+events add a small, mostly significant amount, and at p50 k=2 nothing at all.

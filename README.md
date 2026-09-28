@@ -9,26 +9,27 @@ in [`operations-assistant`](https://operations-assistant.onrender.com).
 
 ## Headline
 
-> **Late-stage SLA triage model: 0.83–0.89 ROC-AUC on realistic targets; early-case 0.62–0.76.**
+> **Late-stage SLA triage model: 0.84–0.88 ROC-AUC on realistic targets; early-case 0.67–0.77.**
 
 This is a **late-stage triage score, not a creation-time predictor.** Most of the model's skill comes from
 features only known late in a case (event count, full activity path). On the configured SLA targets 97% of
-held-out cases breach, so the 0.983 the training script prints is inflated by a degenerate target; the
+held-out cases breach, so the 0.975 the training script prints is inflated by a degenerate target; the
 figures above come from percentile-based targets with 27–52% base rates. Details and every caveat:
 [`docs/evaluation.md`](docs/evaluation.md).
 
 | Setting | ROC-AUC | Where |
 |---|---|---|
-| Full-case features, realistic base rates (27–52%) | **0.83–0.89** | [`less-degenerate-target.md`](docs/less-degenerate-target.md) |
-| Creation-time features only | 0.51–0.65 | [`prediction-time-availability.md`](docs/prediction-time-availability.md) |
-| Prefix (first k events) RF | 0.62–0.76 | [`prefix-model-bpi2019.md`](docs/prefix-model-bpi2019.md) |
-| GRU/LSTM on the first k events | 0.51–0.76 (RF kept) | [`sequence-model.md`](docs/sequence-model.md) |
+| Full-case features, realistic base rates (25–46%) | **0.84–0.88** | [`less-degenerate-target.md`](docs/less-degenerate-target.md) |
+| Creation-time features only | 0.62–0.67 | [`prediction-time-availability.md`](docs/prediction-time-availability.md) |
+| Prefix (first k events) RF | 0.67–0.73 | [`prefix-model-bpi2019.md`](docs/prefix-model-bpi2019.md) |
+| GRU ensemble on the first k events (served, `/early-risk`) | 0.67–0.77 | [`sequence-model.md`](docs/sequence-model.md) |
 | Independent log (BPI 2012), first 3 events | 0.77–0.92 | [`external-validation-bpi2012.md`](docs/external-validation-bpi2012.md) |
 
-**Does the model beat a simple rule?** Barely, and that is reported. In the intervention simulation on the
-realistic (p75, 27% base rate) target, treating the top-k cases by a one-feature supplier-history rule
-captures **81-106% of the model's net-value advantage over random targeting** (k = 30% ... 5%; 96% at 20%).
-The model's clear win is over random (precision 0.69 vs 0.27 at k = 20%), not over that rule. Effect sizes are
+**Does the model beat a simple rule?** Only when more cases are treated, and that is reported. In the
+intervention simulation on the realistic (p75, 25% base rate) target, treating the top-k cases by a one-feature
+supplier-history rule captures **94-97% of the model's net-value advantage over random at k = 5-10%**, falling to
+75% at 20% and 66% at 30%. So a model is only worth running if the team can act on a fifth or more of cases;
+below that, the rule is nearly as good. Against random the model wins clearly (precision 0.69 vs 0.25 at k = 20%). Effect sizes are
 assumptions (SIMULATION); "highest order value first" could not be run because this dataset has no order value,
 so busiest-supplier stood in and is worse than random. Method and grid: [`docs/uplift-method.md`](docs/uplift-method.md).
 
@@ -36,6 +37,11 @@ so busiest-supplier stood in and is worse than random. Method and grid: [`docs/u
 the forest trained on, cutting its ranking ROC-AUC from 0.986 to 0.665 while `meta.json` reported the raw
 forest's score. Now calibrated on a held-out temporal slice; served ROC-AUC = raw. See
 [`docs/calibration.md`](docs/calibration.md).
+
+**Label bug found and fixed (2026-09-28):** 104 truncated cases with zero measured duration (96 single-event) were
+labelled "not breached" in every breach rate and in the model's training labels. They are now excluded
+(`evaluate_sla`, dbt `int_case_sla_scored`), the model retrained on 2,896 cases, and every number on this page
+regenerated. It mattered most for the rule comparison above: those cases had made one supplier look perfect.
 
 ## What this is
 

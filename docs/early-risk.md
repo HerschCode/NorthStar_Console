@@ -2,7 +2,7 @@
 
 The GRU beat the random forest at the p75 target for k >= 2 ([`sequence-model.md`](sequence-model.md)), so it is now
 served, as an **early-warning score with its own accuracy printed on every response**. It does not replace
-`/orders/{id}/risk`, which is the late-stage triage score (0.83-0.89 ROC-AUC on realistic targets).
+`/orders/{id}/risk`, which is the late-stage triage score (0.84-0.88 ROC-AUC on realistic targets).
 
 ## What it does
 Scores a case as of its k-th event (k = 2, 3 or 5) using the first k activities, elapsed and inter-event times,
@@ -25,9 +25,11 @@ numpy-only and is the same code the export script uses for training, checked aga
 ## Measured on the served artifact (held-out last 20% by start time)
 | k | Test n | Base rate | ROC-AUC [95% CI] | Brier (calibrated) |
 |---|---|---|---|---|
-| 2 | 600 | 0.270 | 0.759 [0.717, 0.800] | 0.177 |
-| 3 | 591 | 0.266 | 0.759 [0.709, 0.803] | 0.173 |
-| 5 | 578 | 0.256 | 0.787 [0.742, 0.823] | 0.158 |
+| 2 | 580 | 0.250 | 0.673 [0.625, 0.714] | 0.190 |
+| 3 | 571 | 0.245 | 0.729 [0.680, 0.772] | 0.174 |
+| 5 | 563 | 0.236 | 0.765 [0.718, 0.805] | 0.154 |
+
+*Regenerated 2026-09-28 after excluding 104 zero-duration cases from the labels (was 0.759 / 0.759 / 0.787 on the uncorrected labels, with a different train/test split). k = 2 is now barely above creation-time features.*
 
 Metrics come from running the exported ONNX file through onnxruntime, not from the PyTorch model (the lesson of the
 calibration bug in [`calibration.md`](calibration.md)). ONNX-vs-PyTorch logits agree to < 1e-6 (test asserts < 1e-5).

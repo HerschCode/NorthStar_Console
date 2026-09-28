@@ -63,3 +63,11 @@ same leaf-vote share; sigmoid adds none (295 and 194 both before and after).
 Calibrating on the training rows, and fine-tuning P2 while testing on answers that were in its training data, are the
 same error: evaluating or fitting a downstream step on data the model has already seen. What caught this one was
 computing the *served* artifact's metric independently of the number stored in its metadata.
+
+
+## Regenerated after the zero-duration label fix (2026-09-28)
+With 104 unmeasurable cases excluded (held-out window 580 cases, 15 non-breaches on the configured target), sigmoid is
+still chosen on both targets. Configured: raw ROC-AUC 0.9785, Brier 0.0282; p75: raw ROC-AUC 0.8524, Brier 0.214 raw.
+Deployed model: served ROC-AUC = raw = 0.975. `reports/calibration_comparison.json` holds the full table; the table
+above is the previous run. Threshold analysis now recommends t = 0.10 (flag everything; 15 false alarms on 580) --
+with 97% breaching, the configured target leaves nothing to threshold.

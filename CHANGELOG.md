@@ -2,6 +2,15 @@
 
 ## Unreleased -- Post-v1.0.0 upgrade work
 
+### Fix: zero-duration cases in SLA labels (2026-09-28)
+- 104 truncated cases (cycle_time_hours == 0; 96 single-event) were labelled "not breached" in every breach rate
+  and in the model's training labels. `evaluate_sla()` now drops them by default (single-case scoring keeps them);
+  dbt `int_case_sla_scored` gives them a NULL label and `mart_sla_daily` divides by labelled cases only.
+- Model retrained (2,896 cases; served ROC-AUC 0.975); every headline number regenerated: realistic targets
+  0.84-0.88, creation-time 0.62-0.67, prefix RF 0.67-0.73, served early-risk GRU 0.67-0.77.
+- The supplier-rule finding weakens: the rule captures 94-97% of the model's advantage at 5-10% treated but only
+  75%/66% at 20%/30% (was 81-106%); the bad labels had flattered one supplier's history.
+
 ### Dashboard documented; two data bugs fixed (2026-09-26)
 - `dashboard/README.md` replaces an unbuilt Power BI spec with the real `/dashboard` page, screenshots and caveats.
 - Conformance was 0% by construction: `config/process.yaml` used activity names absent from BPI 2019. Now the log's

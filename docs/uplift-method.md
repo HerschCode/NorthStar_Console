@@ -153,3 +153,27 @@ What it shows, and what it does not:
   This validates the *method*; it says nothing about whether real interventions work.
 
 Reproduce the ledger simulation: `python -m scripts.setup_database && python -m scripts.simulate_interventions`, then `GET /roi/summary`.
+
+
+## Regenerated after the zero-duration label fix (2026-09-28)
+104 truncated cases (zero measured duration) had been labelled "not breached". They are now excluded everywhere and
+all simulations were rerun (`reports/roi_sensitivity.json`, `reports/uplift_validation.json`; 580-case held-out window).
+Tables above this section show the previous run.
+
+**p75 target** (base rate 24.8%, model ROC-AUC 0.852), treat 20%, effect 10%, breach cost 400:
+
+| Who gets treated | Precision | Net value | Break-even effect |
+|---|---|---|---|
+| Top 20% by model risk | 0.690 | **+300** | 9.1% |
+| Supplier-history rule | 0.578 | -220 | 10.8% |
+| Random | 0.248 | -1,748 | 25.2% |
+| Busiest suppliers first | 0.069 | -2,580 | 90.6% |
+
+**The rule finding changes.** The supplier-history rule now captures **94% / 97% / 75% / 66%** of the model's net-value
+advantage over random at 5 / 10 / 20 / 30% treated (previously 100% / 106% / 96% / 81%). The 104 non-breach labels
+had given one supplier (vendorID_0358, 94 such cases) a spotless history, which flattered the rule. Conclusion: at
+small treated shares the rule is nearly as good as the model; from about 20% up the model is clearly better.
+Model lift over random: +0.58 / +0.60 / +0.44 / +0.34 (95% CIs exclude 0).
+
+Ledger replay: 116 interventions, 17.4 avoided breaches, net +4,051 (by model risk). Uplift validation: all three
+pre-registered criteria still pass in both scenarios (p75: true ATE 0.039, X-learner 0.040, difference-in-means 0.037).

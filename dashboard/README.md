@@ -31,7 +31,7 @@ Orders Needing Attention and Recent Pipeline Runs need an API key and are empty 
 - **93.8% breach rate** is a property of the configured SLA targets (10-14 days) against this dataset's real cycle
   times, not a finding about suppliers. See `docs/evaluation.md`.
 - **ROC-AUC ~0.98** in Model Health is measured on that 97%-breach target and is inflated; on realistic targets the
-  model scores 0.83-0.89 and is a late-stage triage score.
+  model scores 0.84-0.88 and is a late-stage triage score.
 - **Feature drift "alert"** compares the last 500 cases of a static sample with its training window, not live traffic
   (`docs/feature-drift.md`).
 - **Data freshness warning (2,700+ days)** is expected: BPI 2019 is a 2018 event log.
