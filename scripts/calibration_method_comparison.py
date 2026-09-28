@@ -64,7 +64,8 @@ def run_target(name, ev):
 
 def main():
     load_dotenv()
-    cases = load_cases().sort_values("start_time").reset_index(drop=True)
+    cases = load_cases()
+    cases = cases[cases["cycle_time_hours"].astype(float) > 0].sort_values("start_time").reset_index(drop=True)  # measurable only
     out = {"configured": run_target("configured SLA targets", evaluate_sla(cases, load_sla_targets())),
            "p75": run_target("training-window per-category p75", evaluate_sla(cases, targets_from_training_percentile(cases, 75)))}
     Path("reports").mkdir(exist_ok=True)

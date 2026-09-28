@@ -108,3 +108,15 @@ def test_supplier_scorecard_ignores_zero_duration_cases():
     s = supplier_scorecard(cases, min_volume=2).set_index("supplier_id")
     assert s.loc["S", "order_count"] == 2 and s.loc["S", "avg_cycle_time_hours"] == 150
     assert s.loc["S", "sla_breach_rate"] == 1.0
+
+
+def test_evaluate_sla_drops_zero_duration_cases_unless_asked_to_keep_them():
+    """Regression (2026-09-28): 104 truncated BPI 2019 cases with cycle_time_hours == 0 were labelled
+    'not breached' and entered every breach rate and the model's training labels."""
+    import pandas as pd
+    from src.analytics.sla_analysis import evaluate_sla
+
+    cases = pd.DataFrame({"case_id": ["a", "b", "c"], "category": ["x"] * 3, "cycle_time_hours": [0.0, 10.0, 500.0]})
+    ev = evaluate_sla(cases, {"default": 240})
+    assert list(ev["case_id"]) == ["b", "c"] and list(ev["sla_breach"]) == [False, True]
+    assert len(evaluate_sla(cases, {"default": 240}, keep_unmeasurable=True)) == 3

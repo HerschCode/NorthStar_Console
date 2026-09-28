@@ -19,8 +19,17 @@ def load_sla_targets(config_path: str | Path = "config/sla.yaml") -> dict:
     return targets
 
 
-def evaluate_sla(cases: pd.DataFrame, sla_targets: dict) -> pd.DataFrame:
+def evaluate_sla(cases: pd.DataFrame, sla_targets: dict, keep_unmeasurable: bool = False) -> pd.DataFrame:
+    """Adds sla_target_hours and sla_breach.
+
+    Cases with no measurable duration (cycle_time_hours <= 0: 96 single-event cases plus 8 whose events share one
+    timestamp in the BPI 2019 sample) are DROPPED by default. They are truncated records, not instant orders, and
+    labelling them "not breached" put 104 wrong negatives into every breach rate and into the model's training
+    labels until 2026-09-28. keep_unmeasurable=True keeps them (breach label then means nothing) for callers that
+    score one specific case rather than compute rates or train."""
     cases = cases.copy()
+    if not keep_unmeasurable and "cycle_time_hours" in cases.columns:
+        cases = cases[cases["cycle_time_hours"].astype(float) > 0]
     default_target = sla_targets.get("default", 240)
 
     if "category" in cases.columns:

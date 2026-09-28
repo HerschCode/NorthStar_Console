@@ -158,6 +158,7 @@ def load_evaluated_cases_from_dbt_marts(engine) -> pd.DataFrame:
                sla_target_hours, sla_breach, event_count, variant, variant_frequency,
                first_activity, last_activity
         from dbt_marts.fct_cases
+        where cycle_time_hours > 0   -- same exclusion as evaluate_sla(): zero-duration cases are truncated records
         """,
         engine,
     )

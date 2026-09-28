@@ -144,7 +144,8 @@ def main():
     load_dotenv()
     policy = load_policy()
     cost_per = policy["types"][policy["default_type"]]["cost"]
-    cases = load_cases().sort_values("start_time").reset_index(drop=True)
+    cases = load_cases()
+    cases = cases[cases["cycle_time_hours"].astype(float) > 0].sort_values("start_time").reset_index(drop=True)  # measurable only
     result = {"label": "SIMULATION: effect sizes are assumptions (config/interventions.yaml), not measured uplift.",
               "cost_per_treatment": cost_per, "treatment": policy["default_type"],
               "strategies_not_run": {"order_value": "no order-value column in this dataset"},

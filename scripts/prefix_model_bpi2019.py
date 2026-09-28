@@ -51,7 +51,8 @@ def causal_supplier_history(cases: pd.DataFrame) -> pd.Series:
 def main():
     events = clean_events(load_event_log(os.environ["RAW_EVENT_LOG_PATH"]))[0]
     events = events.sort_values(["case_id", "timestamp"])
-    cases = build_process_cases(events).sort_values("start_time").reset_index(drop=True)
+    cases = build_process_cases(events)
+    cases = cases[cases["cycle_time_hours"] > 0].sort_values("start_time").reset_index(drop=True)  # measurable only
     by_case = {cid: g for cid, g in events.groupby("case_id")}
     n = len(cases)
     cut = int(n * 0.8)

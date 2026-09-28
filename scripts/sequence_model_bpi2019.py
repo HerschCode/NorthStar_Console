@@ -74,7 +74,8 @@ def bootstrap_diff(y, a, b, n=500, seed=0):
 def main(use_mlflow=True):
     torch.set_num_threads(1)
     events = clean_events(load_event_log(os.environ["RAW_EVENT_LOG_PATH"]))[0].sort_values(["case_id", "timestamp"])
-    cases = build_process_cases(events).sort_values("start_time").reset_index(drop=True)
+    cases = build_process_cases(events)
+    cases = cases[cases["cycle_time_hours"] > 0].sort_values("start_time").reset_index(drop=True)  # measurable only
     by_case = {cid: (g["activity"].tolist(), g["timestamp"].values) for cid, g in events.groupby("case_id")}
     n, cut = len(cases), int(len(cases) * 0.8)
     results = []

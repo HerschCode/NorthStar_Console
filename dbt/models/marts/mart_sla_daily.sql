@@ -5,7 +5,7 @@ select
     category,
     count(*) as case_count,
     sum(case when sla_breach then 1 else 0 end) as breach_count,
-    round(100.0 * sum(case when sla_breach then 1 else 0 end) / nullif(count(*), 0), 1) as breach_rate_pct,
+    round(100.0 * sum(case when sla_breach then 1 else 0 end) / nullif(count(sla_breach), 0), 1) as breach_rate_pct,
     round(avg(cycle_time_hours)::numeric, 1) as avg_cycle_hours
 from {{ ref('fct_cases') }}
 where category is not null

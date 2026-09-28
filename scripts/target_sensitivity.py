@@ -41,7 +41,7 @@ def _end_only(c: str) -> bool:
 
 
 def targets_from_training_percentile(cases, pct: float, train_frac: float = 0.8) -> dict:
-    ordered = cases.sort_values("start_time")
+    ordered = cases[cases["cycle_time_hours"].astype(float) > 0].sort_values("start_time")   # measurable cases only
     train = ordered.iloc[: int(len(ordered) * train_frac)]
     targets = {"default": float(train["cycle_time_hours"].quantile(pct / 100))}
     for cat, grp in train.groupby("category"):
@@ -91,7 +91,8 @@ def evaluate(cases, label: str):
 def main():
     raw = load_event_log(os.environ["RAW_EVENT_LOG_PATH"])
     cleaned, _ = clean_events(raw)
-    cases = build_process_cases(cleaned).sort_values("start_time").reset_index(drop=True)
+    cases = build_process_cases(cleaned)
+    cases = cases[cases["cycle_time_hours"] > 0].sort_values("start_time").reset_index(drop=True)  # measurable only
 
     from src.analytics.sla_analysis import load_sla_targets
     evaluate(evaluate_sla(cases, load_sla_targets()), "configured SLA (10-14 days) -- current deployed target")

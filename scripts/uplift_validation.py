@@ -153,7 +153,8 @@ def plot(all_curves, path):
 
 def main():
     load_dotenv()
-    cases = load_cases().sort_values("start_time").reset_index(drop=True)
+    cases = load_cases()
+    cases = cases[cases["cycle_time_hours"].astype(float) > 0].sort_values("start_time").reset_index(drop=True)  # measurable only
     result, all_curves = {"design": __doc__.split("Design")[1].split("Run:")[0].strip()[:0] or "see script docstring",
                           "n_replicates": N_REPLICATES, "n_draw_per_half": N_DRAW, "holdout_share": HOLDOUT_SHARE,
                           "scenarios": {}}, {}

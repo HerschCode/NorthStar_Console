@@ -183,7 +183,7 @@ def order_risk(case_id: str, explain: bool = Query(default=False, description="I
         raise HTTPException(status_code=404, detail=f"No case found with case_id '{case_id}'")
 
     sla_targets = load_sla_targets()
-    evaluated = evaluate_sla(match, sla_targets)
+    evaluated = evaluate_sla(match, sla_targets, keep_unmeasurable=True)  # score this case even if truncated
     X, _ = build_features(evaluated)
 
     try:

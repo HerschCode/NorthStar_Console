@@ -88,7 +88,8 @@ def bootstrap_ci(y, p, n=500, seed=0):
 def main():
     load_dotenv()
     torch.set_num_threads(1)
-    cases = load_cases().sort_values("start_time").reset_index(drop=True)
+    cases = load_cases()
+    cases = cases[cases["cycle_time_hours"].astype(float) > 0].sort_values("start_time").reset_index(drop=True)  # measurable only
     events = load_events()
     events = events.sort_values(["case_id", "timestamp", "activity"], kind="stable")
     events_by_case = {cid: (g["activity"].tolist(), g["timestamp"].values) for cid, g in events.groupby("case_id")}
