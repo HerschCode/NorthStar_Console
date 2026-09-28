@@ -37,7 +37,7 @@ from typing import Mapping
 log = logging.getLogger(__name__)
 
 API_KEY = "api_key"
-GOOGLE_ID_TOKEN = "google_id_token"
+GOOGLE_ID_TOKEN = "google_id_token"  # nosec B105 - an AUTH_MODE name, not a credential
 MODES = (API_KEY, GOOGLE_ID_TOKEN)
 
 # Ask for a new token this long before the current one expires, so a request that starts just
@@ -95,6 +95,7 @@ def id_token_for(audience: str) -> str:
         token = _fetch(audience)
         refresh_at = _refresh_at(token, now)
         _cache[audience] = (token, refresh_at)
+        # nosemgrep: python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure - the format args are the audience URL and a duration, never the token itself
         log.debug("minted a Google ID token for %s; refreshing in %ds", audience, refresh_at - now)
         return token
 
