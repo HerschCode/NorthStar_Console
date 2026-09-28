@@ -25,7 +25,7 @@ from gateway.adaptive_threshold import AdaptiveThresholdTracker
 from gateway.adapters.base import BackendAdapter
 from gateway.detectors import rule_based
 from gateway.logging_schema import GatewayLogger, LogRecord
-from gateway.text_normalizer import find_hidden_tag_text, normalize as _normalize_text, sanitize as _sanitize_text
+from gateway.text_normalizer import find_hidden_tag_text, normalize as _normalize_text, sanitize as _sanitize_text, decoding_candidates
 
 # CLASSIFIER_THRESHOLD is re-declared here (rather than imported from a
 # detector module) to keep this file import-cheap. Keep in sync with
@@ -36,8 +36,8 @@ from gateway.text_normalizer import find_hidden_tag_text, normalize as _normaliz
 # docs/decisions.md). It no longer needs to exist for that reason -- the
 # serving path now uses gateway/detectors/classifier_numpy.py, a torch-free
 # re-implementation of the same trained model's forward pass (verified
-# bit-parity in tests/test_classifier_numpy_parity.py), so the FULL 3-layer
-# ensemble fits the free tier too. GATEWAY_LITE is kept as an opt-in "run an
+# bit-parity in tests/test_classifier_numpy_parity.py), so the full default
+# ensemble (rules + classifier) fits the free tier too. GATEWAY_LITE is kept as an opt-in "run an
 # even smaller ensemble" toggle (marginally lower latency, one fewer moving
 # part for a quick smoke test), not because anything requires it anymore.
 CLASSIFIER_THRESHOLD = 0.5
@@ -54,7 +54,8 @@ LITE_MODE = os.environ.get("GATEWAY_LITE", "").lower() in ("1", "true", "yes")
 # cuts ~4 ms from a ~4 ms ensemble. See also gateway/detectors/embedding_similarity_st.py and
 # docs/sentence_transformer_similarity_result.md.
 EMBEDDING_BACKEND = os.environ.get("EMBEDDING_BACKEND", "none").lower()
-from gateway.pii import scan_and_redact
+from gateway import pseudonymize
+from gateway.pii import PIIResult, scan_and_redact
 from gateway.response_checks import check_jailbreak_compliance, check_system_prompt_leak
 from gateway.role_exposure import check as check_role_exposure
 from gateway.session_checks import SessionTracker, SessionContentTracker
@@ -104,9 +105,24 @@ class GatewayMiddleware:
         self.session_content_tracker = SessionContentTracker()
         self.adaptive_tracker = AdaptiveThresholdTracker()
         self.logger = GatewayLogger()
+        self.pseudonyms = pseudonymize.PseudonymVault()
+
+    def _scan_pii(self, prompt: str, session_id: str, user_id: str) -> PIIResult:
+        """PII out of the prompt, before anything else sees it: redacted (default) or, with PII_MODE=pseudonymize, replaced by session
+        tokens the model can refer to and an authorized reader gets restored (gateway/pseudonymize.py). The originals never leave the vault."""
+        result = scan_and_redact(prompt)
+        if result.spans and pseudonymize.mode() == "pseudonymize":
+            result = PIIResult(redacted_text=self.pseudonyms.tokenize(session_id, user_id, prompt, result.spans), found=result.found, spans=result.spans)
+        return result
+
+    def _reveal(self, response_text: str, session_id: str, user_id: str, role: str) -> str:
+        """Restore pseudonym tokens in an ALLOWED response for roles in PII_DETOKENIZE_ROLES; everyone else keeps the tokens."""
+        if pseudonymize.mode() == "pseudonymize" and role in pseudonymize.detokenize_roles():
+            return self.pseudonyms.detokenize(session_id, user_id, response_text)
+        return response_text
 
     def _run_injection_ensemble(self, text: str, session_id: str) -> tuple[bool, str | None, str | None, dict]:
-        """Runs all 3 detection layers, blocks if any fires. Returns
+        """Runs the detection layers (rules, then the classifier; the similarity layer only when enabled), blocks if any fires. Returns
         (blocked, detection_layer_used, matched_pattern_id, per_layer_trace).
 
         Tier 3 adaptive thresholding: layers 2 and 3's thresholds are scaled
@@ -122,6 +138,15 @@ class GatewayMiddleware:
         if rb_result.blocked:
             self.adaptive_tracker.record_block(session_id)
             return True, "rule_based", rb_result.matched_pattern_id, per_layer
+
+        # RT-06: the rules also read the text as an attacker who applied a trivial cipher would have written it
+        for label, reading in decoding_candidates(text):
+            cand = rule_based.detect(reading)
+            if cand.blocked:
+                per_layer["rule_based"]["blocked"] = True
+                per_layer["rule_based"]["decoded_via"] = label
+                self.adaptive_tracker.record_block(session_id)
+                return True, "rule_based", cand.matched_pattern_id, per_layer
 
         if self.embedding_detector is None:  # layer 2 disabled (default)
             per_layer["embedding_similarity"] = {"blocked": False, "skipped": "disabled"}
@@ -167,7 +192,7 @@ class GatewayMiddleware:
         # ---------- PRE-FLIGHT ----------
         pre_start = time.perf_counter()
 
-        pii_result = scan_and_redact(prompt)
+        pii_result = self._scan_pii(prompt, session_id, user_id)
         working_text = _normalize_text(pii_result.redacted_text)      # DETECTION only (leet/homoglyph/decoding rewrite text)
         forward_text = _sanitize_text(pii_result.redacted_text)       # what the backend receives: removal-only cleanup
 
@@ -274,7 +299,7 @@ class GatewayMiddleware:
             )
 
         return GatewayResponse(
-            allowed=True, response_text=backend_response, block_reason=None,
+            allowed=True, response_text=self._reveal(backend_response, session_id, user_id, role), block_reason=None,
             trace={
                 "per_layer": per_layer_trace,
                 "total_latency_ms": (time.perf_counter() - overall_start) * 1000,
@@ -307,7 +332,7 @@ class GatewayMiddleware:
         request_id = self.logger.new_request_id()
 
         # ---------- PRE-FLIGHT (identical to process()) ----------
-        pii_result = scan_and_redact(prompt)
+        pii_result = self._scan_pii(prompt, session_id, user_id)
         working_text = _normalize_text(pii_result.redacted_text)      # DETECTION only (leet/homoglyph/decoding rewrite text)
         forward_text = _sanitize_text(pii_result.redacted_text)       # what the backend receives: removal-only cleanup
 
@@ -340,6 +365,8 @@ class GatewayMiddleware:
 
         # ---------- STREAM FROM BACKEND, CHECKING INCREMENTALLY ----------
         buffer = ""
+        detok = self.pseudonyms.stream_detokenizer(
+            session_id, user_id, enabled=pseudonymize.mode() == "pseudonymize" and role in pseudonymize.detokenize_roles())
         for chunk in backend.stream(forward_text, session_id=session_id, role=role, user_id=user_id):
             buffer += chunk
 
@@ -358,12 +385,18 @@ class GatewayMiddleware:
                     timestamp=self.logger.now(), session_id=session_id, request_id=request_id, user_id=user_id,
                     phase="post_flight", decision="block", detection_layer_used="streaming_post_flight",
                     latency_ms=0.0, matched_pattern_id=reason,
-                    extra={"chars_generated_before_cutoff": len(buffer), "buffer_snippet": buffer[-80:]},
+                    extra={"chars_generated_before_cutoff": len(buffer)},   # not the text: what was cut off is by definition data that must not be kept
                 ))
                 yield {"chunk": f"\n[STREAM CUT OFF -- post-flight check flagged: {reason}]", "cut_off": True}
                 return
 
-            yield {"chunk": chunk, "cut_off": False}
+            out = detok.feed(chunk)                # the checks above ran on the tokenized buffer; only the emitted text is restored
+            if out:
+                yield {"chunk": out, "cut_off": False}
+
+        tail = detok.flush()
+        if tail:
+            yield {"chunk": tail, "cut_off": False}
 
         self.logger.log(LogRecord(
             timestamp=self.logger.now(), session_id=session_id, request_id=request_id, user_id=user_id,

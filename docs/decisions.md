@@ -966,3 +966,116 @@ such rather than conflated.
 **Corrected on the way.** The claim that ProtectAI "needs 860 MB" was one measurement; re-runs on the same machine gave +396 to +588 MB incremental RSS and 129 to 827 ms p50, and no 512 MB container test was ever run (no Docker daemon running here). The docs now say the fit is inferred, not tested. A sentence about a post-hoc classifier threshold sweep was recomputed: 57.7% (45/78), not 53.8%.
 
 **Not done (needs `HF_TOKEN`).** Hosted-vs-local parity check of scores; ONNX int8 build of Prompt Guard (`onnx_quantize_guard.py --model pg2-22m|pg2-86m` is parameterized but has never been run); local RSS/latency; `docker run -m 512m`. The 86M as an extra third layer is the only variant with a possible case (own corpus 49/78 vs 42/78 at equal own-corpus false positives) and it takes JailbreakBench false positives from 9% to 21%.
+
+## 2026-09-25: hosted Prompt Guard layer: decided against; shadow mode recorded as the safe alternative
+
+**Context.** The Prompt Guard 2 evaluation (previous entry) showed a hosted guard adds detection mainly on long jailbreaks and adds false positives. The question was whether to wire Groq's hosted Prompt Guard into the gateway as an extra layer.
+
+**Decision: not built, and not to be put in the blocking path.** (1) Throughput and availability: the free tier allows 30 requests per minute per model, which would become the gateway's whole throughput limit, and a security control would depend on a free third-party API being up (fail-open weakens it, fail-closed takes the gateway down with it). (2) Data leaves the box: every prompt would go to an outside service, which is hard to defend for a security product even with PII redacted first. (3) Small benefit for the cost: on this data it adds detection on long jailbreaks and false positives elsewhere (JailbreakBench benign 9% to 14-21% as a third layer).
+
+**If something is wanted from it: shadow mode.** Score a sample of long inputs with the hosted guard in the background, log where it disagrees with the ensemble, never block on it, and review the disagreements offline. That evaluates a candidate detector on real traffic without adding risk. Optional; skipping it is fine. Not implemented.
+
+**Also recorded in this pass (report hygiene).** MITRE ATLAS and OWASP LLM 2025 IDs in `reports/redteam-2026-09.md` were verified against MITRE's `atlas-data` release v2026.09 and the OWASP page on 2026-09-25 (all nine ATLAS IDs exist; the report now lists their names). The hosted-vs-local truncation difference is stated in `docs/guard-baselines.md`; it does not affect the decision (the own corpus and deepset have no text over 632 characters).
+
+## 2026-09-25: Fix 5, taint canonicalisation and cipher readings for the rule layer
+
+**Context.** The red-team pass found the taint check failing on spelling (`ZX9000` for `ZX-9000`: RT-10) and the rule layer blind to ROT13/Atbash/reversed overrides (RT-06). The review asked for identifier canonicalisation in taint and candidate decodings in the normalizer, measured against the pinned misses.
+
+**Decisions.** (1) Candidate readings (ROT13, Atbash, reversed characters, reversed words) go to the RULE layer only and are never appended to the text: appending gibberish to every message would change the classifier's inputs; rules are specific phrases, so a benign text decoding into one is vanishingly unlikely (measured: no change in false positives on 243 held-out and 3,000 other benign texts). Bare hex runs are also decoded now (found while measuring: a hex-encoded override with no cue phrase was not detected at all). (2) Taint compares after NFKC/accent folding, invisible-character removal, case folding, number-word folding and base64/hex decoding, and additionally matches short values (up to 6 words) on their compact form aligned to token boundaries, with an identifier-like window covering a third of the value and trusted-wins. Thresholds are conservative on purpose: a plain long word that a document also contains is not evidence of copying. (3) An embedding-similarity fallback was **not built**: it could only raise the risk label on `reason` (a flag, still approval), never deny, and the translation case needs a multilingual model of several hundred MB.
+
+**Evidence.** `python -X utf8 -m scripts.evaluate_taint_upgrade` on the old and new code (`reports/p3_taint_upgrade_before.json`, `reports/p3_taint_upgrade.json`): mutated calls not denied 21 of 74 to 8; corpus ground-truth agreement 53 to 55 of 59, no benign false blocks; cipher-encoded overrides blocked 45 to 84 of 84; taint false positives on benign phrases 0 to 4 of 8,673. Because the 74 mutations shaped the fix, a fresh hold-out was written after it was frozen (72 cases, new identifiers and some operators not designed for) and not tuned afterwards: denied 8 to 46. Misses there (long identifiers spelled a character at a time, letter-for-digit, reversal, two operators combined) are pinned as known limits.
+
+**Cost.** Text ensemble p50 latency about doubles (0.39 to roughly 0.9 ms; noisy machine) because the rules scan four extra readings.
+
+**Pins.** `tests/test_action_mutations.py`: `KNOWN_MISSES` shrank from 21 to 8 (document splits an identifier, paraphrase, six trusted-tool leaks). The three RT-06 pins became regular tests (`tests/test_text_candidates.py`); AG-B1 and AG-B2 left the corpus's known-evasion set; `tests/test_taint_canonicalisation.py` covers the new behaviour and its limits.
+
+## 2026-09-25: Fix 4, the Windows log-rotation test: the logger, not the test, was wrong
+
+**Context.** `tests/test_dashboard.py::test_log_tail_handles_rotation` failed with `PermissionError` on Windows (file still open during removal). Skipping it was ruled out.
+
+**Cause.** Two separate problems. (1) `GatewayLogger` opened `logs/gateway.jsonl` once and held the handle for its whole life. On Windows a file opened that way cannot be renamed or removed by anyone else (WinError 32), so log rotation was impossible while the gateway ran, and on any platform the logger kept writing to a rotated-away file. (2) The dashboard tests wrote to the real log path and shared one global tail, so they depended on test order and on whatever else held the file (any live `GatewayMiddleware`, or a dev server).
+
+**Fix.** The logger now opens, appends one coalesced batch and closes, retrying briefly if a rotator holds the file for an instant and counting dropped records (`dropped`) instead of dying if it never succeeds. `_LogTail` also detects rotation by a changed prefix of the file (copytruncate: same inode, refilled past the old offset), which neither the inode nor the size check catches, and its docstring no longer claims rotation does not exist. The dashboard tests use a temp file and fresh tail state per test, and gained the realistic cases: rename-rotation, truncate-in-place, and a live logger rotated under a reading tail.
+
+**Evidence.** `tests/test_log_rotation.py` (8 tests) failed on the old logger (`os.replace` and `os.remove` raise `PermissionError` while a logger is alive) and passes on the new one; verified with a real `GatewayMiddleware` rotating the real log file. Full suite 511 passed, 10 expected-fail.
+
+**Cost and limits.** One open/close per batch instead of one open per process; batches coalesce, so under load this is a few opens per second, not per request. A rotator that keeps the file locked for longer than about half a second loses that batch (counted, not silent to the process, but not surfaced in the API yet).
+
+## 2026-09-25: Phase 5, PII: Indian identifiers, span-based backends, Presidio as an option, reversible pseudonymization
+
+**Context.** The PII step was US-format regexes and knew nothing about Aadhaar, PAN or Indian phone numbers; the plan asked for Presidio with Indian custom recognizers, a recall comparison against the regexes, and a reversible pseudonymization option.
+
+**Decisions.** (1) Refactor to spans: every backend returns `PIISpan`s, redaction and pseudonymization share one path. (2) Indian identifiers in dependency-free code first (`gateway/pii_in.py`), gated because RT-09 showed order numbers being redacted: Aadhaar needs a valid 4-4-4 grouping with a Verhoeff check digit, or a context word; PAN needs the holder-status letter; a bare 10-digit mobile needs a context word. (3) Presidio as an optional backend with the same logic wrapped as custom `EntityRecognizer`s, so the comparison isolates Presidio's own recognizers and NER. (4) SSA validity rules added to the SSN regex (impossible areas were being redacted). (5) Pseudonymization: per-session vault, random per-session nonce in tokens, `user_id` binding, caps and TTL, stream detokenizer that holds back split tokens. **Default stays the regex path; Presidio and NER are opt-in.**
+
+**Evidence.** `scripts/evaluate_pii.py` (`reports/p5_pii_evaluation.json`): fresh set structured F1 regex 0.94 vs 0.48 before Phase 5 vs 0.91 Presidio + custom vs 0.90 Presidio + its built-in India recognizers; no false alarms on 3,000 benign instructions for the regex and Presidio-pattern systems, 394 flagged by NER. Independent Gretel set: regex phone precision 0.80 vs 0.26, recall 0.61 vs 0.78. Presidio adds 85 MB RSS (124 MB with NER) and about 30x latency.
+
+**Found on the way.** The evaluation exposed a bug in my own recognizer (a 4-4-4 Aadhaar match inside a card-style 4-4-4-4 number, 10% of Luhn-failing 16-digit numbers): fixed with a regression test, and because the test split had been consulted a fresh set was written afterwards and used once for the final numbers. The pre-existing SSN pattern redacted every impossible-area part number.
+
+**Limits.** Synthetic data with the recognizers' own author; bare numbers without a context word are missed by design (the price of not redacting order numbers); no other Indian identifiers, names in other languages, addresses, dates of birth or PII in responses; pseudonymization identity is caller-asserted (the gateway does not authenticate principals) and the vault is in memory; Presidio tests skip in CI unless the extra is installed.
+
+## 2026-09-25: Phase 6, appsec hygiene, supply chain and a threat model
+
+**Context.** The plan asked for pip-audit, Bandit, Semgrep, Trivy and gitleaks in CI with findings fixed or documented, an SBOM per release, hash-pinned dependencies, and a `SECURITY.md` with a STRIDE table for the gateway itself.
+
+**What ran.** pip-audit, Bandit and detect-secrets locally, plus a scan of all git history for 11 secret formats as a stand-in for gitleaks. Semgrep's native Windows core fails on this machine (even on a one-line rule), there is no Docker daemon, and no scanner binaries were downloaded, so **Semgrep, Trivy and gitleaks are configured for CI but were not run by the author**; Semgrep and the image scan are non-blocking until their first findings have been read, and a test pins which jobs may soften. Workflows and configs were validated against GitHub's schemas; the workflows have not been executed.
+
+**Decisions.** (1) Fix or mitigate every HIGH and MEDIUM Bandit finding rather than suppress: `safe_extract` for the tarball, revision pins for Hugging Face downloads, `weights_only=True`, escapes for the invisible characters (Trojan Source) with a guard test, and for `pickle.load` a SHA-256 manifest of the served artifacts checked before loading (`MODEL_INTEGRITY`: enforce in images and CI, warn elsewhere so retraining still works). Inline `nosec` only where the reason is written next to it. (2) Bandit is strict on `gateway/` (any finding fails) and medium-and-above on scripts. (3) Hash-lock everything CI or an image installs (`uv pip compile --generate-hashes` for Linux and CPython 3.12), including the scanners themselves; pin actions to commit SHAs; pin the base image by digest; run as a non-root user. (4) The threat model is built from what the code exposes, not a template.
+
+**Found by the threat model and by measuring, not by a scanner.** SEC-01: nothing limited a request (`prompt` was an unbounded string), fixed with field limits and a body limit that also stops chunked uploads. SEC-02: the email pattern was quadratic (270 ms for 20,000 characters), fixed with a lookbehind and a scaling test that fails on the old pattern.
+
+**A mistake worth recording.** A `# nosec` comment I inserted in the middle of the `subprocess.Popen(...)` line turned its `stdin`/`stdout`/`stderr` arguments into comment text. The file still parsed and Bandit was satisfied; only the real-stdio MCP proxy test noticed, by hanging. Fixed, with a test that the upstream is started with all three pipes.
+
+**Not done.** Running Semgrep, Trivy and gitleaks; building the images; authentication of principals; a signed or hash-chained audit log; fuzzing the MCP transport. All listed in `SECURITY.md`.
+
+## 2026-09-25: Phase 7, README rewrite; follow-ups to the red-team report
+
+**Context.** The README had grown to 782 lines by adding a section per phase, and its numbers were typed by hand. The plan asked for: one line on what and why, badges and a live link, a GIF of the side-by-side demo, an architecture diagram, a headline table (own ensemble vs the best guard model vs the two combined, plus the action-firewall results), a quickstart and the decisions, with the per-layer history and the retraining narrative moved into `docs/`.
+
+**Decisions.** (1) The headline tables are **generated** from the committed result files by `scripts/render_readme_headline.py`, and `tests/test_readme_headline.py` fails when the README differs from what the files say, so a table cannot outlive its data. Each table keeps its caveats in the generated text, and a test checks that the key ones are present. (2) The old sections were moved **verbatim** into `docs/detection-history.md`, `project-notes.md`, `reproduce.md` and `architecture-notes.md` with a banner saying they were written incrementally and may be older than the README; the reasoning and the corrections are the point of keeping them. `tests/test_docs_links.py` checks every relative link and heading anchor in the README, `SECURITY.md`, `DEPLOY.md`, `HIGHLIGHTS.md`, `docs/` and the red-team report, because a split like this breaks links silently. (3) The GIF is recorded from the real `/gateway/demo` page (`scripts/record_demo_gif.py`, Playwright driving the installed Edge; the dependencies are not in any requirements file). Each run gets a fresh session id, because the page sends none and the adaptive risk score would otherwise make later cases depend on earlier ones. It shows three blocked attacks, one benign request allowed, and **one miss**, with a caption under every frame; the page paints every ALLOWED verdict red, which is why the caption says so. The demo's 19 cases are the author's: 3 of 15 attacks get through and 2 of 4 benign controls are blocked, so they are not presented as a detection rate. (4) `docs/architecture.svg` was redrawn from the code (the old one still showed the retired TF-IDF layer and had no action firewall, limits or pseudonymization), with the figures on it checked against the code.
+
+**Follow-ups to the Phase 4 report.** (a) The first robust adaptive run was rerun with the same settings so its raw JSON exists: 4 of 6 goals, then the 120b model's daily token quota ran out; text layers alone 2 of 4, firewall 0 of 4, agreeing with the lost run's console figures on those goals. The report and the README show the rerun only and label it partial; the old 6-goal figures are no longer relied on. (b) The adaptive results are split by attacker model in the report (no scenario was run with both models, so no cell compares them). (c) A stale sentence in the report's Limitations still said the ATLAS IDs were unverified; corrected. (d) Two runs were **not** done: the two missing robust goals, and a compromised run with the 120b attacker. `GROQ_API_KEY` is not set in this environment, and the quota would need to reset; both are listed in the report. The raw files' `llm_calls` and `tokens` count only the last invocation of a resumed run.
+
+**Found on the way.** The streaming cut-off wrote the last 80 characters of the response it had just blocked to the audit log (`buffer_snippet`), so text blocked for exposing restricted data or the system prompt was kept on disk. Removed, with a regression test (own commit). Three comments still described the old three-layer default (`middleware.py`, `docker-compose.yml`) and were corrected.
+
+**Not done.** Fix 3 (the action firewall in front of the real operations-assistant over MCP) is held until that project exposes `propose_intervention` over MCP; it has nine read tools. Phase 8 (cloud deployment) is deferred until asked for. The links in the README to the live demo were not fetched by the test suite (no network in tests).
+
+## 2026-09-26: CI was red from the Phase 6 push until today; Semgrep, Trivy and gitleaks read for the first time
+
+**What happened.** The Phase 6 push (`3ced567`) failed the CI test job on GitHub and I did not look: I reported Phases 6 and 7 as done and pushed Phase 7 on top of it. I found out while checking the repository afterwards (the CI badge is at the top of the README). The Dependabot PRs opened by the new `dependabot.yml` failed for the same reason. The Phase 6 entry above says the workflows had not been executed; they had run, on that push, and I had not read the result.
+
+**Cause.** `test_a_normal_archive_is_extracted` (Phase 6) builds a tar whose directory member has `TarInfo`'s default mode, `0o644`. On Linux the extracted directory had no execute bit, so reading a file inside it raised `PermissionError`; Windows ignores modes, so the test passed on every local run. I reproduced the CI environment as far as Windows allows before finding it (a torch-free venv, a fresh clone of the repository, Python 3.12 with the exact locked versions): all passed, and none of them could have shown a POSIX-mode bug.
+
+**Fix.** `safe_extract` passes `filter="data"` (PEP 706) where the interpreter has it, which normalises modes and drops setuid and setgid bits, with a POSIX-only regression test for both. Job logs need admin rights to read, so `tests/conftest.py` now reports failing tests as GitHub annotations under Actions (annotations are public); that is how the failure was read.
+
+**Semgrep, Trivy and gitleaks, first read.** gitleaks (full history), Trivy on the filesystem and on the Render image (which CI builds) and Bandit passed. Semgrep gave 13 warnings, read the same way through an annotation script (`scripts/sarif_to_annotations.py`): 3 fixed (the Dependabot cooldown), 10 accepted with a `nosemgrep` comment giving the reason beside the code (pickle in opt-in layers and a training script, an argv-list subprocess, a SHA-1 cache key, a constant https URL); the table is in `docs/security-scans.md`. Semgrep and the image scan are now blocking, and `tests/test_supply_chain.py` allows only the linter to soften. One suppression carried a wrong rule id and its finding stayed blocking until corrected.
+
+**Docs corrected.** The README, `SECURITY.md` (I5, E3, supply chain, not-done list) and `docs/security-scans.md` said these tools had never been run; they now say what ran where.
+
+**Process.** After a push, read the CI result before calling a phase done.
+
+**Still not done.** The full-mode `Dockerfile` (with torch) is built nowhere; nothing was run inside a container; the Trivy, gitleaks and Semgrep reports were read only as pass or fail (plus Semgrep's findings), not as full reports.
+
+## Fix 3: the action firewall in front of the real operations-assistant (2026-09-26)
+
+operations-assistant now exposes `propose_intervention` over MCP. Its first version took a free-text `roi_estimate`
+argument that this policy does not list; the policy is default-deny on unlisted arguments, so every proposal would have
+been blocked here. That argument was removed on the operations-assistant side (ROI figures are fetched server-side from
+operations-performance instead of being written by the model), and a test there pins the MCP argument set to the four
+this policy allows.
+
+`scripts/demo_action_firewall_real_upstream.py` runs the scripted hijacked agent through `MCPFirewallProxy` against the
+real server over stdio: the real read is forwarded; the write whose target came from an untrusted upload is denied at
+the taint stage; an action outside the enum is denied at the policy stage; neither reaches the server; the legitimate
+request is held, the requester's own approval is refused, and after a second manager approves, the proxy executes it
+and the real server records a pending intervention in its own approval queue. Output is in `docs/action-firewall.md`.
+Not in CI (the other repository is not checked out there); `demo_upstream.py` remains the tested upstream.
+
+## 2026-09-28: Re-recorded the demo GIF after the ALLOWED-verdict color fix; PR and CI triage
+
+**Context.** A separate commit (`97adba5`, 2026-09-26) fixed the demo page's gateway-panel ALLOWED verdict from red to green. `docs/demo.gif` (Phase 7) predates that fix, and its GW-036 caption said "this page shows every ALLOWED in red" to explain what was then a real, deliberate-looking quirk. After the fix that sentence describes a page that no longer exists.
+
+**Fix.** Re-recorded with `scripts/record_demo_gif.py` against current `main`; the caption now just states the outcome. The README's own caption paragraph never repeated the red-ALLOWED detail, so it needed no change.
+
+**Checked while here.** The live demo and dashboard (`https://llm-security-gateway-psax.onrender.com`) both answer now, including a full `/gateway/demo/run` round trip (GW-001, blocked by `rule_based`) — an external review's claim that they were timing out did not reproduce; most likely a Render free-tier cold start, or a redeploy since. Fix 3 is done: `docs/action-firewall.md` and this file's Fix 3 entry above confirm operations-assistant now exposes `propose_intervention` over MCP, so the blocker recorded in the Phase 7 entry no longer applies.
+
+**PR triage (12 open, none merged here — merging without review is outside this session's remit).** All 5 GitHub Actions SHA bumps and all 3 pinned pip bumps (numpy 2.4.6, scipy 1.17.1, uvicorn 0.53.0) pass the full test suite in an isolated probe venv; the two floor-only bumps (`ruff>=0.16.8`, `semgrep>=1.177.0`) change nothing the locks don't already satisfy. The Python 3.12→3.14-slim base image bump is unverified (no Docker daemon here) and 3.14 is very new; recommended not to merge yet. PR #1 (`AUTH_MODE=google_id_token`, a Cloud Run deploy workflow, docs referencing the new `northstar-infra` repo) is Phase-8-shaped cloud work now sitting as a mergeable PR — the constraint on file is that Phase 8 stays deferred until explicitly asked for, so it was left for the user to decide rather than merged.
