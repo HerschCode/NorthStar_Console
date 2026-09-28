@@ -14,8 +14,7 @@ A security proxy for LLM apps and agents. It screens the text going into and out
 ![Architecture: a text pipeline for prompts and responses, and an action firewall for an agent's tool calls](docs/architecture.svg)
 
 There are two control points. The **text pipeline** (limits, PII handling, normalisation, rules plus a small classifier, post-flight checks) inspects prompts and responses.
-The **action firewall** does not read text at all: it authorizes each tool call an agent makes against a default-deny policy, tracks whether an argument was copied from untrusted content,
-and holds every write for a human. Details: [`docs/architecture.md`](docs/architecture.md).
+The **action firewall** authorizes each tool call an agent makes against a default-deny policy, holds every write for a human, and checks whether an argument was copied from untrusted content (the taint check reads string overlap between the argument and prior untrusted responses — policy and approvals do not read text, but the taint check does). Details: [`docs/architecture.md`](docs/architecture.md).
 
 ## Results
 
