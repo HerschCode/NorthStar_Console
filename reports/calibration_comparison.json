@@ -1,91 +1,91 @@
 {
   "configured": {
     "target": "configured SLA targets",
-    "n_test": 600,
-    "base_rate": 0.97,
-    "negatives_in_test": 18,
-    "negatives_in_calibration_slice": 16,
+    "n_test": 580,
+    "base_rate": 0.9741,
+    "negatives_in_test": 15,
+    "negatives_in_calibration_slice": 15,
     "auto_choice": "sigmoid",
     "methods": {
       "raw": {
-        "brier": 0.02093,
-        "roc_auc": 0.9831,
-        "pr_auc": 0.9995,
-        "tied_scores": 295,
-        "distinct_scores": 305
+        "brier": 0.02819,
+        "roc_auc": 0.9785,
+        "pr_auc": 0.9994,
+        "tied_scores": 254,
+        "distinct_scores": 326
       },
       "old: isotonic fitted on training rows": {
-        "brier": 0.02172,
-        "roc_auc": 0.6926,
-        "pr_auc": 0.9813,
-        "tied_scores": 593,
-        "distinct_scores": 7
+        "brier": 0.02571,
+        "roc_auc": 0.5971,
+        "pr_auc": 0.9791,
+        "tied_scores": 576,
+        "distinct_scores": 4
       },
       "old: (its raw forest, full train)": {
-        "brier": 0.0224,
-        "roc_auc": 0.9853,
+        "brier": 0.03533,
+        "roc_auc": 0.9806,
         "pr_auc": 0.9995,
-        "tied_scores": 284,
-        "distinct_scores": 316
+        "tied_scores": 271,
+        "distinct_scores": 309
       },
       "isotonic (held-out slice)": {
-        "brier": 0.02132,
-        "roc_auc": 0.9083,
-        "pr_auc": 0.9945,
-        "tied_scores": 588,
-        "distinct_scores": 12
+        "brier": 0.0242,
+        "roc_auc": 0.5972,
+        "pr_auc": 0.9791,
+        "tied_scores": 575,
+        "distinct_scores": 5
       },
       "sigmoid (held-out slice)": {
-        "brier": 0.02204,
-        "roc_auc": 0.9831,
-        "pr_auc": 0.9995,
-        "tied_scores": 295,
-        "distinct_scores": 305
+        "brier": 0.02191,
+        "roc_auc": 0.9785,
+        "pr_auc": 0.9994,
+        "tied_scores": 254,
+        "distinct_scores": 326
       }
     }
   },
   "p75": {
     "target": "training-window per-category p75",
-    "n_test": 600,
-    "base_rate": 0.27,
-    "negatives_in_test": 438,
-    "negatives_in_calibration_slice": 387,
+    "n_test": 580,
+    "base_rate": 0.2483,
+    "negatives_in_test": 436,
+    "negatives_in_calibration_slice": 372,
     "auto_choice": "sigmoid",
     "methods": {
       "raw": {
-        "brier": 0.193,
-        "roc_auc": 0.8584,
-        "pr_auc": 0.7038,
-        "tied_scores": 194,
-        "distinct_scores": 406
+        "brier": 0.21427,
+        "roc_auc": 0.8524,
+        "pr_auc": 0.6888,
+        "tied_scores": 195,
+        "distinct_scores": 385
       },
       "old: isotonic fitted on training rows": {
-        "brier": 0.14744,
-        "roc_auc": 0.8758,
-        "pr_auc": 0.6968,
-        "tied_scores": 583,
-        "distinct_scores": 17
+        "brier": 0.17696,
+        "roc_auc": 0.8633,
+        "pr_auc": 0.6365,
+        "tied_scores": 558,
+        "distinct_scores": 22
       },
       "old: (its raw forest, full train)": {
-        "brier": 0.19412,
-        "roc_auc": 0.8757,
-        "pr_auc": 0.7441,
-        "tied_scores": 203,
-        "distinct_scores": 397
+        "brier": 0.20382,
+        "roc_auc": 0.8644,
+        "pr_auc": 0.699,
+        "tied_scores": 196,
+        "distinct_scores": 384
       },
       "isotonic (held-out slice)": {
-        "brier": 0.14253,
-        "roc_auc": 0.8493,
-        "pr_auc": 0.6496,
-        "tied_scores": 583,
-        "distinct_scores": 17
+        "brier": 0.17023,
+        "roc_auc": 0.8236,
+        "pr_auc": 0.538,
+        "tied_scores": 568,
+        "distinct_scores": 12
       },
       "sigmoid (held-out slice)": {
-        "brier": 0.14116,
-        "roc_auc": 0.8584,
-        "pr_auc": 0.7038,
-        "tied_scores": 194,
-        "distinct_scores": 406
+        "brier": 0.18126,
+        "roc_auc": 0.8524,
+        "pr_auc": 0.6888,
+        "tied_scores": 195,
+        "distinct_scores": 385
       }
     }
   }

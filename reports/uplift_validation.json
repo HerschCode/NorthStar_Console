@@ -6,103 +6,103 @@
   "scenarios": {
     "p75": {
       "label": "p75 target (27% base rate)",
-      "mean_baseline_risk": 0.3492,
+      "mean_baseline_risk": 0.4333,
       "summary": {
         "ate_true": {
-          "mean": 0.03448,
-          "sd": 0.00272
+          "mean": 0.03893,
+          "sd": 0.00288
         },
         "ate_diff_in_means": {
-          "mean": 0.0305,
-          "sd": 0.01014
+          "mean": 0.03732,
+          "sd": 0.01457
         },
         "n_treat_test": {
           "mean": 2003.05,
           "sd": 17.18859
         },
         "t_learner_ate": {
-          "mean": 0.0368,
-          "sd": 0.00793
+          "mean": 0.04049,
+          "sd": 0.00792
         },
         "t_learner_cate_rmse": {
-          "mean": 0.06288,
-          "sd": 0.00452
+          "mean": 0.0627,
+          "sd": 0.00727
         },
         "t_learner_cate_corr": {
-          "mean": 0.66986,
-          "sd": 0.05971
+          "mean": 0.7224,
+          "sd": 0.06489
         },
         "x_learner_ate": {
-          "mean": 0.03666,
-          "sd": 0.00818
+          "mean": 0.04,
+          "sd": 0.00844
         },
         "x_learner_cate_rmse": {
-          "mean": 0.06282,
-          "sd": 0.00604
+          "mean": 0.06394,
+          "sd": 0.00711
         },
         "x_learner_cate_corr": {
-          "mean": 0.68916,
-          "sd": 0.07688
+          "mean": 0.73522,
+          "sd": 0.0664
         },
         "random_oracle_auuc": {
-          "mean": -0.06574,
-          "sd": 1.597
+          "mean": 0.04515,
+          "sd": 1.30489
         },
         "random_top20_benefit": {
-          "mean": 27.29634,
-          "sd": 2.3481
+          "mean": 31.31907,
+          "sd": 3.81207
         },
         "random_observed_auuc": {
-          "mean": 1.48641,
-          "sd": 13.59162
+          "mean": 1.6611,
+          "sd": 18.62827
         },
         "highest_risk_oracle_auuc": {
-          "mean": -13.29717,
-          "sd": 3.37528
+          "mean": -18.12357,
+          "sd": 2.96345
         },
         "highest_risk_top20_benefit": {
-          "mean": -7.155,
-          "sd": 5.92735
+          "mean": -8.97085,
+          "sd": 6.33522
         },
         "highest_risk_observed_auuc": {
-          "mean": -9.53908,
-          "sd": 14.72183
+          "mean": -20.84234,
+          "sd": 15.41045
         },
         "t_learner_oracle_auuc": {
-          "mean": 58.80878,
-          "sd": 5.21743
+          "mean": 68.1931,
+          "sd": 7.01262
         },
         "t_learner_top20_benefit": {
-          "mean": 94.14494,
-          "sd": 7.38385
+          "mean": 116.32449,
+          "sd": 8.1501
         },
         "t_learner_observed_auuc": {
-          "mean": 63.44385,
-          "sd": 21.23685
+          "mean": 64.88794,
+          "sd": 20.56587
         },
         "x_learner_oracle_auuc": {
-          "mean": 60.08187,
-          "sd": 6.73249
+          "mean": 68.36459,
+          "sd": 7.34227
         },
         "x_learner_top20_benefit": {
-          "mean": 95.31314,
-          "sd": 9.21301
+          "mean": 118.74166,
+          "sd": 9.58317
         },
         "x_learner_observed_auuc": {
-          "mean": 65.60995,
-          "sd": 16.77618
+          "mean": 65.30622,
+          "sd": 22.33695
         },
         "oracle_oracle_auuc": {
-          "mean": 84.4156,
-          "sd": 2.14862
+          "mean": 92.14599,
+          "sd": 2.34235
         },
         "oracle_top20_benefit": {
-          "mean": 126.44938,
-          "sd": 3.66614
+          "mean": 135.47835,
+          "sd": 3.53071
         },
         "oracle_observed_auuc": {
-          "mean": 92.03637,
-          "sd": 18.58808
+          "mean": 86.11665,
+          "sd": 19.2591
         }
       },
       "acceptance": {
@@ -113,103 +113,103 @@
     },
     "served": {
       "label": "served model, configured target (97%)",
-      "mean_baseline_risk": 0.9909,
+      "mean_baseline_risk": 0.9942,
       "summary": {
         "ate_true": {
-          "mean": 0.06874,
-          "sd": 0.00291
+          "mean": 0.07081,
+          "sd": 0.00295
         },
         "ate_diff_in_means": {
-          "mean": 0.07073,
-          "sd": 0.00682
+          "mean": 0.07356,
+          "sd": 0.00771
         },
         "n_treat_test": {
           "mean": 2003.05,
           "sd": 17.18859
         },
         "t_learner_ate": {
-          "mean": 0.069,
-          "sd": 0.00586
+          "mean": 0.07161,
+          "sd": 0.00795
         },
         "t_learner_cate_rmse": {
-          "mean": 0.03723,
-          "sd": 0.00449
+          "mean": 0.03617,
+          "sd": 0.00406
         },
         "t_learner_cate_corr": {
-          "mean": 0.87828,
-          "sd": 0.02921
+          "mean": 0.89338,
+          "sd": 0.03118
         },
         "x_learner_ate": {
-          "mean": 0.06909,
-          "sd": 0.00509
+          "mean": 0.07159,
+          "sd": 0.00756
         },
         "x_learner_cate_rmse": {
-          "mean": 0.0374,
-          "sd": 0.00508
+          "mean": 0.03547,
+          "sd": 0.00497
         },
         "x_learner_cate_corr": {
-          "mean": 0.88419,
-          "sd": 0.03299
+          "mean": 0.8981,
+          "sd": 0.03938
         },
         "random_oracle_auuc": {
-          "mean": 0.19109,
-          "sd": 1.63778
+          "mean": -0.10707,
+          "sd": 1.13551
         },
         "random_top20_benefit": {
-          "mean": 54.88532,
-          "sd": 2.45881
+          "mean": 56.43051,
+          "sd": 3.46193
         },
         "random_observed_auuc": {
-          "mean": 0.31324,
-          "sd": 5.52472
+          "mean": 0.63815,
+          "sd": 5.84698
         },
         "highest_risk_oracle_auuc": {
-          "mean": 17.1594,
-          "sd": 3.43983
+          "mean": 24.65912,
+          "sd": 3.92531
         },
         "highest_risk_top20_benefit": {
-          "mean": 73.04,
-          "sd": 6.22852
+          "mean": 77.63,
+          "sd": 8.08734
         },
         "highest_risk_observed_auuc": {
-          "mean": 15.37176,
-          "sd": 6.47174
+          "mean": 26.55062,
+          "sd": 8.50649
         },
         "t_learner_oracle_auuc": {
-          "mean": 71.8761,
-          "sd": 3.43996
+          "mean": 74.71808,
+          "sd": 4.24507
         },
         "t_learner_top20_benefit": {
-          "mean": 146.6,
-          "sd": 4.56092
+          "mean": 150.265,
+          "sd": 6.49764
         },
         "t_learner_observed_auuc": {
-          "mean": 71.96201,
-          "sd": 8.50458
+          "mean": 76.33066,
+          "sd": 9.06052
         },
         "x_learner_oracle_auuc": {
-          "mean": 72.59992,
-          "sd": 3.50424
+          "mean": 75.54528,
+          "sd": 4.90005
         },
         "x_learner_top20_benefit": {
-          "mean": 145.81355,
-          "sd": 5.45277
+          "mean": 150.1,
+          "sd": 9.21016
         },
         "x_learner_observed_auuc": {
-          "mean": 73.31307,
-          "sd": 8.87922
+          "mean": 76.79364,
+          "sd": 9.26109
         },
         "oracle_oracle_auuc": {
-          "mean": 78.20445,
-          "sd": 2.63583
+          "mean": 80.57456,
+          "sd": 2.79242
         },
         "oracle_top20_benefit": {
-          "mean": 150.755,
-          "sd": 3.53942
+          "mean": 153.75,
+          "sd": 5.15427
         },
         "oracle_observed_auuc": {
-          "mean": 80.77446,
-          "sd": 8.33002
+          "mean": 82.48809,
+          "sd": 8.24241
         }
       },
       "acceptance": {
