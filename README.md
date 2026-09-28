@@ -21,7 +21,7 @@ over 10 policy/SOP documents plus live P1 metrics — grounded, cited, and willi
 | Answer gate — correct answers passed (held-out) | **68.8%** | 32 hand-checked correct answers, claim-support gate r=0.65; old NLI gate was 18.8% (same rate as wrong answers — no discrimination); [`docs/gate-calibration.md`](docs/gate-calibration.md) |
 | Answer gate — wrong-fact pass rate | **18.8–21.9%** | same 32 questions with one fact mutated; all failures are polarity flips (Yes↔No) the lexical check cannot catch |
 | Answer gate — off-context pass rate | **3.1–6.2%** | same 32 correct answers scored against chunks from a different question |
-| Agent tool-selection | **25/25 (100%) smoke test** | 25 hand-written questions, 6 categories, mechanical evaluation; regression check, not a generalization estimate |
+| Agent tool-selection smoke test | **25/25 (100%)** — but these questions were written by the same person who tuned the prompt, so this is a regression guard, not a generalization estimate; see v2 eval for a larger independent set | [`docs/agent-eval.md`](docs/agent-eval.md) |
 | Semantic cache false-hit rate | **0%** at t=0.97 (paraphrase recall also 0%; cache fires on exact repeats only at this threshold) | 15 hand-written question pairs; [`docs/cache-calibration.md`](docs/cache-calibration.md) |
 | Provider count | **5** | Groq direct, Gemini, Anthropic, LangChain, LangGraph — one interface |
 
