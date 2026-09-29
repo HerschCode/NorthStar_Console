@@ -9,29 +9,34 @@ in [`operations-assistant`](https://operations-assistant.onrender.com).
 
 ## Headline
 
-> **Late-stage SLA triage model: 0.84–0.88 ROC-AUC on realistic targets; early-case 0.67–0.77.**
+> **Late-stage SLA triage model: 0.78–0.93 ROC-AUC on realistic targets; early-case 0.59–0.83.**
 
 This is a **late-stage triage score, not a creation-time predictor.** Most of the model's skill comes from
 features only known late in a case (event count, full activity path). On the configured SLA targets 97% of
-held-out cases breach, so the 0.975 the training script prints is inflated by a degenerate target; the
-figures above come from percentile-based targets with 27–52% base rates. Details and every caveat:
+held-out cases breach, so the 0.981 the training script prints is inflated by a degenerate target; the
+figures above come from percentile-based targets with 25–55% base rates. Details and every caveat:
 [`docs/evaluation.md`](docs/evaluation.md).
 
 | Setting | ROC-AUC | Where |
 |---|---|---|
-| Full-case features, realistic base rates (25–46%) | **0.84–0.88** | [`less-degenerate-target.md`](docs/less-degenerate-target.md) |
-| Creation-time features only | 0.62–0.67 | [`prediction-time-availability.md`](docs/prediction-time-availability.md) |
-| Prefix (first k events) RF | 0.67–0.73 | [`prefix-model-bpi2019.md`](docs/prefix-model-bpi2019.md) |
-| GRU ensemble on the first k events (served, `/early-risk`) | 0.67–0.77 | [`sequence-model.md`](docs/sequence-model.md) |
+| Full-case features, realistic base rates (25–55%) | **0.78–0.93** | [`less-degenerate-target.md`](docs/less-degenerate-target.md) |
+| Creation-time features only | 0.62–0.86 | [`prediction-time-availability.md`](docs/prediction-time-availability.md) |
+| Prefix (first k events) RF | 0.59–0.82 | [`prefix-model-bpi2019.md`](docs/prefix-model-bpi2019.md) |
+| GRU ensemble on the first k events (served, `/early-risk`) | 0.63–0.83 | [`sequence-model.md`](docs/sequence-model.md) |
 | Independent log (BPI 2012), first 3 events | 0.77–0.92 | [`external-validation-bpi2012.md`](docs/external-validation-bpi2012.md) |
 
-**Does the model beat a simple rule?** Only when more cases are treated, and that is reported. In the
-intervention simulation on the realistic (p75, 25% base rate) target, treating the top-k cases by a one-feature
-supplier-history rule captures **94-97% of the model's net-value advantage over random at k = 5-10%**, falling to
-75% at 20% and 66% at 30%. So a model is only worth running if the team can act on a fifth or more of cases;
-below that, the rule is nearly as good. Against random the model wins clearly (precision 0.69 vs 0.25 at k = 20%). Effect sizes are
-assumptions (SIMULATION); "highest order value first" could not be run because this dataset has no order value,
-so busiest-supplier stood in and is worse than random. Method and grid: [`docs/uplift-method.md`](docs/uplift-method.md).
+*Ranges widened on 2026-09-29's 9,228-case resample (was 3,000) -- a larger, more representative sample
+surfaces more variance across the p50/p75 targets and k values, not less; see the finance-module changelog entry.*
+
+**Does the model beat a simple rule? Not at small treated shares, on the current resample.** In the intervention
+simulation on the realistic (p75, 25% base rate) target, at 5% treated the busiest-supplier rule (precision 0.76)
+and the supplier-history rule (0.69) both **beat the model (0.47)**; at 10% supplier-history still edges it out
+(0.57 vs 0.52). The model only pulls ahead from 20% treated on (0.46 vs 0.45, then 0.46 vs 0.37 at 30%). This
+flipped from the previous (3,000-case) resample, where the model won at every share -- a genuine finding from a
+larger, more representative sample, not a regression to hide. "Highest order value first" now runs (order value
+was recovered from the source data in the finance module, 2026-09-28) and sits between the rules and random at
+every share. Effect sizes throughout are assumptions (SIMULATION). Method and grid:
+[`docs/uplift-method.md`](docs/uplift-method.md).
 
 **Bug found and fixed (2026-09-25):** the served model's probability calibration had been fitted on the same rows
 the forest trained on, cutting its ranking ROC-AUC from 0.986 to 0.665 while `meta.json` reported the raw
@@ -47,9 +52,12 @@ regenerated. It mattered most for the rule comparison above: those cases had mad
 
 An operations-analytics platform for a Procure-to-Pay process (fictional client *Northstar Manufacturing*):
 event-log ingestion, SQL process mining, an SLA-breach risk model with calibrated probabilities, a FastAPI
-service, and the MLOps around it (dbt, Prefect, drift monitoring, an intervention ROI ledger). The
-public event log has no real interventions, business costs or SLAs, so those parts are labelled as
-assumptions or simulation wherever they appear.
+service, the MLOps around it (dbt, Prefect, drift monitoring, an intervention ROI ledger), and an
+accounts-payable controls layer (three-way match, threshold splitting, duplicate invoice, payment-block
+override, Benford screen) with working-capital metrics, on real match-type and order-value fields BPI 2019
+carries but the original sample dropped. The public event log has no real interventions, business costs,
+SLAs or fraud labels, so those parts are labelled as assumptions, simulation or planted-anomaly evaluation
+wherever they appear.
 
 ![Architecture](docs/architecture.svg)
 
@@ -65,7 +73,9 @@ assumptions or simulation wherever they appear.
 | **Feature drift** | Per-feature PSI against training baselines, `GET /health/drift/features`, drift as a retrain trigger, proven on simulated drift | [`feature-drift.md`](docs/feature-drift.md) |
 | **Sequence model** | GRU/LSTM vs prefix RF, k∈{1,2,3,5}, ROC/PR/Brier/CPU latency, MLflow-logged. Mixed result; the GRU ensemble is served for early warning via ONNX (no torch in the image), the RF stays for full-case triage | [`sequence-model.md`](docs/sequence-model.md) |
 | **Intervention ROI** | `interventions` ledger, `POST /interventions`, `GET /roi/summary`. Effects are **assumptions**, not measured uplift | [`uplift-method.md`](docs/uplift-method.md) |
-| **Model** | Random forest (deployed), LR, GB; temporal split, held-out sigmoid calibration, SHAP explanations, ablations, bootstrap CIs | [`ml-model.md`](docs/ml-model.md) |
+| **Model** | RF / LR / GB compared, best by held-out AUC deployed; temporal split, held-out sigmoid calibration, SHAP explanations, ablations, bootstrap CIs | [`ml-model.md`](docs/ml-model.md) |
+| **AP controls** (finance) | 6 rule-based controls (3-way match, threshold splitting, duplicate invoice, payment-block override, Benford screen) on real recovered order-value/match-type fields; measured on planted anomalies since BPI 2019 has no fraud labels | [`ap-controls.md`](docs/ap-controls.md), [`ap-controls-evaluation.md`](docs/ap-controls-evaluation.md) |
+| **Working capital** | Days-payable-outstanding proxy, late-payment exposure, early-discount scenario (stated assumptions) | `src/analytics/working_capital.py` |
 | **Ops** | Prometheus `/metrics`, structured logs, per-client API keys, read-only DB role, data contract and DQ checks | [`security-notes.md`](docs/security-notes.md) |
 
 ## API (selection)
@@ -79,6 +89,8 @@ assumptions or simulation wherever they appear.
 | `GET /health/model`, `/health/drift/features` | Model age/metrics, per-feature PSI (unauthenticated) |
 | `GET /observability/data-quality`, `/observability/prediction-drift` | DQ report, output-distribution drift |
 | `POST /interventions`, `GET /roi/summary` | Intervention ledger (admin), simulated vs logged ROI |
+| `GET /controls/exceptions`, `GET /controls/summary` | AP control exceptions and per-control rollup (anomaly triage, not fraud) |
+| `GET /working-capital/summary` | DPO proxy, late-payment exposure, early-discount scenario |
 | `GET /metrics` | Prometheus scrape target |
 
 Existing routes are stable: `operations-assistant` consumes them, so new work only adds endpoints.
@@ -108,6 +120,8 @@ Every number in this repo is regenerated by one command:
 | Full flow (needs `requirements-orchestration.txt`) | `python -m flows.pipeline_flow` |
 | Feature baselines for an existing model | `python -m scripts.backfill_feature_baselines` |
 | Simulated intervention ROI + sensitivity grid | `python -m scripts.simulate_interventions`, `python -m scripts.roi_sensitivity` |
+| AP control exceptions (real data) | `python -m scripts.run_ap_controls` |
+| AP control recall/FPR (planted anomalies) | `python -m scripts.evaluate_ap_controls` |
 | Uplift estimators on planted effects (T/X-learner, Qini) | `python -m scripts.uplift_validation` |
 | Calibration method comparison | `python -m scripts.calibration_method_comparison` |
 | Tests | `python -m pytest` (200+ pass, 18 opt-in live-DB tests skipped by default) |

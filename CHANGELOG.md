@@ -2,6 +2,41 @@
 
 ## Unreleased -- Post-v1.0.0 upgrade work
 
+### Finance module: AP controls, working capital, resample (2026-09-28/29)
+- **Recovered real BPI 2019 fields the original 8-column sample dropped**: match type
+  (`item_category`), goods-receipt/invoice-verification flags, document/item type, company,
+  sub-spend-area, per-event actor (`user_id`), and order value (`net_worth_eur`). Confirmed present
+  in the source XES by probing raw attribute keys before adding them, not assumed. Resampled with a
+  coverage-based stopping rule (>=10 POs for >=60 vendors) instead of "first N cases": 9,228 cases
+  (was 3,000), `data/raw/bpi2019_events.sample_method.json` records the method.
+- **Six AP controls** (`src/controls/ap_controls.py`, `config/ap_controls.yaml`): three-way-match
+  violation, invoice/GR order mismatch, approval-threshold splitting, possible duplicate invoice,
+  payment-block override with a segregation-of-duties flag, Benford's-law screen. Framed throughout
+  as anomaly triage, not fraud detection -- BPI 2019 has no fraud labels.
+- **Two real bugs found and fixed before reporting** (both via the planted-anomaly evaluation):
+  threshold-splitting flagged 3,288 of 9,228 cases (routine purchasing, not splits) until a
+  near-threshold/window-size filter was added; duplicate-invoice detection had a loop-scoping bug
+  that skipped almost every real pair, and after fixing it, ~12,000 pairs turned out to be a
+  vendor's own routine recurring amount, filtered out by an exact-recurring-amount check. Both fixes
+  and their real exception counts (before/after) are in `docs/ap-controls.md`.
+- **Planted-anomaly evaluation** (`scripts/evaluate_ap_controls.py`, `docs/ap-controls-evaluation.md`):
+  recall 97.5% (C1), 66.7% (C3), 80.0% (C4) against seeded synthetic injections; an Isolation Forest
+  baseline catches 1 of 200 (0.5%) -- a real negative result showing these anomalies are relational,
+  not extreme-value.
+- **Working capital** (`src/analytics/working_capital.py`): invoice-to-clear DPO proxy, late-payment
+  exposure, early-payment-discount scenario (stated assumptions).
+- New endpoints `GET /controls/exceptions`, `GET /controls/summary`, `GET /working-capital/summary`;
+  dashboard tiles for both; `analytics.ap_control_exceptions` table, dbt-exposed
+  (`mart_ap_control_exceptions`, Python-computed and documented as such).
+- `docs/model-risk.md`: maps existing validation/calibration/drift/audit-trail work to the SR 11-7
+  structure, explicit about what a real bank's model-risk function would still need.
+- **The 3x larger, richer resample changes the model's headline numbers** (see README/docs for the
+  regenerated ranges): a larger, more representative sample is expected to shift ranges from the
+  3,000-case sample. The best-performing candidate is now selected purely by held-out ROC-AUC as
+  before; which algorithm wins is no longer assumed to be the random forest -- see `docs/ml-model.md`.
+  The ROI order-value strategy, previously in `strategies_not_run` for lack of a value column, now
+  runs (`scripts/roi_sensitivity.py`).
+
 ### Fix: zero-duration cases in SLA labels (2026-09-28)
 - 104 truncated cases (cycle_time_hours == 0; 96 single-event) were labelled "not breached" in every breach rate
   and in the model's training labels. `evaluate_sla()` now drops them by default (single-case scoring keeps them);
