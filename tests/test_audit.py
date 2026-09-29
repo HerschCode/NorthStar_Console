@@ -11,6 +11,8 @@ Verifies:
 No real LLM calls: the compile step's client is injected as a fake that returns a
 deterministic compile_audit_report tool response.
 """
+import json
+
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
@@ -212,3 +214,79 @@ def test_audit_route_returns_structured_response(mock_run_audit):
     assert body["report"]["gate_applied"] is True
     assert body["p1_unavailable"] is False
     assert body["parse_failed"] is False
+
+
+# ── _compile_report: Groq/Ollama JSON-mode path (regression) ──────────────────
+
+def _fake_groq_client(json_str: str):
+    """A fake OpenAI-compatible client (Groq/Ollama): no `.messages`, only `.chat.completions`."""
+    msg = MagicMock()
+    msg.content = json_str
+    choice = MagicMock()
+    choice.message = msg
+    response = MagicMock()
+    response.choices = [choice]
+    fake = MagicMock(spec=["chat"])
+    fake.chat.completions.create.return_value = response
+    return fake
+
+
+def test_compile_report_uses_json_mode_for_a_non_anthropic_client():
+    """Regression: run_audit previously called client.messages.create() unconditionally, which
+    raised on a Groq/Ollama client (no .messages attribute) -- every real (non-mocked) eval run
+    against those providers silently fell back to 'Report compilation failed (LLM unavailable)'
+    for all 30 questions. Fixed by dispatching on hasattr(client, 'messages')."""
+    from src.agent.audit import _compile_report
+
+    payload = {"exception_summary": "s", "policy_clauses": ["c"], "risk_assessment": "r",
+               "recommended_action": "a", "limitations": "l"}
+    client = _fake_groq_client(json.dumps(payload))
+    result = _compile_report(client, {"model": "llama-3.3-70b-versatile"}, "prompt")
+    assert result == payload
+    client.chat.completions.create.assert_called_once()
+
+
+def test_compile_report_strips_markdown_fences_from_json_mode_output():
+    from src.agent.audit import _compile_report
+
+    payload = {"exception_summary": "s", "policy_clauses": "single string clause",
+               "risk_assessment": "r", "recommended_action": "a", "limitations": "l"}
+    fenced = "```json\n" + json.dumps(payload) + "\n```"
+    client = _fake_groq_client(fenced)
+    result = _compile_report(client, {"model": "m"}, "prompt")
+    assert result["policy_clauses"] == ["single string clause"]   # normalised to a list
+
+
+def test_run_audit_compiles_successfully_with_a_groq_style_client():
+    """End-to-end: run_audit no longer reports parse_failed=True for a real non-Anthropic client."""
+    chunk_text = "Duplicate invoices are held for review pending AP Supervisor sign-off."
+    payload = {"exception_summary": "Found 1 exception for vendor Acme.",
+               "policy_clauses": [chunk_text + " (Source: AP Controls Policy, 4.2)"],
+               "risk_assessment": "High, EUR 12,450 exposure.",
+               "recommended_action": "Propose a payment hold pending AP Supervisor review.",
+               "limitations": "This is an anomaly flag, not proof of fraud or misconduct."}
+    client = _fake_groq_client(json.dumps(payload))
+    with patch("src.agent.audit.get_control_exceptions", return_value=[_fake_exception()]), \
+         patch("src.agent.audit.hybrid_search", return_value=[_make_policy_hit(
+             "AP Controls Policy, 4.2", chunk_text)]):
+        result = run_audit(vendor="Acme", client=client)
+    assert result.parse_failed is False
+    assert result.report.exception_summary == payload["exception_summary"]
+    assert result.report.policy_clauses == payload["policy_clauses"]   # supported by the retrieved chunk
+
+
+def test_gate_strips_citation_suffix_before_checking_support():
+    """Regression: '(Source: <doc>, <section>)' was previously checked as its own sentence
+    against the retrieved chunks and always failed -- every correctly-cited clause was gated
+    out, which is what actually produced the eval's 0% clause_cited score (on top of the
+    separate _compile_report bug)."""
+    chunk_text = "Duplicate invoices are held for review pending AP Supervisor sign-off."
+    clause = chunk_text + " (Source: AP Controls Policy, 4.2)"
+    supported, flagged = _gate_clauses([clause], [chunk_text])
+    assert supported == [clause] and flagged == []
+
+
+def test_strip_citation_only_removes_the_trailing_annotation():
+    from src.agent.audit import _strip_citation
+    assert _strip_citation("Clause text. (Source: Doc, 4.2)") == "Clause text."
+    assert _strip_citation("No citation here.") == "No citation here."

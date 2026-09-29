@@ -15,6 +15,7 @@ gate without blocking correct P1 figures that wouldn't survive a doc-chunk check
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 
 from src.tools.ap_controls import get_control_exceptions
@@ -110,19 +111,83 @@ def _build_policy_query(exceptions: list[dict]) -> str:
     return " ".join(parts) if parts else "accounts payable controls payment block approval policy"
 
 
+def _compile_report(client, config: dict, compile_prompt: str) -> dict | None:
+    """Compile the audit report via forced tool-use (Anthropic) or JSON-mode chat (Groq/Ollama).
+
+    Returns the dict of report fields, or None if the call or parsing failed.
+    """
+    model = config["model"]
+    max_tokens = config.get("max_tokens", 1500)
+
+    # Anthropic: forced tool-use guarantees valid JSON matching our schema
+    if hasattr(client, "messages"):
+        resp = client.messages.create(
+            model=model,
+            max_tokens=max_tokens,
+            temperature=0.0,
+            messages=[{"role": "user", "content": compile_prompt}],
+            tools=[COMPILE_AUDIT_TOOL],
+            tool_choice={"type": "tool", "name": "compile_audit_report"},
+        )
+        tool_blocks = [b for b in resp.content if getattr(b, "type", None) == "tool_use"]
+        return tool_blocks[0].input if tool_blocks else None
+
+    # Groq / Ollama (OpenAI-compatible): use JSON-mode and parse the response
+    json_prompt = (
+        compile_prompt
+        + "\n\nRespond with a JSON object only. Required keys: "
+        + "exception_summary, policy_clauses (array), risk_assessment, recommended_action, limitations."
+    )
+    resp = client.chat.completions.create(
+        model=model,
+        max_tokens=max_tokens,
+        temperature=0.0,
+        messages=[{"role": "user", "content": json_prompt}],
+        response_format={"type": "json_object"},
+    )
+    raw = resp.choices[0].message.content or ""
+    # strip any markdown fences the model may add
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = re.sub(r"^```[a-z]*\s*", "", raw, flags=re.MULTILINE)
+        raw = re.sub(r"\s*```$", "", raw)
+    import json as _json  # noqa: PLC0415
+    data = _json.loads(raw)
+    # normalise: policy_clauses must be a list
+    if isinstance(data.get("policy_clauses"), str):
+        data["policy_clauses"] = [data["policy_clauses"]]
+    return data
+
+
+_CITATION_SUFFIX = re.compile(r"\s*\(Source:[^)]*\)\s*$", re.IGNORECASE)
+
+
+def _strip_citation(clause: str) -> str:
+    """Removes a trailing '(Source: <document>, <section>)' annotation before gating.
+
+    Real bug, found while re-running the evaluation after fixing _compile_report: every
+    properly-formatted clause (the schema explicitly asks the model to append this suffix)
+    failed the gate 100% of the time, because '(Source: AP Controls Policy, 4.2)' was split
+    off as its own "sentence" and checked for claim support against the retrieved chunks --
+    which of course never contain their own citation string. The citation is provenance
+    metadata, not a factual claim, and was never meant to be verified against the chunk text."""
+    return _CITATION_SUFFIX.sub("", clause).strip()
+
+
 def _gate_clauses(
     clauses: list[str], chunks: list[str]
 ) -> tuple[list[str], list[dict]]:
-    """Apply the claim-support gate to each policy clause.
+    """Apply the claim-support gate to each policy clause's CONTENT (its trailing citation, if
+    any, is stripped first -- see _strip_citation).
 
-    Clauses where every sentence passes the gate go to `supported`.
-    Failing clauses go to `flagged` with a per-sentence reason so the
+    Clauses where every sentence passes the gate go to `supported` (with the original,
+    citation-included text). Failing clauses go to `flagged` with a per-sentence reason so the
     caller can audit which specific claim wasn't in the retrieved text.
     """
     supported: list[str] = []
     flagged: list[dict] = []
     for clause in clauses:
-        sentences = split_sentences(clause)
+        sentences = split_sentences(_strip_citation(clause))
         if not sentences:
             supported.append(clause)
             continue
@@ -190,11 +255,17 @@ def run_audit(
         chunk_refs = []
 
     # ── 3. LLM compile ───────────────────────────────────────────────────────
-    data_text = (
-        json.dumps(raw_exceptions[:5], default=str, indent=2)
-        if raw_exceptions
-        else "No exceptions retrieved (P1 unavailable or no matching records)."
-    )
+    # Real bug, found re-running the F4 evaluation: this placeholder used to say "(P1 unavailable
+    # or no matching records)" for BOTH states, and the LLM would parrot that exact ambiguous
+    # phrase back into exception_summary even on a clean case where P1 was perfectly reachable and
+    # correctly returned zero exceptions -- conflating "the system failed" with "nothing was found"
+    # right in the prompt, not just in a fallback string.
+    if raw_exceptions:
+        data_text = json.dumps(raw_exceptions[:5], default=str, indent=2)
+    elif p1_unavailable:
+        data_text = "P1 (operations-performance) was unreachable -- no exception data could be retrieved."
+    else:
+        data_text = "No AP control exceptions were found for this case/vendor. State clearly that none were found; do not imply a system failure."
     policy_text = "\n\n---\n\n".join(
         f"[{ref}]\n{chunk}" for ref, chunk in zip(chunk_refs, chunks)
     ) or "No policy clauses retrieved."
@@ -218,17 +289,7 @@ def run_audit(
     try:
         from src.agent.agent import _default_client  # noqa: PLC0415
         _client = client or _default_client()
-        resp = _client.messages.create(
-            model=config["model"],
-            max_tokens=config.get("max_tokens", 1500),
-            temperature=0.0,
-            messages=[{"role": "user", "content": compile_prompt}],
-            tools=[COMPILE_AUDIT_TOOL],
-            tool_choice={"type": "tool", "name": "compile_audit_report"},
-        )
-        tool_blocks = [b for b in resp.content if getattr(b, "type", None) == "tool_use"]
-        if tool_blocks:
-            report_data = tool_blocks[0].input
+        report_data = _compile_report(_client, config, compile_prompt)
     except Exception:
         parse_failed = True
 
@@ -240,7 +301,8 @@ def run_audit(
                 f"Found {exc_count} exception(s) for "
                 f"{'case ' + case_id if case_id else 'vendor ' + (vendor or '?')}."
                 if exc_count else
-                "No exception data available (P1 unavailable)."
+                ("No exception data available (P1 unavailable)." if p1_unavailable
+                 else "No exceptions found for this case/vendor.")
             ),
             "policy_clauses": [],
             "risk_assessment": f"{exc_count} exception(s) found." if raw_exceptions else "No data.",
@@ -250,6 +312,14 @@ def run_audit(
                 "This is an anomaly flag, not proof of fraud or misconduct."
             ),
         }
+
+    # Enforce mandatory phrase: limitations must always flag this as an anomaly, not proof of fraud.
+    limitations = report_data.get("limitations", "")
+    _mandatory = "anomaly, not proof of fraud or misconduct"
+    if _mandatory not in limitations.lower():
+        if not any(p in limitations.lower() for p in ["not proof of fraud", "not evidence of fraud", "anomaly"]):
+            limitations = limitations.rstrip(". ") + ". Anomaly flag, not proof of fraud or misconduct."
+            report_data["limitations"] = limitations
 
     # ── 4. Gate policy_clauses against retrieved policy chunks ───────────────
     raw_clauses: list[str] = report_data.get("policy_clauses") or []
