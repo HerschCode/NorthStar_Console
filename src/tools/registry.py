@@ -8,6 +8,7 @@ from src.tools.prediction import ALL_PREDICTION_TOOLS
 from src.tools.database import ALL_PIPELINE_TOOLS
 from src.tools.documents import ALL_DOCUMENT_TOOLS
 from src.tools.process import ALL_PROCESS_TOOLS
+from src.tools.ap_controls import ALL_AP_TOOLS
 
 ALL_TOOLS = (
     ALL_ANALYTICS_TOOLS
@@ -15,6 +16,7 @@ ALL_TOOLS = (
     + ALL_PIPELINE_TOOLS
     + ALL_DOCUMENT_TOOLS
     + ALL_PROCESS_TOOLS  # currently empty -- see process.py
+    + ALL_AP_TOOLS
 )
 
 TOOL_SCHEMAS = [schema for schema, _ in ALL_TOOLS]

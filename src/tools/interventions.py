@@ -23,6 +23,9 @@ VALID_ACTIONS = {
     "notify_manager",
     "request_approval",
     "mark_exception",
+    # Finance module: payment actions (AP controls)
+    "hold_payment",
+    "release_payment",
 }
 VALID_PRIORITIES = {"low", "normal", "high", "urgent"}
 

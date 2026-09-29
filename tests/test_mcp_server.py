@@ -24,6 +24,11 @@ EXPECTED_TOOL_NAMES = {
     "get_sla_metrics",
     "get_supplier_performance",
     "get_management_report",
+    "get_control_exceptions",
+    "get_control_summary",
+    "get_working_capital_summary",
+    "propose_payment_hold",
+    "propose_payment_release",
     "predict_sla_risk",
     "get_pipeline_status",
     "search_policy_documents",
@@ -33,7 +38,7 @@ EXPECTED_TOOL_NAMES = {
 
 
 @pytest.mark.asyncio
-async def test_all_ten_tools_registered():
+async def test_all_tools_registered():
     tools = await mcp.list_tools()
     names = {t.name for t in tools}
     assert names == EXPECTED_TOOL_NAMES

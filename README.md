@@ -16,8 +16,8 @@ over 10 policy/SOP documents plus live P1 metrics — grounded, cited, and willi
 
 | What | Number | How measured |
 |---|---|---|
-| Hybrid retrieval Hit@1 | **66.2%** | 130 in-scope questions over a 10-document corpus, section-level match, deployed config |
-| Hybrid retrieval MRR | **0.756** | same eval set; with optional cross-encoder reranker: Hit@1 77.7%, MRR 0.832 |
+| Hybrid retrieval Hit@1 | **70.8%** | 130 in-scope questions over a 12-document corpus, section-level match, deployed config |
+| Hybrid retrieval MRR | **0.780** | same eval set; with optional cross-encoder reranker: Hit@1 77.7%, MRR 0.832 |
 | Answer gate — correct answers passed (held-out) | **68.8%** | 32 hand-checked correct answers, claim-support gate r=0.65; old NLI gate was 18.8% (same rate as wrong answers — no discrimination); [`docs/gate-calibration.md`](docs/gate-calibration.md) |
 | Answer gate — wrong-fact pass rate | **18.8–21.9%** | same 32 questions with one fact mutated; all failures are polarity flips (Yes↔No) the lexical check cannot catch |
 | Answer gate — off-context pass rate | **3.1–6.2%** | same 32 correct answers scored against chunks from a different question |
@@ -80,10 +80,11 @@ garbage-collected before completing its first request — fixed in
 
 ## Knowledge base
 
-10 synthetic Northstar Manufacturing policy/SOP documents
+12 synthetic Northstar Manufacturing policy/SOP documents
 ([`data/documents/`](data/documents/)) — procurement, SLA, escalation, exception handling,
 vendor onboarding, quality control, inventory, contract renewal, data retention, safety
-incident reporting — split into section-level chunks at markdown headings (`##`/`#`).
+incident reporting, plus 2 accounts-payable controls docs (AP controls policy and
+segregation-of-duties matrix) — split into section-level chunks at markdown headings (`##`/`#`).
 
 Small on purpose: portfolio-scale RAG target, not a claim of enterprise volume. Retrieval
 quality was measured, not assumed.
@@ -93,54 +94,56 @@ quality was measured, not assumed.
 ## Retrieval evaluation
 
 Four-method head-to-head (`scripts/benchmark_retrieval.py`): **165 questions** (130 in-scope,
-35 OOD/adversarial) across 8 categories against the live ChromaDB collection. Section-level
+35 OOD/adversarial) across 6 categories against the live ChromaDB collection. Section-level
 hit matching — document ID + section heading substring — which is strictly harder than
 document-level hit rate.
 
-### Method comparison (130 in-scope questions, 10 documents)
+### Method comparison (130 in-scope questions, 12 documents)
 
 | Method | Hit@1 | Hit@3 | Hit@5 | MRR | Avg latency |
 |---|---|---|---|---|---|
-| BM25 only | 59.2% | 77.7% | 81.5% | 0.680 | 12 ms |
-| Semantic only | **72.3%** | 86.9% | 89.2% | 0.797 | 229 ms |
-| Hybrid (BM25 + semantic, RRF) | 66.2% | 85.4% | 88.5% | 0.756 | 233 ms |
-| **Hybrid + Cross-encoder rerank** | **77.7%** | **88.5%** | **90.8%** | **0.832** | 446 ms |
+| BM25 only | 58.5% | 77.7% | 81.5% | 0.676 | 11 ms |
+| Semantic only | 70.0% | 86.9% | 87.7% | 0.781 | 200 ms |
+| Hybrid (BM25 + semantic, RRF) | **70.8%** | 85.4% | 88.5% | **0.780** | 974 ms |
+| **Hybrid + Cross-encoder rerank** | **77.7%** | **88.5%** | **90.8%** | **0.832** | 1,595 ms |
 
 Cross-encoder (`cross-encoder/ms-marco-MiniLM-L-6-v2`) reads each (query, chunk) pair
-jointly: +11.5pp Hit@1 over hybrid. Hybrid trails semantic-only at Hit@1 on 10 documents
-(66.2% vs 72.3%) because the BM25 side drags RRF down when multiple documents reuse the same
-vocabulary. This limitation is reported, not tuned away.
+jointly: +7pp Hit@1 over hybrid. Hybrid and semantic-only are within 0.8pp at Hit@1 on
+12 documents (70.8% vs 70.0%) — the AP controls docs added vocabulary that helps the BM25
+side, narrowing the previous gap.
 
 **Deployment note:** `RERANKER_BACKEND=none` disables the cross-encoder and falls back to
 hybrid ranking — required on Render's 512 MB free tier where `torch` doesn't fit. The
-deployed config reports Hit@1 66.2% / MRR 0.756.
+deployed config reports Hit@1 70.8% / MRR 0.780.
 
-### Effect of expanding from 4 to 10 documents
+### Effect of corpus expansion
 
-| Method | Hit@1 (4 docs) | Hit@1 (same 91 q, 10 docs) |
-|---|---|---|
-| BM25 | 62.6% | 52.7% |
-| Semantic | 71.4% | 69.2% |
-| Hybrid | 69.2% | 58.2% |
-| Hybrid + rerank | 78.0% | 72.5% |
+| Corpus size | BM25 Hit@1 | Semantic Hit@1 | Hybrid Hit@1 | Hybrid+Rerank Hit@1 |
+|---|---|---|---|---|
+| 4 documents | 62.6% | 71.4% | 69.2% | 78.0% |
+| 10 documents | 59.2% | 72.3% | 66.2% | 77.7% |
+| **12 documents** (+ 2 AP controls) | **58.5%** | **70.0%** | **70.8%** | **77.7%** |
 
-More documents reusing the same vocabulary hurts keyword matching most (BM25 −9.9pp, Hybrid
-−11.0pp) and dense retrieval least (−2.2pp). Cross-encoder is most robust (−5.5pp).
+Adding the AP controls docs (same procurement domain, 29 new chunks) slightly improved
+Hybrid Hit@1 (+4.6pp vs 10-doc) because the new AP vocabulary gave BM25 more anchors for
+finance queries. Dense retrieval and Hybrid+Rerank held flat. The prior pattern —
+generic vocabulary hurts keyword matching most — does not apply when the new documents
+are closely related to the existing corpus.
 
-### Per-category Hit@3 (Hybrid, 130 in-scope questions)
+### Per-category Hit@3 (Hybrid, 130 in-scope questions, 12 documents)
 
 | Category | Hit@3 | Notes |
 |---|---|---|
-| Lookup (30) | 28/30 (93%) | Direct fact retrieval |
+| Lookup (30) | 29/30 (97%) | Direct fact retrieval |
 | Numerical (25) | 23/25 (92%) | Exact thresholds; BM25 contribution visible |
-| Multi-hop (22) | 19/22 (86%) | Primary source usually retrieved |
+| Multi-hop (22) | 18/22 (82%) | Primary source usually retrieved |
 | Policy interpretation (25) | 21/25 (84%) | Correct section found even when phrased abstractly |
-| Paraphrase (17) | 14/17 (82%) | Semantic retrieval handles most paraphrases |
-| Ambiguous (11) | 6/11 (55%) | Hardest: deliberately underspecified questions |
+| Paraphrase (17) | 12/17 (71%) | AP docs share $-threshold vocabulary with procurement-policy — some paraphrase queries land on the wrong doc |
+| Ambiguous (11) | 8/11 (73%) | Improved vs 10-doc (was 6/11); new AP sections anchor formerly ambiguous queries |
 
 Two failure patterns: (1) correct document retrieved but section boundary doesn't match
-question scope; (2) after corpus expansion, generic phrasing is captured by the wrong
-document's section.
+question scope; (2) "$500 self-approval" paraphrase queries sometimes hit ap-controls-policy
+instead of procurement-policy — the new docs overlap on threshold vocabulary.
 
 ### OOD and adversarial false-positive rate (35 questions)
 
@@ -239,7 +242,12 @@ score (1–5 rubric, sampled subset).
 | `predict_sla_risk` | prediction.py | SLA breach risk level and probability for a specific case ID |
 | `get_pipeline_status` | database.py | Recent data pipeline run status — confirms data is fresh before trusting a metric |
 | `get_conformance` | process.py | Share of cases that follow the expected activity sequence, and the deviation types found |
-| `search_policy_documents` | documents.py | Hybrid BM25 + semantic search over the 10 policy/SOP documents |
+| `search_policy_documents` | documents.py | Hybrid BM25 + semantic search over the 12 policy/SOP documents |
+| `get_control_exceptions` | ap_controls.py | AP control exceptions (C1–C6: three-way match, duplicate invoice, SoD, etc.) with optional filters |
+| `get_control_summary` | ap_controls.py | Summary of AP exceptions by control ID: count, EUR exposure, severity breakdown |
+| `get_working_capital_summary` | ap_controls.py | Days payable outstanding, invoice-to-clear time, late-payment exposure, discount capture rate |
+| `propose_payment_hold` | ap_controls.py | Propose a payment hold for human approval — enters the HITL queue; not executed until approved |
+| `propose_payment_release` | ap_controls.py | Propose releasing a held payment for human approval — SoD enforced: proposer ≠ approver |
 
 ---
 

@@ -1,5 +1,5 @@
 """
-MCP server exposing all 9 operations-assistant tools.
+MCP server exposing all 14 operations-assistant tools.
 
 Each tool delegates to the existing implementation in src/tools/, which means:
   - The same input validation (validate_case_id, validate_query, clamp_int) runs for
@@ -38,6 +38,13 @@ from src.tools.database import get_pipeline_status as _get_pipeline_status
 from src.tools.documents import search_policy_documents as _search_policy_documents
 from src.tools.process import get_conformance as _get_conformance
 from src.tools.interventions import propose_intervention as _propose_intervention
+from src.tools.ap_controls import (
+    get_control_exceptions as _get_control_exceptions,
+    get_control_summary as _get_control_summary,
+    get_working_capital_summary as _get_working_capital_summary,
+    propose_payment_hold as _propose_payment_hold,
+    propose_payment_release as _propose_payment_release,
+)
 from src.tools.client import OpsPerformanceUnavailable
 
 mcp = MCPServer(
@@ -147,9 +154,10 @@ def get_pipeline_status(limit: int = 5) -> str:
 
 @mcp.tool(
     description=(
-        "Search the company's policy and procedure documents (Procurement Policy, "
-        "SLA Policy, Escalation Procedure, Exception Handling Procedure) for relevant "
-        "sections. Use for questions about rules, approval requirements, or procedures — "
+        "Search the company's 12 policy and procedure documents (procurement, SLA, escalation, "
+        "exception handling, vendor onboarding, quality control, inventory, contract renewal, "
+        "data retention, safety, AP controls, and segregation of duties) for relevant sections. "
+        "Use for questions about rules, approval requirements, or procedures — "
         "not for operational numbers, which need get_cycle_time / get_sla_metrics / etc."
     )
 )
@@ -174,7 +182,8 @@ def get_conformance() -> str:
         "Propose a human-in-the-loop intervention for a procurement action that requires "
         "operator approval before execution. Returns an intervention_id that an operator "
         "must approve via the REST API (POST /interventions/{id}/approve). "
-        "Valid actions: escalate_case, flag_supplier, notify_manager, request_approval, mark_exception. "
+        "Valid actions: escalate_case, flag_supplier, notify_manager, request_approval, mark_exception, "
+        "hold_payment, release_payment. "
         "Valid priorities: low, normal, high, urgent. "
         "ROI context is attached server-side from operations-performance; do not estimate it."
     )
@@ -187,6 +196,77 @@ def propose_intervention(
 ) -> str:
     with _tool_errors():
         return _json(_propose_intervention(action=action, target=target, reason=reason, priority=priority))
+
+
+@mcp.tool(
+    description=(
+        "Return AP control exceptions from the finance controls layer. "
+        "Controls: C1=three-way-match violation, C2=invoice before GR, C3=approval-threshold split, "
+        "C4=duplicate invoice, C5=payment-block override without SoD, C6=Benford's law anomaly. "
+        "All filters are optional; omit to get all open exceptions."
+    )
+)
+def get_control_exceptions(
+    control: str | None = None,
+    vendor: str | None = None,
+    min_exposure: float | None = None,
+    top_n: int = 20,
+) -> str:
+    with _tool_errors():
+        return _json(_get_control_exceptions(
+            control=control, vendor=vendor, min_exposure=min_exposure, top_n=top_n
+        ))
+
+
+@mcp.tool(
+    description=(
+        "Return a high-level summary of AP control exceptions by control ID: "
+        "count, total EUR exposure, and severity breakdown. "
+        "Use this before drilling into individual exceptions with get_control_exceptions."
+    )
+)
+def get_control_summary() -> str:
+    with _tool_errors():
+        return _json(_get_control_summary())
+
+
+@mcp.tool(
+    description=(
+        "Return working-capital metrics: days payable outstanding (overall and by vendor/spend area), "
+        "invoice-to-clear cycle time, late-payment exposure in EUR, and early-payment discount capture rate. "
+        "Use for questions about payment timing, cash flow, or 2/10 net 30 discount opportunities."
+    )
+)
+def get_working_capital_summary() -> str:
+    with _tool_errors():
+        return _json(_get_working_capital_summary())
+
+
+@mcp.tool(
+    description=(
+        "Propose placing a payment hold on a specific case or invoice for human approval. "
+        "The hold is NOT executed immediately — a manager must approve it via "
+        "POST /interventions/{id}/approve. "
+        "Use when an AP exception (C1–C6) indicates payment should be paused. "
+        "Include the control ID and evidence in the reason."
+    )
+)
+def propose_payment_hold(case_id: str, reason: str) -> str:
+    with _tool_errors():
+        return _json(_propose_payment_hold(case_id=case_id, reason=reason))
+
+
+@mcp.tool(
+    description=(
+        "Propose releasing a payment that is currently on hold, for human approval. "
+        "The release is NOT executed immediately — a manager (not the proposer) must approve via "
+        "POST /interventions/{id}/approve. "
+        "Include which exception was resolved, how, and who authorised the resolution."
+    )
+)
+def propose_payment_release(case_id: str, reason: str) -> str:
+    with _tool_errors():
+        return _json(_propose_payment_release(case_id=case_id, reason=reason))
 
 
 def main():
