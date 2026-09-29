@@ -11,6 +11,7 @@ sources:
       - name: process_cases
       - name: suppliers
       - name: sla_rules
+      - name: ap_control_exceptions
 
 models:
   - name: stg_events
@@ -22,6 +23,15 @@ models:
         tests: [not_null]
       - name: timestamp
         tests: [not_null]
+      - name: item_category
+        description: "Match type -- real BPI 2019 field, added 2026-09-28 for AP controls"
+        tests:
+          - accepted_values:
+              values: ["3-way match, invoice before GR", "3-way match, invoice after GR", "Consignment"]
+              config:
+                where: "item_category is not null"
+      - name: net_worth_eur
+        description: "Cumulative order value in EUR at this event; NULL on events that don't report it. Non-negativity checked by the singular test assert_no_negative_net_worth.sql (no dbt_utils dependency)."
 
   - name: stg_process_cases
     description: 1:1 with analytics.process_cases.
@@ -43,4 +53,12 @@ models:
       - name: category
         tests: [unique, not_null]
       - name: target_hours
+        tests: [not_null]
+
+  - name: stg_ap_control_exceptions
+    description: 1:1 with analytics.ap_control_exceptions -- Python-computed (see the model file's header).
+    columns:
+      - name: exception_id
+        tests: [unique, not_null]
+      - name: control_id
         tests: [not_null]

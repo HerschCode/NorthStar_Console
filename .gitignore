@@ -5,6 +5,7 @@ __pycache__/
 data/raw/*
 data/processed/*
 !data/raw/.gitkeep
+!data/raw/bpi2019_events.sample_method.json
 !data/processed/.gitkeep
 models/*
 !models/.gitkeep

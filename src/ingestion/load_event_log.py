@@ -10,6 +10,18 @@ RAW_COLUMN_MAP = {
     "case:Item": "item_id",
     "case:Spend area text": "category",
     "case:Vendor": "supplier_id",
+    # AP-control fields (2026-09-28, finance module Phase F1) -- real BPI 2019 attributes,
+    # confirmed present in the source XES; see docs/data-contract.md and
+    # scripts/download_bpi2019_sample.py's docstring for how they were verified and sampled.
+    "case:Item Category": "item_category",          # e.g. "3-way match, invoice before GR"
+    "case:GR-Based Inv. Verif.": "gr_based_inv_verif",  # source string "true"/"false"
+    "case:Goods Receipt": "goods_receipt_required",     # source string "true"/"false"
+    "case:Document Type": "document_type",
+    "case:Item Type": "item_type",
+    "case:Company": "company",
+    "case:Sub spend area text": "sub_spend_area",
+    "User": "user_id",                               # event-level actor (distinct from org:resource)
+    "Cumulative net worth (EUR)": "net_worth_eur",
 }
 
 REQUIRED_RAW_COLUMNS = [
@@ -17,6 +29,10 @@ REQUIRED_RAW_COLUMNS = [
     "concept:name",
     "time:timestamp",
 ]
+
+_STRING_ID_COLS = ("purchase_order_id", "item_id")
+_BOOLEAN_COLS = ("gr_based_inv_verif", "goods_receipt_required")
+_NUMERIC_COLS = ("net_worth_eur",)
 
 
 def load_event_log(path: str | Path) -> pd.DataFrame:
@@ -42,9 +58,21 @@ def load_event_log(path: str | Path) -> pd.DataFrame:
     # pd.read_csv, which the data contract (correctly) rejects as "not string-like".
     # Cast explicitly rather than relaxing the contract, since the contract's
     # expectation is the correct one -- an ID should never silently become a number.
-    for id_col in ("purchase_order_id", "item_id"):
+    for id_col in _STRING_ID_COLS:
         if id_col in df.columns:
             df[id_col] = df[id_col].astype("string")
+
+    # Source booleans are the literal strings "true"/"false" (XES <boolean value="true">,
+    # written through untouched by the CSV sampler) -- normalize to real bool, NaN if absent.
+    for col in _BOOLEAN_COLS:
+        if col in df.columns:
+            df[col] = df[col].map({"true": True, "false": False, True: True, False: False})
+
+    # net_worth_eur is per-event cumulative net worth -- blank for events that don't carry it
+    # (not every activity reports a running total); coerce rather than drop the column.
+    for col in _NUMERIC_COLS:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
     return df
 

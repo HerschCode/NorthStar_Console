@@ -10,10 +10,26 @@ dataset from an actual company's procurement system. This is what makes the proc
 findings (bottlenecks, variants, conformance, rework) meaningful: they're patterns in real
 operational data, not patterns designed into synthetic data to look interesting.
 
+**2026-09-28 (finance module, Phase F1):** the sample originally kept only 8 columns and silently
+dropped several other real fields the source XES carries -- match type (`Item Category`), goods-
+receipt/invoice-verification flags, document/item type, company, sub-spend-area, the per-event
+actor (`User`, distinct from `org:resource`), and cumulative order value (`Cumulative net worth
+(EUR)`). Verified present by streaming and inspecting the first traces' attribute keys before
+adding them (not assumed from documentation) -- see `scripts/download_bpi2019_sample.py`. These are
+REAL BPI 2019 fields, not synthetic additions; they were just never wired through. Used by the new
+AP-controls module (`docs/ap-controls.md`) and the working-capital metrics.
+
 ## Synthetic
 - **SLA targets** (`config/sla.yaml`) -- BPI 2019 doesn't include contractual SLA thresholds, so
   these are invented business rules, chosen to be plausible for a procurement process but not
   derived from any real contract.
+- **Approval threshold used by the splitting control** (`$10,000`, `docs/ap-controls.md` C3) --
+  taken from `operations-assistant`'s synthetic procurement-policy document (Section 4.2), applied
+  to the real EUR order-value field as a stated assumption (the source data's currency is EUR, not
+  the policy document's implied USD; no conversion is applied -- this is disclosed, not corrected).
+- **Anomaly rates in the planted-anomaly evaluation** (`docs/ap-controls-evaluation.md`) --
+  synthetic injections at chosen rates, used only to measure recall/false-positive rate; never
+  mixed with or presented as real exception counts.
 - **Expected process sequence** (`config/process.yaml`) -- the "correct" P2P path used for
   conformance checking is a reasonable generic P2P sequence, not Northstar's (fictional) actual
   documented process.

@@ -20,6 +20,15 @@ full real-vs-synthetic breakdown.
 | `item_id` | string | Real (`case:Item`) | Line-item identifier within the PO |
 | `category` | string | Real (`case:Spend area text`) | Spend category -- drives which SLA target applies (`config/sla.yaml`) |
 | `supplier_id` | string | Real (`case:Vendor`) | Vendor identifier. `UNKNOWN` after cleaning if missing in source |
+| `item_category` | string | Real (`case:Item Category`) | Match type: e.g. "3-way match, invoice before GR", "3-way match, invoice after GR", "2-way match", "Consignment" -- drives which AP controls apply (`docs/ap-controls.md`) |
+| `gr_based_inv_verif` | bool | Real (`case:GR-Based Inv. Verif.`) | Whether this item is configured for goods-receipt-based invoice verification |
+| `goods_receipt_required` | bool | Real (`case:Goods Receipt`) | Whether a goods receipt is required before this item's invoice can clear |
+| `document_type` | string | Real (`case:Document Type`) | SAP purchasing document type code |
+| `item_type` | string | Real (`case:Item Type`) | SAP item type (standard, subcontracting, consignment, ...) |
+| `company` | string | Real (`case:Company`) | Company code the PO was raised under |
+| `sub_spend_area` | string | Real (`case:Sub spend area text`) | Finer-grained spend classification within `category` |
+| `user_id` | string | Real (`User`, event-level) | The SAP user who performed the event -- distinct from `resource` (`org:resource`); used for segregation-of-duties checks (C5, `docs/ap-controls.md`) |
+| `net_worth_eur` | float | Real (`Cumulative net worth (EUR)`, event-level) | Running order value in EUR at this event, as recorded by SAP. Blank on events that don't report it (`NaN` after cleaning). Recovered 2026-09-28 -- the original 8-column sample dropped it; see `docs/data-contract.md` |
 
 ## Derived fields (computed, not sourced)
 | Field | Computed by | Description |
@@ -42,8 +51,8 @@ full real-vs-synthetic breakdown.
 | `allowed_repeats` | `config/process.yaml` | Which repeated activities are normal operation, not rework |
 
 ## Fields intentionally not modeled yet
-Order value/monetary amount, business unit, and region are referenced in earlier planning
-documents and in `docs/ml-model.md`'s "known limitations" as a reasonable next feature set, but
-aren't wired into the current pipeline -- BPI 2019 does carry some monetary fields under different
-column names depending on export version; confirm the exact column name against your actual export
-before adding them (`load_event_log.py:RAW_COLUMN_MAP`), rather than assuming a name.
+`business unit` and `region` are referenced in earlier planning documents as a reasonable next
+feature set but aren't wired into the pipeline. `net_worth_eur` WAS in that category until
+2026-09-28, when it was confirmed present in the source XES and added (see above) as part of the
+finance/AP-controls module (`docs/ap-controls.md`); it unblocked the ROI sensitivity grid's
+"highest order value first" strategy, which was previously in `strategies_not_run`.

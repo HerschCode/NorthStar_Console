@@ -17,5 +17,14 @@ select
     purchase_order_id,
     item_id,
     category,
-    supplier_id
+    supplier_id,
+    item_category,
+    gr_based_inv_verif,
+    goods_receipt_required,
+    document_type,
+    item_type,
+    company,
+    sub_spend_area,
+    user_id,
+    net_worth_eur
 from {{ source('raw', 'events') }}

@@ -1,0 +1,8 @@
+{
+  "sampling_method": "streamed in source-file order (not reshuffled/filtered by content); stopped at coverage target or the hard cap, whichever came first",
+  "stop_reason": "vendor_coverage_target",
+  "min_pos_per_vendor": 10,
+  "vendors_meeting_target": 60,
+  "min_vendors_covered_target": 60,
+  "distinct_vendors_seen": 818
+}
