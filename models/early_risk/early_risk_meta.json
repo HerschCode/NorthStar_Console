@@ -38,6 +38,7 @@
   "categories": [
     "Additives",
     "CAPEX & SOCS",
+    "Chemicals & Intermediates",
     "Commodity Resins",
     "Enterprise Services",
     "Latex & Monomers",
@@ -49,9 +50,11 @@
     "Sales",
     "Solvents",
     "Specialty Resins",
+    "Spend Area Unidentified",
     "Titanium Dioxides",
     "Trading & End Products",
-    "UNKNOWN"
+    "UNKNOWN",
+    "Workforce Services"
   ],
   "static_columns": [
     "hour",
@@ -60,6 +63,7 @@
     "supplier_hist",
     "cat_Additives",
     "cat_CAPEX & SOCS",
+    "cat_Chemicals & Intermediates",
     "cat_Commodity Resins",
     "cat_Enterprise Services",
     "cat_Latex & Monomers",
@@ -71,93 +75,98 @@
     "cat_Sales",
     "cat_Solvents",
     "cat_Specialty Resins",
+    "cat_Spend Area Unidentified",
     "cat_Titanium Dioxides",
     "cat_Trading & End Products",
-    "cat_UNKNOWN"
+    "cat_UNKNOWN",
+    "cat_Workforce Services"
   ],
   "target": {
     "percentile": 75,
     "targets_hours": {
-      "default": 2711.65,
-      "Additives": 2188.6083333333336,
-      "CAPEX & SOCS": 1848.5833333333333,
-      "Latex & Monomers": 2063.508333333333,
-      "Logistics": 9079.216666666667,
-      "Packaging": 3002.2833333333333,
-      "Pigments & Colorants": 2467.1,
-      "Sales": 2045.6166666666666,
-      "Solvents": 2231.229166666667,
-      "Titanium Dioxides": 1832.7083333333335,
-      "Trading & End Products": 2676.3166666666666
+      "default": 2592.4125,
+      "Additives": 2202.0333333333333,
+      "CAPEX & SOCS": 1489.3291666666667,
+      "Latex & Monomers": 2044.6666666666667,
+      "Logistics": 8877.183333333332,
+      "Marketing": 4577.333333333333,
+      "Others": 1911.6083333333333,
+      "Packaging": 2828.266666666667,
+      "Pigments & Colorants": 2562.7,
+      "Sales": 1923.5,
+      "Solvents": 2064.016666666667,
+      "Specialty Resins": 2160.945833333333,
+      "Titanium Dioxides": 1937.6083333333331,
+      "Trading & End Products": 2590.35
     },
-    "prior_breach_rate": 0.24050086355785838,
+    "prior_breach_rate": 0.24800988196541313,
     "definition": "cycle time above the training-window per-category p75"
   },
-  "trained_at": "2026-09-28T05:45:43.796800+00:00",
-  "train_window_end": "2018-01-04 20:54:00+00:00",
+  "trained_at": "2026-09-29T05:16:38.281512+00:00",
+  "train_window_end": "2018-01-12 07:47:00+00:00",
   "models": {
     "2": {
       "file": "gru_k2.onnx",
-      "platt_a": 1.4407493142739622,
-      "platt_b": -1.293484680759248,
+      "platt_a": 1.0403972680613833,
+      "platt_b": -1.4772631943396826,
       "seeds": [
         0,
         1,
         2
       ],
-      "n_train": 1952,
-      "n_validation": 345,
-      "n_test": 580,
-      "base_rate": 0.25,
-      "test_roc_auc": 0.6731351565596513,
+      "n_train": 6168,
+      "n_validation": 1089,
+      "n_test": 1813,
+      "base_rate": 0.24489795918367346,
+      "test_roc_auc": 0.6296130864246278,
       "test_roc_auc_ci95": [
-        0.6253873132616998,
-        0.7144296238393947
+        0.5991846546348774,
+        0.66091087475504
       ],
-      "test_brier": 0.1900592331788775,
-      "onnx_vs_torch_max_abs_logit_diff": 2.384185791015625e-07
+      "test_brier": 0.18322009796824587,
+      "onnx_vs_torch_max_abs_logit_diff": 9.5367431640625e-07
     },
     "3": {
       "file": "gru_k3.onnx",
-      "platt_a": 1.1018689606378451,
-      "platt_b": -1.3413462065781068,
+      "platt_a": 0.8949739842595152,
+      "platt_b": -1.0426276147722173,
       "seeds": [
         0,
         1,
         2
       ],
-      "n_train": 1807,
-      "n_validation": 319,
-      "n_test": 571,
-      "base_rate": 0.24518388791593695,
-      "test_roc_auc": 0.7290934703347696,
+      "n_train": 5453,
+      "n_validation": 963,
+      "n_test": 1682,
+      "base_rate": 0.2544589774078478,
+      "test_roc_auc": 0.6870295428460702,
       "test_roc_auc_ci95": [
-        0.6797327183395706,
-        0.7718861349025222
+        0.6575735428993467,
+        0.7169701872237376
       ],
-      "test_brier": 0.17443481563099048,
-      "onnx_vs_torch_max_abs_logit_diff": 3.5762786865234375e-07
+      "test_brier": 0.18017343108044875,
+      "onnx_vs_torch_max_abs_logit_diff": 4.76837158203125e-07
     },
     "5": {
       "file": "gru_k5.onnx",
-      "platt_a": 0.8814114389844157,
-      "platt_b": -1.3256046302980025,
+      "platt_a": 0.7260742527143722,
+      "platt_b": -1.7133814391719664,
       "seeds": [
         0,
         1,
         2
       ],
-      "n_train": 1562,
-      "n_validation": 276,
-      "n_test": 563,
-      "base_rate": 0.23623445825932504,
-      "test_roc_auc": 0.7649414233257563,
+      "n_train": 4590,
+      "n_validation": 811,
+      "n_test": 1517,
+      "base_rate": 0.1964403427818062,
+      "test_roc_auc": 0.8309512142750961,
       "test_roc_auc_ci95": [
-        0.7176685385734981,
-        0.8046809309692012
+        0.807435939083656,
+        0.8517918058625011
       ],
-      "test_brier": 0.15422851534580698,
-      "onnx_vs_torch_max_abs_logit_diff": 4.76837158203125e-07
+      "test_brier": 0.12270734754375015,
+      "onnx_vs_torch_max_abs_logit_diff": 1.430511474609375e-06
     }
   }
 }
