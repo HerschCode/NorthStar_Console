@@ -19,7 +19,7 @@ import yaml
 
 DEFAULT_POLICY_PATH = Path(__file__).resolve().parents[2] / "config" / "tool_policies.yaml"
 
-_TOOL_KEYS = {"kind", "output_trust", "rules", "taint", "max_per_session", "description"}
+_TOOL_KEYS = {"kind", "output_trust", "rules", "taint", "max_per_session", "description", "require_role_separation"}
 _RULE_KEYS = {"name", "roles", "args", "approval"}
 _ARG_KEYS = {"in", "pattern", "not_pattern", "max_length", "min", "max", "type", "required", "equals"}
 _TYPES = {"string": str, "integer": int, "number": (int, float), "boolean": bool}
@@ -71,6 +71,11 @@ class Policy:
                     raise PolicyError(f"tool {name!r}: taint[{field_name!r}] must be 'deny' or 'flag'")
             if spec["kind"] == "write" and not all(r.get("approval") == "required" for r in spec.get("rules", [])):
                 raise PolicyError(f"tool {name!r}: every rule of a write tool must set approval: required")
+            if "require_role_separation" in spec:
+                if not isinstance(spec["require_role_separation"], bool):
+                    raise PolicyError(f"tool {name!r}: require_role_separation must be a boolean")
+                if spec["require_role_separation"] and spec["kind"] != "write":
+                    raise PolicyError(f"tool {name!r}: require_role_separation only applies to write tools (nothing is approved otherwise)")
             for i, rule in enumerate(spec.get("rules", [])):
                 unknown = set(rule) - _RULE_KEYS
                 if unknown:

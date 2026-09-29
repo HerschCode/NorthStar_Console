@@ -64,7 +64,10 @@ never supplies it. Set `--p2-dir` or `P2_DIR` if the repositories are not siblin
    Per argument, the policy says `deny` (used for `target`) or `flag` (used for `reason`: raises risk to high, still needs approval).
 3. **Approval gate** (`approvals.py`): writes are queued in SQLite, not run. Only a manager or admin may decide; the requester may not
    decide their own request (separation of duties); decisions are final; requests expire after 24 h; the queue is capped at 200 pending;
-   execution is tracked separately from approval.
+   execution is tracked separately from approval. A tool the policy marks `require_role_separation: true` (added for the accounts-payable
+   controls work, see `docs/decisions.md`) is stricter still: the approver's *role* must differ from the requester's, not just their
+   identity, so two people who happen to hold the same role cannot approve each other's requests. The flag is read once at enqueue time
+   and stored on the request row itself, so editing the policy later cannot change the rule for a request already pending.
 
 ## MCP proxy mode (`python -m gateway.actions.mcp_proxy --role manager --user-id mona -- <upstream command>`)
 
@@ -159,7 +162,16 @@ label on `reason` (a flag, still approval), never deny, and the translation case
 ## What is implemented vs not
 
 Implemented: default-deny capability policy with argument constraints; string-overlap provenance tracking; human approval queue with
-separation of duties; audit log; HTTP decision point; stdio MCP proxy; dashboard panel.
+separation of duties (same-person, and optionally same-role) and role separation; audit log; HTTP decision point; stdio MCP proxy;
+dashboard panel.
+
+**Accounts-payable controls (groundwork, not a complete feature).** `require_role_separation` and the finance-fraud scenarios in
+`redteam/promptfoo/tests.yaml` were built ahead of operations-assistant's `hold_payment` / `release_payment` tools, which do not exist
+yet — see `docs/decisions.md`. What exists today: the mechanism (tested against a stand-in tool in `tests/test_action_firewall.py`) and
+red-team coverage of the finance-fraud framing on the text pipeline. What does not exist yet: an actual policy entry for
+`hold_payment`/`release_payment` (their argument shape depends on how operations-assistant implements them), and any check that ties the
+firewall's notion of "role" to a real finance function (AP clerk vs. controller) rather than the existing employee/manager/admin ladder.
+Mechanism-to-objective mapping (and what it deliberately does not claim): [`docs/finance-controls-mapping.md`](finance-controls-mapping.md).
 
 **Not CaMeL, and not claiming to be.** CaMeL (Debenedetti et al., 2025) uses a privileged model that only sees trusted input to plan the
 actions, a quarantined model that reads untrusted data but cannot call tools, and an interpreter that tracks data flow exactly. Nothing

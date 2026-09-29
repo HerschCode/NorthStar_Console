@@ -106,6 +106,8 @@ def test_visibility_follows_role_rules(policy):
     ({"tools": {"t": {"kind": "read", "rules": [{"roles": ["admin"], "args": {"a": {"regexp": "x"}}}]}}}, "unknown keys"),
     ({"tools": {"t": {"kind": "read", "taint": {"a": "ignore"}}}}, "taint"),
     ({"tools": {"t": {"kind": "read", "rules": [{"roles": []}]}}}, "roles"),
+    ({"tools": {"t": {"kind": "write", "rules": [{"roles": ["admin"], "approval": "required"}], "require_role_separation": "yes"}}}, "boolean"),
+    ({"tools": {"t": {"kind": "read", "require_role_separation": True}}}, "only applies to write tools"),
 ])
 def test_malformed_policy_fails_loudly_at_load_time(data, match):
     with pytest.raises(PolicyError, match=match):

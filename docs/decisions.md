@@ -1079,3 +1079,41 @@ Not in CI (the other repository is not checked out there); `demo_upstream.py` re
 **Checked while here.** The live demo and dashboard (`https://llm-security-gateway-psax.onrender.com`) both answer now, including a full `/gateway/demo/run` round trip (GW-001, blocked by `rule_based`) — an external review's claim that they were timing out did not reproduce; most likely a Render free-tier cold start, or a redeploy since. Fix 3 is done: `docs/action-firewall.md` and this file's Fix 3 entry above confirm operations-assistant now exposes `propose_intervention` over MCP, so the blocker recorded in the Phase 7 entry no longer applies.
 
 **PR triage (12 open, none merged here — merging without review is outside this session's remit).** All 5 GitHub Actions SHA bumps and all 3 pinned pip bumps (numpy 2.4.6, scipy 1.17.1, uvicorn 0.53.0) pass the full test suite in an isolated probe venv; the two floor-only bumps (`ruff>=0.16.8`, `semgrep>=1.177.0`) change nothing the locks don't already satisfy. The Python 3.12→3.14-slim base image bump is unverified (no Docker daemon here) and 3.14 is very new; recommended not to merge yet. PR #1 (`AUTH_MODE=google_id_token`, a Cloud Run deploy workflow, docs referencing the new `northstar-infra` repo) is Phase-8-shaped cloud work now sitting as a mergeable PR — the constraint on file is that Phase 8 stays deferred until explicitly asked for, so it was left for the user to decide rather than merged.
+
+## 2026-09-29: Accounts-payable controls, groundwork only (segregation of duties by role, finance red-team)
+
+**Context.** The user is adding a finance angle to the portfolio by extending the existing trilogy rather than starting
+a fourth project: operations-performance's procurement data is already accounts-payable, so P1/P2/P3 each get one
+finance-shaped module. The P3 piece (this entry) is policies for two planned operations-assistant tools,
+`hold_payment` and `release_payment`, plus finance-flavored red-team coverage. Those tools do not exist yet (a
+concurrent session was still building the P2 side, including the policy documents referenced by `search_policy_documents`
+in the demo, at the time of this entry) — this is deliberately the subset of the work that does not depend on them.
+
+**What was built.**
+1. **`require_role_separation`** (`gateway/actions/policy.py`, `gateway/actions/approvals.py`): a write tool can now ask
+   for stricter segregation of duties than "not the same person" — the approver's *role* must differ from the
+   requester's. Auditors distinguish these because two people who hold the same role are not a functional check on
+   each other; only a different function is. The flag is read from the policy once, at `enqueue()` time, and stored on
+   the approval row itself (a new column, default 0, so existing rows and existing tools are unaffected) — a later
+   policy edit cannot retroactively loosen or tighten a request that is already pending. Tested against a stand-in
+   write tool (`tests/test_action_firewall.py`); no real tool uses the flag yet, so `config/tool_policies.yaml` was
+   deliberately left unchanged rather than guessing at `hold_payment`/`release_payment`'s eventual argument shape.
+2. **27 finance-fraud red-team scenarios** in `redteam/promptfoo/tests.yaml` (`finance_bec`, `finance_threshold_evasion`,
+   `finance_sod_bypass`, `finance_fake_authority`, `finance_data_overreach`, `finance_encoding`, `finance_multilingual`)
+   plus 2 benign finance controls, testing the same text pipeline the rest of the suite already exercises: a poisoned
+   "CFO approved" invoice note, a fake policy update raising or waiving the approval threshold, vendor-bank-change
+   (BEC) fraud, split-purchase threshold evasion, and segregation-of-duties bypass requests ("approve your own",
+   "no other approver"). `gateway/adapters/stub_ops_agent.py` gained matching canned-compliance triggers so the
+   direct-vs-gateway comparison stays meaningful for the categories that hit a keyword (20 of 27; the rest, like the
+   original encoding/multilingual categories, mainly measure detection/block rate rather than stub compliance, since
+   the stub is a plain keyword matcher and does not decode or translate).
+3. **`docs/finance-controls-mapping.md`**: maps these mechanisms (plus the existing policy/taint/approval/audit-log
+   controls) to the internal-control objectives an AP audit tests for (authorization, segregation of duties, validity,
+   audit trail, safeguarding of assets), and is explicit that this is a mapping, not a compliance claim — no
+   framework (SOX, SOC 2, PCI-DSS) is asserted, and the document says plainly what is still missing: the tools
+   themselves, real finance role names instead of employee/manager/admin, and any actual amount/threshold enforcement.
+
+**What was deliberately not done.** No policy entry for `hold_payment`/`release_payment` (their arguments aren't
+settled), no new roles (adding `ap_clerk`/`controller` unilaterally here risked colliding with the concurrent P2
+session's own naming), and no fraud-detection/anomaly scoring (that is P1's job, against real transaction data, not
+a text/action-firewall's).

@@ -7,6 +7,8 @@
 #   * strict_args: an argument that is not declared in the matching rule is rejected
 #     (blocks smuggled parameters such as `skip_approval=true`).
 #   * approval: required  -> the call is queued for human approval instead of running.
+#   * require_role_separation: true (write tools only) -> the approver's role, not just their identity, must
+#     differ from the requester's (auditor-grade segregation of duties); see docs/decisions.md.
 #   * output_trust: untrusted -> this tool's results are free text that may carry injected
 #     instructions; they are registered as untrusted spans for taint tracking.
 #   * taint: per-argument reaction when the value was copied from an untrusted span without

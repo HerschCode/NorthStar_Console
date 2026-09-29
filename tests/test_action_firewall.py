@@ -5,7 +5,7 @@ import pytest
 
 from gateway.actions.approvals import ApprovalError, ApprovalQueue
 from gateway.actions.firewall import ActionFirewall
-from gateway.actions.policy import Principal
+from gateway.actions.policy import Policy, Principal
 
 EMP = Principal("employee", "alice")
 MGR = Principal("manager", "mona")
@@ -117,6 +117,28 @@ def test_separation_of_duties_requester_cannot_approve_own_request(fw):
     a = _pending(fw, MGR)
     with pytest.raises(ApprovalError, match="separation of duties"):
         fw.approvals.decide(a, True, Principal("manager", "MONA"))         # case-insensitive
+    assert fw.approvals.decide(a, True, MGR2)["status"] == "approved"
+
+
+def _role_separated_fw(tmp_path):
+    policy = Policy({"tools": {"release_payment": {
+        "kind": "write", "require_role_separation": True,
+        "rules": [{"roles": ["manager", "admin"], "approval": "required", "args": {}}],
+    }}})
+    return ActionFirewall(policy=policy, approvals=ApprovalQueue(tmp_path / "rs.db"), audit_path=None)
+
+
+def test_role_separation_rejects_a_same_role_approver_even_if_a_different_person(tmp_path):
+    fw = _role_separated_fw(tmp_path)
+    a = fw.authorize("s1", MGR, "release_payment", {}).approval_id
+    with pytest.raises(ApprovalError, match="segregation of duties"):
+        fw.approvals.decide(a, True, MGR2)                                  # different person, same role: still refused
+    assert fw.approvals.decide(a, True, ADM)["status"] == "approved"        # different role: allowed
+
+
+def test_role_separation_does_not_apply_to_tools_that_do_not_ask_for_it(fw):
+    # propose_intervention has no require_role_separation flag: same-role, different-person still works (existing behaviour).
+    a = _pending(fw, MGR)
     assert fw.approvals.decide(a, True, MGR2)["status"] == "approved"
 
 
