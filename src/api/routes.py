@@ -12,6 +12,7 @@ from src.api.schemas import (
     InvestigateRequest, InvestigateResponse, InvestigationReport,
     HITLChatResponse, InterventionProposal, InterventionStatusResponse,
     InterventionResumeResponse, RejectRequest,
+    AuditRequest, AuditResponse, AuditReportResponse, FlaggedClause,
 )
 from src.api.auth import require_role
 from src.api.dependencies import check_ops_performance_reachable, check_vector_store_reachable
@@ -22,6 +23,7 @@ from src.ingestion.chunker import chunk_text
 from src.ingestion.index_documents import index_document, list_indexed_documents
 from src.agent.agent import run_agent
 from src.agent.investigation import run_investigation
+from src.agent.audit import run_audit
 from src.agent.conversation_store import (
     get_history, append_turn,
     get_turns_to_summarize, get_summary, save_summary, delete_turns,
@@ -618,4 +620,29 @@ def investigate(request: InvestigateRequest):
             limitations=r.limitations,
         ),
         tools_used=result.tools_used,
+    )
+
+
+@router.post("/investigate/audit", response_model=AuditResponse)
+def investigate_audit(request: AuditRequest):
+    if not request.case_id and not request.vendor:
+        raise HTTPException(status_code=422, detail="At least one of case_id or vendor must be provided.")
+    try:
+        result = run_audit(case_id=request.case_id, vendor=request.vendor)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Audit investigation failed: {exc}")
+    r = result.report
+    return AuditResponse(
+        report=AuditReportResponse(
+            exception_summary=r.exception_summary,
+            data_evidence=r.data_evidence,
+            policy_clauses=r.policy_clauses,
+            flagged_clauses=[FlaggedClause(clause=f["clause"], reasons=f["reasons"]) for f in r.flagged_clauses],
+            risk_assessment=r.risk_assessment,
+            recommended_action=r.recommended_action,
+            limitations=r.limitations,
+            gate_applied=r.gate_applied,
+        ),
+        p1_unavailable=result.p1_unavailable,
+        parse_failed=result.parse_failed,
     )

@@ -122,3 +122,38 @@ class InterventionResumeResponse(BaseModel):
 
 class RejectRequest(BaseModel):
     reason: str = ""
+
+
+# ── Audit investigation schemas ───────────────────────────────────────────────
+
+class AuditRequest(BaseModel):
+    case_id: str | None = Field(
+        default=None,
+        description="AP case or document ID to investigate.",
+    )
+    vendor: str | None = Field(
+        default=None,
+        description="Vendor name or ID to investigate.",
+    )
+
+
+class FlaggedClause(BaseModel):
+    clause: str
+    reasons: list[str]
+
+
+class AuditReportResponse(BaseModel):
+    exception_summary: str
+    data_evidence: list[dict]
+    policy_clauses: list[str]
+    flagged_clauses: list[FlaggedClause]
+    risk_assessment: str
+    recommended_action: str
+    limitations: str
+    gate_applied: bool
+
+
+class AuditResponse(BaseModel):
+    report: AuditReportResponse
+    p1_unavailable: bool
+    parse_failed: bool

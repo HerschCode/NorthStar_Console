@@ -251,6 +251,33 @@ score (1–5 rubric, sampled subset).
 
 ---
 
+## Audit investigation mode
+
+`POST /investigate/audit` — deterministic AP controls audit pipeline, separate from the
+general-purpose investigation mode (`POST /investigate`).
+
+**Fixed output shape:** Exception summary → Data evidence (raw P1 records) → Policy clauses
+(cited) → Risk & EUR exposure → Recommended action (proposal, not execution) → Limitations
+("anomaly, not proof of fraud").
+
+**Data evidence and document evidence stay separate.** The claim-support gate runs on
+`policy_clauses` only — not on `data_evidence`. P1 figures (exception records, EUR exposure)
+are not in policy documents and would fail any doc-chunk check. This is the fix for the
+"gate isn't on the live agent path" gap noted in the README's answer gate section.
+
+**Pipeline (`src/agent/audit.py`):**
+1. `get_control_exceptions(vendor=…)` — fetch P1 data directly (no LLM tool selection)
+2. `hybrid_search(query)` — retrieve relevant policy chunks based on control IDs found
+3. LLM compile (Anthropic forced tool-use) — data + chunks → structured JSON
+4. Claim-support gate on `policy_clauses` → supported/flagged split
+5. Return `AuditResponse(report=…, p1_unavailable=…, parse_failed=…)`
+
+When P1 is unreachable, `p1_unavailable=true` and the report compiles with empty
+`data_evidence` and a fallback `exception_summary`. When the LLM compile step fails,
+`parse_failed=true` and a rule-based fallback populates the report fields.
+
+---
+
 ## Chunking strategy
 
 Section-aware chunking (400 tokens, 60-token overlap). Each document splits first on markdown
