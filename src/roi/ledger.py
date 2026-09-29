@@ -144,5 +144,5 @@ def load_sensitivity(path: str | Path = SENSITIVITY_PATH) -> dict | None:
     scenarios = {k: ({kk: vv for kk, vv in v.items() if kk != "grid"} if k.endswith("_uncalibrated") else v)
                  for k, v in data["scenarios"].items()}
     return {"label": data["label"], "cost_per_treatment": data["cost_per_treatment"],
-            "strategies_not_run": data["strategies_not_run"], "scenarios": scenarios,
-            "regenerate_with": "python -m scripts.roi_sensitivity"}
+            "strategies_not_run": data["strategies_not_run"], "strategies_history": data.get("strategies_history", {}),
+            "scenarios": scenarios, "regenerate_with": "python -m scripts.roi_sensitivity"}

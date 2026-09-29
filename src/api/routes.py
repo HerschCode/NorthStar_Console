@@ -27,6 +27,10 @@ from src.api.schemas import (
     InterventionCreate,
     InterventionCreated,
     EarlyRiskResponse,
+    ApControlException,
+    ApControlsSummaryResponse,
+    ApControlsSummaryRow,
+    WorkingCapitalSummaryResponse,
 )
 from src.analytics.cycle_time import cycle_time_percentiles, stage_summary
 from src.analytics.bottlenecks import identify_bottlenecks
@@ -37,6 +41,8 @@ from src.ml.predict import load_model, predict_sla_risk
 from src.ml.features import build_features
 from src.ml.explain_shap import explain_prediction_shap
 from src.reports.generate_management_report import build_management_report, render_markdown
+from src.controls.ap_controls import load_config as load_ap_controls_config
+from src.analytics.working_capital import working_capital_summary
 
 router = APIRouter()
 
@@ -647,4 +653,94 @@ def order_early_risk(case_id: str, k: int = Query(default=3, ge=2, le=5, descrip
         model=f"GRU ensemble ({len(m['seeds'])} seeds), ONNX, first-{k}-events",
         warning=(f"EARLY-WARNING, weak signal: held-out ROC-AUC {m['test_roc_auc']:.2f} at k={k} on a ~"
                  f"{m['base_rate']:.0%} base-rate target. Not a late-stage triage score and not the configured SLA."),
+    )
+
+
+@router.get("/controls/exceptions", response_model=list[ApControlException])
+def controls_exceptions(
+    control: str | None = Query(default=None, description="Filter to one control id, e.g. C4_possible_duplicate_invoice"),
+    vendor: str | None = Query(default=None, description="Filter to one supplier_id"),
+    min_exposure: float | None = Query(default=None, ge=0, description="Only exceptions with exposure_eur >= this"),
+    limit: int = Query(default=200, ge=1, le=2000),
+):
+    """AP control exceptions (src/controls/ap_controls.py, docs/ap-controls.md). SIMULATION-adjacent
+    framing applies here too: these are rule violations / statistical anomalies against BPI 2019,
+    which has no fraud labels -- see docs/ap-controls-evaluation.md for what recall/FPR actually
+    means here (measured only against planted synthetic anomalies, never against real data as if
+    it were labeled)."""
+    query = "select * from analytics.ap_control_exceptions where 1=1"
+    params: dict = {}
+    if control:
+        query += " and control_id = :control"
+        params["control"] = control
+    if min_exposure is not None:
+        query += " and exposure_eur >= :min_exposure"
+        params["min_exposure"] = min_exposure
+    query += " order by exposure_eur desc nulls last limit :limit"
+    params["limit"] = limit
+    from sqlalchemy import text
+
+    df = pd.read_sql(text(query), get_engine(), params=params)
+    if df.empty:
+        return []
+    if vendor:
+        cases = load_cases()
+        case_supplier = cases.set_index("case_id")["supplier_id"] if "supplier_id" in cases.columns else pd.Series(dtype=str)
+        df["supplier_id"] = df["case_id"].map(case_supplier)
+        df = df[df["supplier_id"] == vendor]
+    else:
+        cases = load_cases()
+        if "supplier_id" in cases.columns:
+            df["supplier_id"] = df["case_id"].map(cases.set_index("case_id")["supplier_id"])
+        if "category" in cases.columns:
+            df["category"] = df["case_id"].map(cases.set_index("case_id")["category"])
+    for col in ("supplier_id", "category"):
+        if col not in df.columns:
+            df[col] = None
+    import json as _json
+
+    df["evidence"] = df["evidence"].map(lambda x: x if isinstance(x, dict) else _json.loads(x))
+    return df.to_dict(orient="records")
+
+
+@router.get("/controls/summary", response_model=ApControlsSummaryResponse)
+def controls_summary():
+    """Aggregate view of GET /controls/exceptions -- one row per control with count, total EUR
+    exposure and a severity breakdown. See docs/ap-controls.md; this is anomaly triage, not a
+    fraud-detection result (BPI 2019 has no fraud labels)."""
+    df = pd.read_sql("select control_id, severity, exposure_eur from analytics.ap_control_exceptions", get_engine())
+    if df.empty:
+        return ApControlsSummaryResponse(
+            label="AP control exceptions -- rule violations / statistical anomalies, not confirmed fraud (BPI 2019 has no fraud labels).",
+            total_exceptions=0, controls=[],
+            note="No controls have been run yet -- run `python -m scripts.run_ap_controls`.")
+    rows = []
+    for control_id, g in df.groupby("control_id"):
+        rows.append(ApControlsSummaryRow(
+            control_id=control_id, count=int(len(g)),
+            total_exposure_eur=round(float(g["exposure_eur"].fillna(0).sum()), 2),
+            severity_breakdown=g["severity"].value_counts().to_dict(),
+        ))
+    return ApControlsSummaryResponse(
+        label="AP control exceptions -- rule violations / statistical anomalies, not confirmed fraud (BPI 2019 has no fraud labels).",
+        total_exceptions=int(len(df)), controls=sorted(rows, key=lambda r: r.count, reverse=True),
+        note="Recall/false-positive rate for C1/C3/C4 are measured only against planted synthetic "
+             "anomalies -- see docs/ap-controls-evaluation.md and reports/ap_controls_evaluation.json.",
+    )
+
+
+@router.get("/working-capital/summary", response_model=WorkingCapitalSummaryResponse)
+def working_capital_summary_endpoint():
+    """Working-capital metrics (src/analytics/working_capital.py): days-payable-outstanding proxy,
+    late-payment exposure and an early-payment-discount scenario. Payment terms and the discount
+    rate are stated assumptions (config/ap_controls.yaml) -- BPI 2019 has no payment-terms field."""
+    events = load_events()
+    if events.empty:
+        raise HTTPException(status_code=404, detail="No events loaded yet -- run the pipeline first")
+    cfg = load_ap_controls_config()
+    summary = working_capital_summary(events, cfg)
+    return WorkingCapitalSummaryResponse(
+        **summary,
+        assumptions={"payment_terms_days": cfg["payment_terms_days"], "early_discount_pct": cfg["early_discount_pct"],
+                    "early_discount_window_days": cfg["early_discount_window_days"]},
     )

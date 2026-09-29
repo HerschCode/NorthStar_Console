@@ -30,6 +30,9 @@ from src.analytics.conformance import check_conformance, conformance_report
 from src.ml.predict import load_model, predict_sla_risk
 from src.ml.features import build_features
 from src.ml.explain import explain_shap_batch
+from src.api.db import get_engine
+from src.controls.ap_controls import load_config as load_ap_config
+from src.analytics.working_capital import working_capital_summary
 
 router = APIRouter()
 
@@ -189,6 +192,29 @@ def _sla_risk(cases):
     }
 
 
+def _ap_controls():
+    """Top-line AP controls summary for the dashboard: real exception counts + exposure, per
+    control, straight from analytics.ap_control_exceptions (docs/ap-controls.md). Labelled
+    anomaly triage, not fraud, same as the API's /controls/summary."""
+    df = pd.read_sql("select control_id, severity, exposure_eur from analytics.ap_control_exceptions", get_engine())
+    if df.empty:
+        raise ValueError("No AP control run yet -- run scripts.run_ap_controls")
+    rows = []
+    for control_id, g in df.groupby("control_id"):
+        rows.append({"control_id": control_id, "count": int(len(g)),
+                     "total_exposure_eur": round(float(g["exposure_eur"].fillna(0).sum()), 2),
+                     "high": int((g["severity"] == "high").sum()), "medium": int((g["severity"] == "medium").sum()),
+                     "low": int((g["severity"] == "low").sum())})
+    return {"total_exceptions": int(len(df)), "controls": sorted(rows, key=lambda r: r["count"], reverse=True)}
+
+
+def _working_capital(events):
+    cfg = load_ap_config()
+    wc = working_capital_summary(events, cfg)
+    return {"late_payment": wc["late_payment"], "early_discount_scenario": wc["early_discount_scenario"],
+            "dpo_by_spend_area": wc["dpo_by_spend_area"][:8]}
+
+
 _CACHE_TTL_SECONDS = 120
 _cache: dict = {"data": None, "computed_at": 0.0}
 
@@ -230,6 +256,8 @@ def _compute_dashboard_data() -> dict:
         "conformance": events_section(_conformance),
         "sla_risk": cases_section(_sla_risk),
         "top_risk_cases": cases_section(_top_risk_cases),
+        "ap_controls": _section(_ap_controls),
+        "working_capital": events_section(_working_capital),
     }
 
 

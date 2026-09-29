@@ -13,9 +13,9 @@ Strategies for "which k cases get the intervention":
 - supplier_history: top-k by the causal supplier historical breach rate -- a one-feature rule
   needing no model
 - supplier_volume: top-k by the supplier's training-window case count ("busiest supplier first")
-NOT included: "highest order value". This dataset's event log has no order-value column
-(BPI 2019 sample: case, PO, item, spend area, vendor, activity, timestamp, resource), so that
-comparison cannot be run honestly here; supplier volume is the closest available business rule.
+- order_value: top-k by the case's order value in EUR (net_worth_eur, recovered 2026-09-28's
+  finance module -- see docs/data-contract.md; previously absent from the sampled columns, so this
+  strategy used to be listed in strategies_not_run and is now run)
 
 Grid: treated share {5,10,20,30%} x assumed effect {5,10,20,30%} x breach cost {200,400,800};
 per-treatment cost = config/interventions.yaml default type. Outcomes are the cases' ACTUAL breaches,
@@ -38,7 +38,8 @@ from sklearn.metrics import roc_auc_score
 
 from scripts.target_sensitivity import targets_from_training_percentile
 from src.analytics.sla_analysis import evaluate_sla, load_sla_targets
-from src.api.db import load_cases
+from src.api.db import load_cases, load_events
+from src.controls.case_attributes import case_ap_attributes
 from src.ml.features import build_features
 from src.ml.predict import load_model, predict_sla_risk
 from src.ml.train import fit_calibrated, time_based_split
@@ -48,7 +49,7 @@ warnings.filterwarnings("ignore")
 SHARES = (0.05, 0.10, 0.20, 0.30)
 EFFECTS = (0.05, 0.10, 0.20, 0.30)
 BREACH_COSTS = (200.0, 400.0, 800.0)
-STRATEGIES = ("model", "random", "supplier_history", "supplier_volume")
+STRATEGIES = ("model", "random", "supplier_history", "supplier_volume", "order_value")
 OUT_JSON = Path("reports/roi_sensitivity.json")
 OUT_PNG = Path("docs/roi-sensitivity.png")
 
@@ -67,6 +68,7 @@ def scenario(ev: pd.DataFrame, test_idx, scores: dict, y: np.ndarray, cost_per: 
         breaches = {"model": top_k_breaches(scores["model"], y, k, rng),
                     "supplier_history": top_k_breaches(scores["supplier_history"], y, k, rng),
                     "supplier_volume": top_k_breaches(scores["supplier_volume"], y, k, rng),
+                    "order_value": top_k_breaches(scores["order_value"], y, k, rng),
                     "random": k * base}                       # exact expectation
         mc = [int(y[rng.choice(n, k, replace=False)].sum()) for _ in range(200)]
         for strat in STRATEGIES:
@@ -98,8 +100,11 @@ def scenario(ev: pd.DataFrame, test_idx, scores: dict, y: np.ndarray, cost_per: 
 def make_scores(ev, train_idx, test_idx, model_scores):
     hist = ev.loc[test_idx, "supplier_historical_breach_rate"].values
     vol = ev.loc[train_idx].groupby("supplier_id").size()
+    order_value = ev.loc[test_idx].get("order_value_eur")
     return {"model": model_scores, "supplier_history": hist,
-            "supplier_volume": ev.loc[test_idx, "supplier_id"].map(vol).fillna(0).values.astype(float)}
+            "supplier_volume": ev.loc[test_idx, "supplier_id"].map(vol).fillna(0).values.astype(float),
+            "order_value": order_value.fillna(0).values.astype(float) if order_value is not None
+                          else np.zeros(len(test_idx))}
 
 
 def with_history(ev):
@@ -146,9 +151,13 @@ def main():
     cost_per = policy["types"][policy["default_type"]]["cost"]
     cases = load_cases()
     cases = cases[cases["cycle_time_hours"].astype(float) > 0].sort_values("start_time").reset_index(drop=True)  # measurable only
+    order_value = case_ap_attributes(load_events())[["case_id", "order_value_eur"]]
+    cases = cases.merge(order_value, on="case_id", how="left")
     result = {"label": "SIMULATION: effect sizes are assumptions (config/interventions.yaml), not measured uplift.",
               "cost_per_treatment": cost_per, "treatment": policy["default_type"],
-              "strategies_not_run": {"order_value": "no order-value column in this dataset"},
+              "strategies_not_run": {},
+              "strategies_history": {"order_value": "recovered 2026-09-28 (finance module); "
+                                     "previously not run because net_worth_eur was absent from the sampled columns"},
               "scenarios": {}}
 
     # p75 scenario: trained on p75 labels, evaluated on the held-out window

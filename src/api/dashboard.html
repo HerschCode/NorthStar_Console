@@ -373,7 +373,7 @@
       <p><strong>Cycle Time</strong> — how long it takes from purchase order creation to delivery. The 30-day reference line is an illustrative internal target, not a sourced industry benchmark. Northstar's average is highlighted.</p>
       <p><strong>SLA Breach Rate</strong> — the % of orders that exceeded their agreed delivery deadline. The 15% line is an illustrative target. Note: the configured SLA targets (10–14 days) sit far below this dataset's real cycle times, so ~94% of cases breach; see the project's evaluation docs.</p>
       <p><strong>Bottlenecks</strong> — which process stages cause the most delay, ranked by average hours spent there. The top stage explains most SLA breaches.</p>
-      <p><strong>SLA Risk</strong> — each order is scored LOW / MEDIUM / HIGH by a calibrated Random Forest model trained on historical breach patterns. Its ROC-AUC shown below (~0.98) is on the configured 97%-breach target and is inflated; on realistic targets it is 0.84–0.88, and it is a late-stage score (most of its signal comes from features known late in a case). Risk score ≠ breach rate: the distribution shows predicted likelihood, not confirmed outcome.</p>
+      <p><strong>SLA Risk</strong> — each order is scored LOW / MEDIUM / HIGH by a calibrated model (best of RF/LR/GB by held-out AUC -- see the exact model below) trained on historical breach patterns. Its ROC-AUC shown below (~0.98) is on the configured breach target and is inflated; on realistic targets it is 0.78–0.93, and it is a late-stage score (most of its signal comes from features known late in a case). Risk score ≠ breach rate: the distribution shows predicted likelihood, not confirmed outcome.</p>
       <p><strong>Orders Needing Attention</strong> — the top HIGH-risk orders ranked by predicted breach probability. Each order shows SHAP feature attributions: signed, per-instance contributions from the model (positive = pushed breach probability up, negative = pushed it down), ranked by magnitude.</p>
       <p><strong>Supplier Performance</strong> — which suppliers are slowest and which breach SLA most often. Click any column header to re-sort. A <span class="pill worst" style="position:relative;top:-1px">worst</span> badge marks the highest breach-rate supplier.</p>
       <p><strong>Recommended Actions</strong> — synthesised from the data above: the highest-impact interventions given current breach rate, top bottleneck, and worst-performing supplier.</p>
@@ -437,6 +437,24 @@
     </div>
   </div>
 
+  <!-- ── AP Controls + Working Capital ── -->
+  <div class="grid-2">
+    <div class="card">
+      <h2>AP Controls <span class="badge">anomaly triage, not fraud -- BPI 2019 has no fraud labels</span></h2>
+      <div class="card-sublabel">Rule violations / statistical anomalies from the real event log. See <a href="/docs" style="color:var(--accent)">docs/ap-controls.md</a> for what each control tests and its known false-positive sources.</div>
+      <div id="ap-controls-body">
+        <div class="skeleton tall"></div><div class="skeleton short"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Working Capital</h2>
+      <div class="card-sublabel">Late-payment exposure and an early-payment-discount scenario. Payment terms are a stated assumption (net 30 / 2-10 net 30).</div>
+      <div id="working-capital-body">
+        <div class="skeleton tall"></div><div class="skeleton short"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Recommended Actions ── -->
   <div class="card" id="actions-card" hidden>
     <h2>💡 Recommended Actions <span class="badge">derived from current data</span></h2>
@@ -453,7 +471,7 @@
 
   <!-- ── Model Health ── -->
   <div class="card" id="model-health-card" hidden>
-    <h2>Model Health <span class="badge">sla_risk_predictor · calibrated RF</span></h2>
+    <h2>Model Health <span class="badge">sla_risk_predictor · calibrated (best of RF/LR/GB)</span></h2>
     <div id="model-health-body">
       <div class="skeleton"></div><div class="skeleton short"></div>
     </div>
@@ -795,6 +813,50 @@ function renderConformance(data) {
     </table>` : ''}`;
 }
 
+// ── AP Controls ────────────────────────────────────────────────────────────────
+function renderApControls(data) {
+  const el = document.getElementById('ap-controls-body');
+  if (!data.available || !data.controls || !data.controls.length) {
+    el.innerHTML = empty('No AP control run yet -- run scripts.run_ap_controls.');
+    return;
+  }
+  const rows = data.controls.map(c => `
+    <tr>
+      <td>${c.control_id}</td>
+      <td class="num">${c.count.toLocaleString()}</td>
+      <td class="num">€${c.total_exposure_eur.toLocaleString(undefined, {maximumFractionDigits:0})}</td>
+      <td class="num">${c.high ? `<span class="breach-bad">${c.high} high</span>` : ''}${c.medium ? ` ${c.medium} med` : ''}${c.low ? ` ${c.low} low` : ''}</td>
+    </tr>`).join('');
+  el.innerHTML = `
+    <div class="card-sublabel" style="margin-bottom:6px">${data.total_exceptions.toLocaleString()} total exceptions across ${data.controls.length} controls</div>
+    <table>
+      <thead><tr><th>Control</th><th class="num">Count</th><th class="num">Exposure</th><th class="num">Severity</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ── Working Capital ──────────────────────────────────────────────────────────
+function renderWorkingCapital(data) {
+  const el = document.getElementById('working-capital-body');
+  if (!data.available) {
+    el.innerHTML = empty('No working-capital data available yet.');
+    return;
+  }
+  const lp = data.late_payment, ds = data.early_discount_scenario;
+  el.innerHTML = `
+    <div class="kpi-grid" style="margin-bottom:10px">
+      <div class="kpi"><div class="kpi-label">Late (&gt;${lp.payment_terms_days}d)</div><div class="kpi-value ${lp.late_rate_pct > 30 ? 'warn' : ''}">${lp.late_rate_pct ?? '—'}%</div><div class="kpi-sub">€${(lp.exposure_eur||0).toLocaleString(undefined,{maximumFractionDigits:0})} exposure</div></div>
+      <div class="kpi"><div class="kpi-label">Discount captured</div><div class="kpi-value">€${(ds.captured_discount_eur||0).toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="kpi-sub">of €${(ds.potential_discount_eur||0).toLocaleString(undefined,{maximumFractionDigits:0})} potential</div></div>
+      <div class="kpi"><div class="kpi-label">Missed discount</div><div class="kpi-value warn">€${(ds.missed_discount_eur||0).toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="kpi-sub">${ds.discount_pct*100}% / ${ds.discount_window_days}d assumption</div></div>
+    </div>
+    ${(data.dpo_by_spend_area||[]).length ? `
+    <div class="card-sublabel" style="margin-bottom:4px">Invoice-to-clear days by spend area</div>
+    <table>
+      <thead><tr><th>Spend area</th><th class="num">Cases</th><th class="num">Mean days</th></tr></thead>
+      <tbody>${data.dpo_by_spend_area.map(r => `<tr><td>${r.sub_spend_area ?? '—'}</td><td class="num">${r.case_count}</td><td class="num">${r.mean_days.toFixed(1)}</td></tr>`).join('')}</tbody>
+    </table>` : ''}`;
+}
+
 // ── Orders Needing Attention ──────────────────────────────────────────────────
 function renderAttention(data) {
   const card = document.getElementById('attention-card');
@@ -1062,6 +1124,8 @@ async function loadDashboard() {
     renderAttention(data.top_risk_cases);
     renderSuppliers(data.suppliers);
     renderConformance(data.conformance);
+    renderApControls(data.ap_controls);
+    renderWorkingCapital(data.working_capital);
     renderCallout(data.executive_overview, data.conformance);
     renderActions(data);
     await renderRuns();

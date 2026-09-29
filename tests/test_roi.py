@@ -127,9 +127,9 @@ def test_committed_sensitivity_grid_is_complete_and_labelled():
     out = load_sensitivity()
     assert out is not None and "SIMULATION" in out["label"]
     g = out["scenarios"]["p75"]["grid"]
-    assert {r["strategy"] for r in g} == {"model", "random", "supplier_history", "supplier_volume"}
-    assert len(g) == 4 * 4 * 4 * 3           # strategies x shares x effects x breach costs
-    assert "order_value" in out["strategies_not_run"]
+    assert {r["strategy"] for r in g} == {"model", "random", "supplier_history", "supplier_volume", "order_value"}
+    assert len(g) == 5 * 4 * 4 * 3           # strategies x shares x effects x breach costs
+    assert "order_value" in out.get("strategies_history", {})
     # on the non-degenerate target the model must beat random at every treated share (CI lower bound > 0)
     assert all(r["lift_ci95"][0] > 0 for r in out["scenarios"]["p75"]["model_vs_random"])
 

@@ -150,6 +150,39 @@ class EarlyRiskResponse(BaseModel):
     warning: str
 
 
+class ApControlException(BaseModel):
+    exception_id: int
+    case_id: str | None
+    control_id: str
+    severity: str
+    exposure_eur: float | None
+    evidence: dict
+    supplier_id: str | None = None
+    category: str | None = None
+
+
+class ApControlsSummaryRow(BaseModel):
+    control_id: str
+    count: int
+    total_exposure_eur: float
+    severity_breakdown: dict
+
+
+class ApControlsSummaryResponse(BaseModel):
+    label: str
+    total_exceptions: int
+    controls: list[ApControlsSummaryRow]
+    note: str
+
+
+class WorkingCapitalSummaryResponse(BaseModel):
+    dpo_by_supplier: list[dict]
+    dpo_by_spend_area: list[dict]
+    late_payment: dict
+    early_discount_scenario: dict
+    assumptions: dict
+
+
 class InterventionCreate(BaseModel):
     case_id: str
     intervention_type: str | None = None   # defaults to config/interventions.yaml default_type
