@@ -22,13 +22,21 @@ result reported honestly rather than asserted.
 | **Safeguarding of assets** | A single compromised session cannot cause unbounded damage | Per-session write budget (`max_per_session`); the approval queue itself is capped (200 pending) so it cannot be exhausted as a denial-of-service on legitimate approvals | `gateway/actions/firewall.py`, `gateway/actions/approvals.py` |
 | **Control testing** | The controls above actually hold against realistic attack framing, not just clean inputs | `finance_*` categories in `redteam/promptfoo/tests.yaml` (27 scenarios: vendor-bank-change/BEC fraud, threshold evasion, segregation-of-duties bypass requests, fake-authority notes, data over-reach, encoded and multilingual variants) | `redteam/promptfoo/tests.yaml`, `gateway/adapters/stub_ops_agent.py` |
 
+## What this now covers, since operations-assistant shipped the tools
+
+`propose_payment_hold` / `propose_payment_release` exist now (operations-assistant, Phase F2) — both are
+thin wrappers that call the existing `propose_intervention` tool with `action="hold_payment"` /
+`"release_payment"`, not new top-level MCP tools, so the policy wiring lives in `propose_intervention`'s
+own rule list as two new rules, `finance-hold` and `finance-release` (`config/tool_policies.yaml`).
+`finance-release` sets `require_role_separation: true`; `finance-hold` does not, since placing a hold is
+the conservative direction. Both constrain `priority` to the single value each real caller actually sends
+(`high` for hold, `normal` for release) — anything else is rejected rather than silently accepted. Argument
+shapes were checked directly against operations-assistant's own `tests/test_ap_controls.py`, which the
+commit that added them says exists "for P3 policy coordination." Tested end-to-end (not just against a
+stand-in) in `tests/test_action_firewall.py` and `tests/test_action_policy.py`.
+
 ## What this does not cover
 
-- **The tools themselves don't exist yet.** `hold_payment` and `release_payment` are planned
-  operations-assistant tools (see `docs/decisions.md`); nothing here is wired to a real payment system.
-  `require_role_separation` is tested against a stand-in tool (`tests/test_action_firewall.py`) so the
-  mechanism is ready the day those tools land, but there is no policy entry for them yet — their argument
-  shape isn't settled.
 - **"Role" here is still employee/manager/admin**, not a real finance org chart (AP clerk, controller,
   treasury). Auditor-grade segregation of duties in a real deployment means these roles map onto actual,
   distinct job functions with their own hiring/training controls — software can enforce that two *labels*

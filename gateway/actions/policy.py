@@ -19,8 +19,8 @@ import yaml
 
 DEFAULT_POLICY_PATH = Path(__file__).resolve().parents[2] / "config" / "tool_policies.yaml"
 
-_TOOL_KEYS = {"kind", "output_trust", "rules", "taint", "max_per_session", "description", "require_role_separation"}
-_RULE_KEYS = {"name", "roles", "args", "approval"}
+_TOOL_KEYS = {"kind", "output_trust", "rules", "taint", "max_per_session", "description"}
+_RULE_KEYS = {"name", "roles", "args", "approval", "require_role_separation"}
 _ARG_KEYS = {"in", "pattern", "not_pattern", "max_length", "min", "max", "type", "required", "equals"}
 _TYPES = {"string": str, "integer": int, "number": (int, float), "boolean": bool}
 
@@ -41,6 +41,7 @@ class PolicyResult:
     approval: str = "none"           # "none" | "required" (only meaningful when allowed)
     rule: str | None = None
     reasons: list[str] = field(default_factory=list)
+    require_role_separation: bool = False
 
 
 class Policy:
@@ -71,17 +72,17 @@ class Policy:
                     raise PolicyError(f"tool {name!r}: taint[{field_name!r}] must be 'deny' or 'flag'")
             if spec["kind"] == "write" and not all(r.get("approval") == "required" for r in spec.get("rules", [])):
                 raise PolicyError(f"tool {name!r}: every rule of a write tool must set approval: required")
-            if "require_role_separation" in spec:
-                if not isinstance(spec["require_role_separation"], bool):
-                    raise PolicyError(f"tool {name!r}: require_role_separation must be a boolean")
-                if spec["require_role_separation"] and spec["kind"] != "write":
-                    raise PolicyError(f"tool {name!r}: require_role_separation only applies to write tools (nothing is approved otherwise)")
             for i, rule in enumerate(spec.get("rules", [])):
                 unknown = set(rule) - _RULE_KEYS
                 if unknown:
                     raise PolicyError(f"tool {name!r} rule {i}: unknown keys {sorted(unknown)}")
                 if not rule.get("roles"):
                     raise PolicyError(f"tool {name!r} rule {i}: roles must be a non-empty list")
+                if "require_role_separation" in rule:
+                    if not isinstance(rule["require_role_separation"], bool):
+                        raise PolicyError(f"tool {name!r} rule {i}: require_role_separation must be a boolean")
+                    if rule["require_role_separation"] and rule.get("approval") != "required":
+                        raise PolicyError(f"tool {name!r} rule {i}: require_role_separation only applies to a rule with approval: required")
                 for arg, constraint in (rule.get("args") or {}).items():
                     unknown = set(constraint) - _ARG_KEYS
                     if unknown:
@@ -121,7 +122,8 @@ class Policy:
         for i, rule in role_rules:
             failures = self._check_args(rule, args, principal)
             if not failures:
-                return PolicyResult(True, approval=rule.get("approval", "none"), rule=rule.get("name", f"rule-{i}"))
+                return PolicyResult(True, approval=rule.get("approval", "none"), rule=rule.get("name", f"rule-{i}"),
+                                     require_role_separation=bool(rule.get("require_role_separation")))
             failures_by_rule.append((rule.get("name", f"rule-{i}"), failures))
         # report the failures of the first role-matching rule: the closest thing to what the caller meant
         name, failures = failures_by_rule[0]

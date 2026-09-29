@@ -1117,3 +1117,36 @@ in the demo, at the time of this entry) — this is deliberately the subset of t
 settled), no new roles (adding `ap_clerk`/`controller` unilaterally here risked colliding with the concurrent P2
 session's own naming), and no fraud-detection/anomaly scoring (that is P1's job, against real transaction data, not
 a text/action-firewall's).
+
+## 2026-09-29: Accounts-payable controls, real wiring (operations-assistant shipped the tools)
+
+**Context.** Within hours of the entry above, both operations-performance (F1-F5: recovered BPI 2019 fields,
+six AP controls, working capital, model-risk doc) and operations-assistant (F2: `propose_payment_hold`,
+`propose_payment_release`, two policy documents; F3: an audit-investigation endpoint) landed, committed and pushed —
+a concurrent session finished the P1 and P2 sides of the same finance plan while this session was doing P3's
+groundwork. That resolves the "tools don't exist yet" caveat from the entry above.
+
+**A design correction.** `propose_payment_hold`/`propose_payment_release` are not new MCP tools — reading
+operations-assistant's `src/tools/ap_controls.py` shows both are thin wrappers that call the *existing*
+`propose_intervention` tool with `action="hold_payment"` / `"release_payment"`. That meant the tool-level
+`require_role_separation` flag from the groundwork entry was the wrong granularity: `propose_intervention` also
+handles `escalate_case`, `flag_supplier`, etc., and a tool-level flag would have applied the strict role check to
+those too. Moved the flag from `_TOOL_KEYS` to `_RULE_KEYS` (`gateway/actions/policy.py`): `PolicyResult` now
+carries `require_role_separation` from whichever rule actually matched, and `ActionFirewall._decide` reads it from
+the result instead of the tool spec. Two new rules on `propose_intervention`, `finance-hold` and `finance-release`
+(`config/tool_policies.yaml`), each constrained to their one action and to the exact `priority` value the real
+caller sends (`high` / `normal` — anything else is rejected); only `finance-release` sets
+`require_role_separation: true`, matching the user's original ask ("releasing a payment needs an approver with a
+different role from the requester, not just a different person"); `finance-hold` does not, since a hold is the
+conservative direction.
+
+**Verification.** Argument shapes (target=case_id, the two priority values, the action strings) were checked
+directly against operations-assistant's own `tests/test_ap_controls.py`, whose commit message says it exists "for
+P3 policy coordination." New end-to-end tests exercise the real (not stand-in) policy:
+`tests/test_action_firewall.py` (full authorize→enqueue→decide cycle, including that a poisoned document still
+taints a `release_payment` target) and `tests/test_action_policy.py` (rule matching, wrong-priority rejection,
+employee denial). Full suite: 804 passed.
+
+**Still not done**, unchanged from the groundwork entry: role granularity (employee/manager/admin, not AP
+clerk/controller), and no dollar-amount/threshold enforcement (`propose_payment_hold`/`release` carry no amount
+argument to check).

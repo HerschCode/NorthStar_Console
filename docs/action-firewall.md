@@ -165,13 +165,16 @@ Implemented: default-deny capability policy with argument constraints; string-ov
 separation of duties (same-person, and optionally same-role) and role separation; audit log; HTTP decision point; stdio MCP proxy;
 dashboard panel.
 
-**Accounts-payable controls (groundwork, not a complete feature).** `require_role_separation` and the finance-fraud scenarios in
-`redteam/promptfoo/tests.yaml` were built ahead of operations-assistant's `hold_payment` / `release_payment` tools, which do not exist
-yet — see `docs/decisions.md`. What exists today: the mechanism (tested against a stand-in tool in `tests/test_action_firewall.py`) and
-red-team coverage of the finance-fraud framing on the text pipeline. What does not exist yet: an actual policy entry for
-`hold_payment`/`release_payment` (their argument shape depends on how operations-assistant implements them), and any check that ties the
-firewall's notion of "role" to a real finance function (AP clerk vs. controller) rather than the existing employee/manager/admin ladder.
-Mechanism-to-objective mapping (and what it deliberately does not claim): [`docs/finance-controls-mapping.md`](finance-controls-mapping.md).
+**Accounts-payable controls.** `propose_intervention` gained two dedicated rules, `finance-hold` and `finance-release`
+(`config/tool_policies.yaml`), for operations-assistant's `propose_payment_hold` / `propose_payment_release` tools — both are thin
+wrappers around `propose_intervention` itself (`action="hold_payment"` / `"release_payment"`), not separate MCP tools. `finance-release`
+sets `require_role_separation: true`; `finance-hold` does not (a hold is the conservative direction). Argument shapes were checked
+against operations-assistant's own `tests/test_ap_controls.py`; tested end-to-end here in `tests/test_action_firewall.py` and
+`tests/test_action_policy.py`, plus the finance-fraud scenarios in `redteam/promptfoo/tests.yaml`. What is still missing: any check
+that ties the firewall's notion of "role" to a real finance function (AP clerk vs. controller) rather than the existing
+employee/manager/admin ladder, and any real dollar-amount/threshold enforcement (the split-purchase red-team scenarios test the text
+pipeline, not an amount check, since `propose_payment_hold`/`release` carry no amount argument). Mechanism-to-objective mapping (and
+what it deliberately does not claim): [`docs/finance-controls-mapping.md`](finance-controls-mapping.md).
 
 **Not CaMeL, and not claiming to be.** CaMeL (Debenedetti et al., 2025) uses a privileged model that only sees trusted input to plan the
 actions, a quarantined model that reads untrusted data but cannot call tools, and an interpreter that tracks data flow exactly. Nothing

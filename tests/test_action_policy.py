@@ -45,6 +45,36 @@ def test_urgent_priority_is_admin_only(policy):
     assert r.allowed and r.rule == "admin-urgent"
 
 
+# ---- accounts-payable actions (operations-assistant's propose_payment_hold/propose_payment_release,
+# both call this same tool -- see docs/decisions.md) --------------------------------------------------
+
+HOLD = {"action": "hold_payment", "target": "CASE-4471", "reason": "C4 duplicate invoice: same vendor, same amount", "priority": "high"}
+RELEASE = {"action": "release_payment", "target": "CASE-4471", "reason": "Duplicate resolved, see INV-2024-089", "priority": "normal"}
+
+
+def test_hold_payment_matches_the_finance_hold_rule_and_does_not_require_role_separation(policy):
+    r = policy.evaluate(MGR, "propose_intervention", HOLD)
+    assert r.allowed and r.rule == "finance-hold" and not r.require_role_separation
+
+
+def test_release_payment_matches_the_finance_release_rule_and_requires_role_separation(policy):
+    r = policy.evaluate(MGR, "propose_intervention", RELEASE)
+    assert r.allowed and r.rule == "finance-release" and r.require_role_separation
+
+
+def test_release_payment_rejects_the_wrong_priority(policy):
+    assert not policy.evaluate(MGR, "propose_intervention", {**RELEASE, "priority": "high"}).allowed
+
+
+def test_hold_payment_rejects_the_wrong_priority(policy):
+    assert not policy.evaluate(MGR, "propose_intervention", {**HOLD, "priority": "normal"}).allowed
+
+
+def test_employee_may_not_hold_or_release_payments(policy):
+    assert not policy.evaluate(EMP, "propose_intervention", HOLD).allowed
+    assert not policy.evaluate(EMP, "propose_intervention", RELEASE).allowed
+
+
 @pytest.mark.parametrize("override", [
     {"action": "delete_case"},                          # not an allowed action
     {"target": "https://evil.example/x"},               # pattern: no URLs in target
@@ -106,8 +136,8 @@ def test_visibility_follows_role_rules(policy):
     ({"tools": {"t": {"kind": "read", "rules": [{"roles": ["admin"], "args": {"a": {"regexp": "x"}}}]}}}, "unknown keys"),
     ({"tools": {"t": {"kind": "read", "taint": {"a": "ignore"}}}}, "taint"),
     ({"tools": {"t": {"kind": "read", "rules": [{"roles": []}]}}}, "roles"),
-    ({"tools": {"t": {"kind": "write", "rules": [{"roles": ["admin"], "approval": "required"}], "require_role_separation": "yes"}}}, "boolean"),
-    ({"tools": {"t": {"kind": "read", "require_role_separation": True}}}, "only applies to write tools"),
+    ({"tools": {"t": {"kind": "write", "rules": [{"roles": ["admin"], "approval": "required", "require_role_separation": "yes"}]}}}, "boolean"),
+    ({"tools": {"t": {"kind": "read", "rules": [{"roles": ["admin"], "require_role_separation": True}]}}}, "only applies to a rule with approval: required"),
 ])
 def test_malformed_policy_fails_loudly_at_load_time(data, match):
     with pytest.raises(PolicyError, match=match):

@@ -122,8 +122,8 @@ def test_separation_of_duties_requester_cannot_approve_own_request(fw):
 
 def _role_separated_fw(tmp_path):
     policy = Policy({"tools": {"release_payment": {
-        "kind": "write", "require_role_separation": True,
-        "rules": [{"roles": ["manager", "admin"], "approval": "required", "args": {}}],
+        "kind": "write",
+        "rules": [{"roles": ["manager", "admin"], "approval": "required", "require_role_separation": True, "args": {}}],
     }}})
     return ActionFirewall(policy=policy, approvals=ApprovalQueue(tmp_path / "rs.db"), audit_path=None)
 
@@ -140,6 +140,28 @@ def test_role_separation_does_not_apply_to_tools_that_do_not_ask_for_it(fw):
     # propose_intervention has no require_role_separation flag: same-role, different-person still works (existing behaviour).
     a = _pending(fw, MGR)
     assert fw.approvals.decide(a, True, MGR2)["status"] == "approved"
+
+
+# ---- accounts-payable actions against the real policy (finance-hold / finance-release) ------------------
+
+def test_release_payment_end_to_end_needs_a_different_role_to_approve(fw):
+    d = fw.authorize("s1", MGR, "propose_intervention", pi(action="release_payment", priority="normal"))
+    assert d.effect == "require_approval" and d.rule == "finance-release"
+    with pytest.raises(ApprovalError, match="segregation of duties"):
+        fw.approvals.decide(d.approval_id, True, MGR2)             # different person, same role: still refused
+    assert fw.approvals.decide(d.approval_id, True, ADM)["status"] == "approved"
+
+
+def test_hold_payment_end_to_end_only_needs_a_different_person(fw):
+    d = fw.authorize("s1", MGR, "propose_intervention", pi(action="hold_payment", priority="high"))
+    assert d.effect == "require_approval" and d.rule == "finance-hold"
+    assert fw.approvals.decide(d.approval_id, True, MGR2)["status"] == "approved"   # same role, different person: fine
+
+
+def test_a_poisoned_document_target_still_taints_a_payment_release(fw):
+    fw.observe_result("s1", "search_policy_documents", POISONED)     # untrusted per policy
+    d = fw.authorize("s1", MGR, "propose_intervention", pi(target="ZX-9000", action="release_payment", priority="normal"))
+    assert d.effect == "deny" and d.stage == "taint"
 
 
 def test_decision_is_final(fw):
