@@ -268,13 +268,38 @@ are not in policy documents and would fail any doc-chunk check. This is the fix 
 **Pipeline (`src/agent/audit.py`):**
 1. `get_control_exceptions(vendor=…)` — fetch P1 data directly (no LLM tool selection)
 2. `hybrid_search(query)` — retrieve relevant policy chunks based on control IDs found
-3. LLM compile (Anthropic forced tool-use) — data + chunks → structured JSON
-4. Claim-support gate on `policy_clauses` → supported/flagged split
+3. LLM compile — forced tool-use (Anthropic) or JSON-mode chat (Groq/Ollama) — data + chunks → structured JSON
+4. Claim-support gate on `policy_clauses` (citation suffix stripped first) → supported/flagged split
 5. Return `AuditResponse(report=…, p1_unavailable=…, parse_failed=…)`
 
 When P1 is unreachable, `p1_unavailable=true` and the report compiles with empty
 `data_evidence` and a fallback `exception_summary`. When the LLM compile step fails,
 `parse_failed=true` and a rule-based fallback populates the report fields.
+
+### Evaluation (30 questions: 10 planted exception, 10 clean, 10 policy-only)
+
+Reproduce: `python -m scripts.evaluate_audit --provider groq` → `docs/audit-eval.md`,
+`data/evaluation/audit_eval_results.json`. Model: `openai/gpt-oss-120b` (Groq).
+
+| Dimension | Score |
+|---|---|
+| Control identified (planted) | **100%** |
+| Clause cited (planted + policy) | **65%** |
+| Recommendation type ok (planted) | **70%** |
+| No fraud claim (all) | **100%** |
+| Abstains on clean cases | **80%** |
+
+**Two real bugs found and fixed before reporting** (the first run scored 100% / 0% / — / — / — with
+every `limitations` field literally reading "Report compilation failed (LLM unavailable)"): the compile
+step only ever called Anthropic's API, so every real (Groq) call raised and silently fell back to canned
+text; and the claim-support gate checked the citation suffix `(Source: …)` as its own sentence, which can
+never match the retrieved chunk text, so it failed every correctly-cited clause. A third, measurement-only
+bug in the eval's own scorer counted any mention of "hold/block/escalate" as a recommended action — even
+inside "confirm that no payment blocks were triggered" — which read as a 10% abstain rate until fixed
+(actual: 80%). Full writeup: [`docs/audit-eval.md`](docs/audit-eval.md).
+
+A live smoke test against a real local P1 was attempted (2026-09-29) and blocked by the Neon free-tier
+database quota being exhausted at the time — an account limit, not a code issue; see the doc.
 
 ---
 
