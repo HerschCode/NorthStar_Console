@@ -246,9 +246,10 @@ def demo_run(req: DemoRunRequest, request: Request):
 
 _LITE_BANNER = """
   <div class="banner">
-    &#x26A1; <b>Lite mode</b> &mdash; Layers 1 &amp; 2 active (rule-based + embedding similarity).
-    Layer 3 (MLP classifier) requires 512&nbsp;MB+ RAM and runs locally via
-    <code>docker compose up</code>. All pre/post-flight checks run on this deploy.
+    &#x26A1; <b>Lite mode</b> &mdash; only the rule-based layer is active on this deploy
+    (<code>GATEWAY_LITE=1</code> switches the small classifier off, and the embedding layer is off by default).
+    The default configuration runs the rules plus the classifier. PII handling, normalisation and the
+    post-flight checks still run.
   </div>
 """
 

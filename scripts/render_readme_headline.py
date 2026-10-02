@@ -93,7 +93,7 @@ def firewall_block() -> str:
     denied = lambda h: sum(int(v.split("/")[0]) for v in h.values())  # noqa: E731
     total = sum(int(v.split("/")[1]) for v in ho.values())
     t = ["| Test | Result |", "|---|---|",
-         f"| {fw['scenarios']}-scenario agentic corpus ({fw['harmful_scenarios']} harmful, {fw['benign_scenarios']} benign) | **{stopped} of {n_in}** in-scope harmful scenarios stopped outright ({inscope.get('stopped_policy', 0)} by policy, {inscope.get('stopped_taint', 0)} by taint), {inscope.get('held_for_approval', 0)} held for approval; "
+         f"| {fw['scenarios']}-scenario agentic corpus ({fw['harmful_scenarios']} harmful, {fw['benign_scenarios']} benign; {fw['finance']['scenarios']} of them are the finance scenarios below) | **{stopped} of {n_in}** in-scope harmful scenarios stopped outright ({inscope.get('stopped_policy', 0)} by policy, {inscope.get('stopped_taint', 0)} by taint), {inscope.get('stopped_approval_gate', 0)} stopped at the approval gate, {inscope.get('held_for_approval', 0)} held for approval; "
          f"{fw['known_evasion_scenarios'].get('held_for_approval', 0)} known evasions held for approval; **{len(fw['benign_false_blocks'])} benign false blocks** |",
          f"| {len(effects)} mutated calls (deterministic attacker) | {sum(e == 'deny' for e in effects)} denied, {sum(e == 'require_approval' for e in effects)} held for approval, **{sum(e in ('allow', 'executed') for e in effects)} executed**; policy-enforced goals: {policy_bypass} of {policy_cases} bypassed |",
          f"| Fresh hold-out ({total} new cases, written after the fix was frozen) | {denied(ho)} denied (was {denied(hob)} before the taint fix) |",
@@ -122,6 +122,27 @@ def redteam_status_counts() -> dict:
             severity = line.rstrip().rstrip("|").rsplit("|", 2)[-2].strip().lower()
             counts["open_high"] += "high" in severity
     return counts
+
+
+def finance_block() -> str:
+    fw = load("reports/p3_action_firewall.json")["summary"]
+    f = fw["finance"]
+    inscope, evasive = f["harmful_excluding_known_evasions"], f["known_evasion_scenarios"]
+    n_in = sum(inscope.values())
+    outright = inscope.get("stopped_policy", 0) + inscope.get("stopped_taint", 0)
+    att = f["approval_attempts"]
+    t = ["| Test | Result |", "|---|---|",
+         f"| {f['scenarios']} accounts-payable scenarios ({f['harmful_scenarios']} harmful, {f['benign_scenarios']} benign): poisoned \"CFO approved\" notes, a fake AP policy upload, hold-then-release confusion, releases split under the session cap, "
+         f"bank details in `reason`, self- and same-role approval | **{outright} of {n_in}** in-scope harmful scenarios stopped outright ({inscope.get('stopped_policy', 0)} by policy, {inscope.get('stopped_taint', 0)} by taint), "
+         f"{inscope.get('stopped_approval_gate', 0)} stopped at the approval gate, {inscope.get('held_for_approval', 0)} held for approval; {sum(evasive.values())} known misses held, not stopped; "
+         f"**{len(f['benign_false_blocks'])} benign false blocks** |",
+         f"| Approval attempts on held payment requests (requester, same-role peer, employee) | {att['match']} of {att['attempts']} behaved as specified: a release needs an approver with a different role, a hold only a different person |"]
+    return "\n".join([
+        "### Accounts-payable controls (the finance module)", "", *t, "",
+        "The known misses are a release of the invoice the same agent was asked to hold (the firewall keeps no cross-call state), five releases that fit under the session write cap, and a bare account number in `reason` (nothing tells it from a PO number); "
+        "each is pinned as a strict `xfail`. Scenarios are same-author, the agent is assumed hijacked, and there is no amount or threshold check because the payment tools carry no amount. "
+        "A mapping of each control to an internal-control objective, which makes no compliance claim: [`docs/finance-controls-mapping.md`](docs/finance-controls-mapping.md).",
+    ])
 
 
 def redteam_block() -> str:
@@ -159,7 +180,7 @@ def pii_block() -> str:
 
 
 def render() -> str:
-    return "\n\n".join([START, detection_block(), firewall_block(), redteam_block(), pii_block(), END])
+    return "\n\n".join([START, detection_block(), firewall_block(), finance_block(), redteam_block(), pii_block(), END])
 
 
 def current_block(text: str) -> str | None:

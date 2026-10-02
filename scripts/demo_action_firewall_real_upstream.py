@@ -158,6 +158,29 @@ def main():
                       f"status={result['status']} roi_context={result.get('roi_context')}")
             print(f"   calls that reached the real server: {upstream.forwarded}\n")
 
+            print("5. payment release (accounts payable): the user types 'Release payment INV-4471, the duplicate was voided and the AP Manager signed off.'")
+            fw.register_source("real", "user_message", "Release payment INV-4471, the duplicate was voided and the AP Manager signed off.", "trusted")
+            dup = conn.send(call("propose_payment_release", {"case_id": "INV-4471", "reason": "duplicate voided"}))
+            print(f"   the duplicate tool propose_payment_release (not in the policy) -> {text(dup)[:110]}")
+            held = conn.send(call("propose_intervention", {"action": "release_payment", "target": "INV-4471",
+                                                           "reason": "duplicate voided and AP Manager signed off", "priority": "normal"}))
+            approval_id = held["result"]["_meta"]["actionFirewall"]["approval_id"]
+            print(f"   propose_intervention(release_payment, INV-4471) -> {text(held)[:120]}")
+            for who, label in ((Principal("manager", "mona"), "mona, the requester"), (Principal("manager", "max"), "max, another manager (same role)")):
+                try:
+                    fw.approvals.decide(approval_id, True, who)
+                except Exception as e:  # noqa: BLE001
+                    print(f"   {label} approves -> refused: {e}")
+            fw.approvals.decide(approval_id, True, Principal("admin", "ada"))
+            print("   ada, an admin (a different role), approves; the proxy executes it on the real server:")
+            for execution in proxy.poll_executions():
+                resp = upstream.request(execution)
+                proxy.from_upstream(resp)
+                result = json.loads(text(resp))
+                print(f"   operations-assistant -> intervention_id={result['intervention_id']} action={result.get('action')} "
+                      f"status={result['status']} roi_context={result.get('roi_context')}")
+            print(f"   calls that reached the real server: {upstream.forwarded}\n")
+
             print("audit log:")
             for line in (td / "actions.jsonl").read_text().splitlines():
                 r = json.loads(line)
