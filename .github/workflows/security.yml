@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   bandit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
@@ -31,7 +31,7 @@ jobs:
         run: bandit -r scripts project2_agent redteam --exclude redteam/.venv-garak,redteam/runs --severity-level medium -q
 
   semgrep:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # A gate since 2026-09-26. Semgrep cannot run on the maintainer's Windows machine, so its first run was in CI: 13 warnings, triaged in
     # docs/security-scans.md (1 fixed: the Dependabot cooldown; 10 accepted with the reason in a `nosemgrep` comment next to the code).
     # A new finding fails the job; the SARIF report is kept as an artifact and the findings are shown as an annotation either way.
@@ -61,7 +61,7 @@ jobs:
           path: semgrep.sarif
 
   gitleaks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with:
@@ -72,7 +72,7 @@ jobs:
           GITLEAKS_CONFIG: .gitleaks.toml
 
   trivy-fs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
       - name: Trivy filesystem scan (dependencies, secrets, Dockerfile and CI misconfigurations)
@@ -87,7 +87,7 @@ jobs:
           skip-dirs: redteam/.venv-garak,.venv,.venv-pii,.venv-sec,data
 
   trivy-image:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # A gate since 2026-09-26. The image could not be built locally (no Docker daemon on the maintainer's machine); CI built it and the scan found no
     # fixed HIGH or CRITICAL vulnerability, so a new one now fails the job. The report is kept as an artifact.
     steps:
@@ -99,12 +99,18 @@ jobs:
         with:
           image-ref: llm-security-gateway:scan
           severity: HIGH,CRITICAL
+          limit-severities-for-sarif: true
           ignore-unfixed: true
           exit-code: "1"
-          format: table
-          output: trivy-image.txt
+          format: sarif
+          output: trivy-image.sarif
+      # The report artifact needs a login and job logs need admin rights, so a new finding could only be read by the owner. Printed as an annotation, it
+      # shows on the run page and through the public check-runs API (the same trick as for Semgrep).
+      - name: Show the findings on the run page
+        if: always()
+        run: python3 scripts/sarif_to_annotations.py trivy-image.sarif --title "Trivy image"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         if: always()
         with:
           name: trivy-image-report
-          path: trivy-image.txt
+          path: trivy-image.sarif
