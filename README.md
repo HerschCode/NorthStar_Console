@@ -39,7 +39,7 @@ The evaluation sets are small; the caveat under each table matters as much as th
 
 | Test | Result |
 |---|---|
-| 54-scenario agentic corpus (45 harmful, 9 benign) | **40 of 41** in-scope harmful scenarios stopped outright (28 by policy, 12 by taint), 1 held for approval; 4 known evasions held for approval; **0 benign false blocks** |
+| 86-scenario agentic corpus (72 harmful, 14 benign; 32 of them are the finance scenarios below) | **58 of 65** in-scope harmful scenarios stopped outright (39 by policy, 19 by taint), 5 stopped at the approval gate, 2 held for approval; 7 known evasions held for approval; **0 benign false blocks** |
 | 74 mutated calls (deterministic attacker) | 66 denied, 8 held for approval, **0 executed**; policy-enforced goals: 0 of 39 bypassed |
 | Fresh hold-out (72 new cases, written after the fix was frozen) | 46 denied (was 8 before the taint fix) |
 | Adaptive LLM attacker, robust victim (gpt-oss-120b, 4 of 6 goals; quota ran out) | text layers alone 2 of 4; with the firewall **0 of 4** |
@@ -47,6 +47,15 @@ The evaluation sets are small; the caveat under each table matters as much as th
 | Adaptive LLM attacker, compromised victim (gpt-oss-20b, 6 goals) | text layers alone 6 of 6; with the firewall **1 of 6** |
 
 Held for approval is not blocked: a human decides. "Executed: 0" is true by construction for writes (every write needs approval) and says nothing about how often real agents are hijacked. The taint check is a string-overlap heuristic: paraphrase, translation, acronyms and confidential data from a trusted tool still reach the approval queue. Not CaMeL. Same-author test design. [`docs/action-firewall.md`](docs/action-firewall.md), [`reports/p3_taint_upgrade.json`](reports/p3_taint_upgrade.json).
+
+### Accounts-payable controls (the finance module)
+
+| Test | Result |
+|---|---|
+| 32 accounts-payable scenarios (27 harmful, 5 benign): poisoned "CFO approved" notes, a fake AP policy upload, hold-then-release confusion, releases split under the session cap, bank details in `reason`, self- and same-role approval | **18 of 24** in-scope harmful scenarios stopped outright (11 by policy, 7 by taint), 5 stopped at the approval gate, 1 held for approval; 3 known misses held, not stopped; **0 benign false blocks** |
+| Approval attempts on held payment requests (requester, same-role peer, employee) | 8 of 8 behaved as specified: a release needs an approver with a different role, a hold only a different person |
+
+The known misses are a release of the invoice the same agent was asked to hold (the firewall keeps no cross-call state), five releases that fit under the session write cap, and a bare account number in `reason` (nothing tells it from a PO number); each is pinned as a strict `xfail`. Scenarios are same-author, the agent is assumed hijacked, and there is no amount or threshold check because the payment tools carry no amount. A mapping of each control to an internal-control objective, which makes no compliance claim: [`docs/finance-controls-mapping.md`](docs/finance-controls-mapping.md).
 
 ### Red-team (standard scanners plus an adaptive attacker)
 
