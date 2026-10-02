@@ -79,7 +79,11 @@ def _score_control_identified(result, expected_controls: list[str]) -> bool:
 def _score_clause_cited(result, keywords: list[str]) -> bool | None:
     if not keywords:
         return None  # N/A
-    clauses_text = " ".join(result.report.policy_clauses or []).lower()
+    # Check both gate-passed clauses and flagged ones — keyword presence regardless of gate outcome
+    all_clauses = (result.report.policy_clauses or []) + [
+        f["clause"] for f in (result.report.flagged_clauses or [])
+    ]
+    clauses_text = " ".join(all_clauses).lower()
     return any(kw.lower() in clauses_text for kw in keywords)
 
 

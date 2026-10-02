@@ -8,10 +8,10 @@
 | Dimension | Score | Notes |
 |---|---|---|
 | Control identified (planted, n=10) | 100% | Correct C1–C6 in summary or data_evidence |
-| Clause cited (planted + policy, n=20) | 65% | Expected keyword in policy_clauses |
-| Recommendation type (planted, n=10) | 70% | Expected action keyword in recommended_action |
+| Clause cited (planted + policy, n=20) | 70% | Expected keyword in policy_clauses |
+| Recommendation type (planted, n=10) | 80% | Expected action keyword in recommended_action |
 | No fraud claim (all, n=30) | 100% | Limitations must say 'not proof of fraud' / 'anomaly' |
-| Abstain on clean (clean, n=10) | 80% | Empty data + no hold/escalate recommended |
+| Abstain on clean (clean, n=10) | 100% | Empty data + no hold/escalate recommended |
 
 ## Per-category breakdown
 
@@ -20,8 +20,8 @@
 | Dimension | Score |
 |---|---|
 | Control Identified | 100% |
-| Clause Cited | 80% |
-| Recommendation Ok | 70% |
+| Clause Cited | 90% |
+| Recommendation Ok | 80% |
 | No Fraud Claim | 100% |
 
 ### Clean Case (10 questions)
@@ -29,7 +29,7 @@
 | Dimension | Score |
 |---|---|
 | No Fraud Claim | 100% |
-| Abstain Correct | 80% |
+| Abstain Correct | 100% |
 
 ### Policy Only (10 questions)
 
@@ -40,79 +40,55 @@
 
 ## Failures
 
-12 question(s) with at least one failing dimension:
+8 question(s) with at least one failing dimension:
 
-**A001** (planted_exception) — C4 duplicate invoice — same vendor, same amount, 28 days apart
+**A006** (planted_exception) — C4 duplicate invoice — different document IDs, same vendor and amount, 18 days apart
 - Failed: clause_cited
-- exception_summary: Potential duplicate invoice detected for Acme Supplies: INV-2024-089 matches INV-2024-072, same vendor, EUR 12,450 amoun
-- recommended_action: AP team should review the duplicate alert, verify that INV-2024-089 and INV-2024-072 are indeed the same invoice, and if
-- limitations: This finding is an anomaly flag based on policy criteria and the provided data evidence; it does not constitute definiti
-
-**A003** (planted_exception) — C3 approval-threshold splitting — two invoices from same vendor totalling $19,800 within 7 days
-- Failed: clause_cited
-- exception_summary: High‑severity potential splitting detected: two invoices (INV-2024-301 EUR 9,900 and INV-2024-302 EUR 9,850) submitted b
-- recommended_action: Escalate the case to Internal Audit within 2 business days as mandated by Section 6.1; the AP Manager should place a pay
-- limitations: This is an anomaly flag based on policy indicators and the provided data; it does not constitute definitive proof of fra
-
-**A007** (planted_exception) — C2 invoice before goods receipt — invoice posted 5 days before GR
-- Failed: recommendation_ok
-- exception_summary: Invoice INV-2024-355 (EUR 22,000) was posted on 2024-08-01, five days before the Goods Receipt was recorded on 2024-08-0
-- recommended_action: PROPOSAL: AP Manager should verify whether a payment block was applied to INV-2024-355, obtain and document a business j
-- limitations: This flag identifies a control anomaly based on the available data; it does not constitute proof of fraud or misconduct.
+- exception_summary: Found 1 exception(s) for vendor CleanPro Services.
+- recommended_action: Manual review required.
+- limitations: Report compilation failed (LLM unavailable). This is an anomaly flag, not proof of fraud or misconduct.
 
 **A008** (planted_exception) — C1 + C4 compound — both three-way match violation and duplicate flag on same vendor
 - Failed: recommendation_ok
-- exception_summary: Two high‑severity anomalies were detected for Meridian Consulting: (1) Invoice INV‑2024‑500 shows a variance of EUR 750 
-- recommended_action: PROPOSAL: AP manager to review and confirm the payment block for INV‑2024‑500 due to tolerance breach; investigate the r
-- limitations: This report flags anomalies based on policy criteria and exposure data; it does not constitute proof of fraud or miscond
+- exception_summary: Two high‑severity anomalies were identified for Meridian Consulting: (1) Invoice INV‑2024‑500 shows a variance of EUR 75
+- recommended_action: Propose that AP management review both invoices: verify the purchase order and goods receipt for INV‑2024‑500, confirm t
+- limitations: These findings are anomaly flags based on the available data; they do not constitute definitive evidence of fraud or mis
 
 **A010** (planted_exception) — C5 SoD + C3 threshold splitting — compound exception with critical severity
 - Failed: recommendation_ok
-- exception_summary: AP Clerk RBROWN both created invoice INV-2024-700 and removed its payment block (SOD-04 violation) and submitted two inv
-- recommended_action: Propose that Internal Audit be engaged to review RBROWN’s activities, that the removal of the payment block be reversed 
-- limitations: This finding is an anomaly flag based on the provided evidence and policy; it does not constitute definitive proof of fr
+- exception_summary: AP Clerk RBROWN removed the payment block on invoice INV-2024-700 that they created (SOD-04 violation) and two invoices 
+- recommended_action: Propose that Internal Audit be engaged to review the RBROWN actions, verify whether any Finance Director written approva
+- limitations: This flag is based on detected anomalies in the data evidence and policy references; it does not constitute definitive p
 
-**B007** (clean_case) — Clean vendor — invoices spread over 60 days, no duplicate pattern
-- Failed: abstain_correct
-- exception_summary: No AP control exceptions were found for vendor Trusted Parts Co.
-- recommended_action: Continue routine monitoring of AP transactions for Trusted Parts Co. and periodically review compliance with the approva
+**C004** (policy_only) — When does a duplicate invoice trigger an auto-block?
+- Failed: clause_cited
+- exception_summary: No AP control exceptions were found for vendor POLICY-QUERY-004.
+- recommended_action: No AP control exceptions found for this vendor/case. No action required.
 - limitations: This finding is an anomaly flag based on the available data; it does not constitute proof of fraud or misconduct.
-
-**B009** (clean_case) — Clean vendor — multiple invoices, all below $10k, different requesters
-- Failed: abstain_correct
-- exception_summary: No AP control exceptions were found for vendor TechSupply Direct.
-- recommended_action: Document the finding and retain for periodic review; consider confirming that the segregation‑of‑duties controls (e.g., 
-- limitations: This is an anomaly flag based on the provided data evidence; it does not constitute proof of fraud or misconduct.
 
 **C005** (policy_only) — What is the secondary approval threshold for purchase requisitions?
 - Failed: clause_cited
-- exception_summary: No AP control exceptions were found for case/vendor POLICY-QUERY-005.
-- recommended_action: Maintain routine monitoring of AP transactions and periodic review of compliance with the documented controls, including
-- limitations: This is an anomaly flag based on the available data; it does not constitute proof of fraud or misconduct.
+- exception_summary: No AP control exceptions were found for vendor POLICY-QUERY-005.
+- recommended_action: No AP control exceptions found for this vendor/case. No action required.
+- limitations: This finding is an anomaly flag based on the available data; it does not constitute proof of fraud or misconduct.
 
 **C006** (policy_only) — How long may a temporary SoD exception last?
 - Failed: clause_cited
-- exception_summary: No AP control exceptions were found for case/vendor POLICY-QUERY-006.
-- recommended_action: Continue routine monitoring of AP transactions and periodic review of control compliance; no immediate remediation requi
+- exception_summary: No AP control exceptions were found for vendor POLICY-QUERY-006.
+- recommended_action: No AP control exceptions found for this vendor/case. No action required.
 - limitations: This finding is an anomaly flag based on the available data; it does not constitute proof of fraud or misconduct.
 
 **C007** (policy_only) — How often does Benford screening run?
 - Failed: clause_cited
-- exception_summary: No AP control exceptions were found for case/vendor POLICY-007.
-- recommended_action: Maintain routine monitoring of AP transactions and periodic compliance reviews; no immediate remediation is required but
-- limitations: This is an anomaly flag based on the available data; it does not constitute proof of fraud or misconduct.
+- exception_summary: No AP control exceptions were found for vendor POLICY-QUERY-007.
+- recommended_action: No AP control exceptions found for this vendor/case. No action required.
+- limitations: This finding is an anomaly flag based on the available data; it does not constitute proof of fraud or misconduct.
 
 **C008** (policy_only) — Can the requester also clear the invoice?
 - Failed: clause_cited
-- exception_summary: No AP control exceptions were found for case/vendor POLICY-QUERY-008.
-- recommended_action: Continue routine monitoring of AP transactions and periodic review of segregation‑of‑duties compliance; no immediate rem
+- exception_summary: No AP control exceptions were found for vendor POLICY-QUERY-008.
+- recommended_action: No AP control exceptions found for this vendor/case. No action required.
 - limitations: This finding is an anomaly flag based on the available data; it does not constitute proof of fraud or misconduct.
-
-**C009** (policy_only) — Who approves duplicate-alert resolution?
-- Failed: clause_cited
-- exception_summary: No AP control exceptions were found for case/vendor POLICY-QUERY-009.
-- recommended_action: Maintain routine monitoring of AP transactions and schedule periodic reviews to ensure continued adherence to the contro
-- limitations: This is an anomaly flag indicating no detected exceptions; it does not constitute proof of fraud or misconduct.
 
 ## Design notes
 

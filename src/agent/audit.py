@@ -313,6 +313,12 @@ def run_audit(
             ),
         }
 
+    # Deterministic override: no exceptions + P1 available → no action warranted.
+    if not raw_exceptions and not p1_unavailable and not parse_failed:
+        report_data["recommended_action"] = (
+            "No AP control exceptions found for this vendor/case. No action required."
+        )
+
     # Enforce mandatory phrase: limitations must always flag this as an anomaly, not proof of fraud.
     limitations = report_data.get("limitations", "")
     _mandatory = "anomaly, not proof of fraud or misconduct"
