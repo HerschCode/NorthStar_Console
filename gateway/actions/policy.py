@@ -125,9 +125,13 @@ class Policy:
                 return PolicyResult(True, approval=rule.get("approval", "none"), rule=rule.get("name", f"rule-{i}"),
                                      require_role_separation=bool(rule.get("require_role_separation")))
             failures_by_rule.append((rule.get("name", f"rule-{i}"), failures))
-        # report the failures of the first role-matching rule: the closest thing to what the caller meant
-        name, failures = failures_by_rule[0]
-        return PolicyResult(False, rule=name, reasons=failures)
+        # no rule matched: report the closest ones (fewest failures). Rules that tie are all shown, each tagged with its name:
+        # reporting only the first would blame, say, the finance-hold rule for a call that was never a hold.
+        fewest = min(len(f) for _, f in failures_by_rule)
+        closest = [(n, f) for n, f in failures_by_rule if len(f) == fewest]
+        if len(closest) == 1:
+            return PolicyResult(False, rule=closest[0][0], reasons=closest[0][1])
+        return PolicyResult(False, rule=closest[0][0], reasons=[f"[{n}] {x}" for n, f in closest for x in f])
 
     def _check_args(self, rule: dict, args: dict, principal: Principal) -> list[str]:
         constraints = rule.get("args") or {}

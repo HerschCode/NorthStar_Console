@@ -151,7 +151,7 @@ class ApprovalQueue:
                 raise ApprovalForbidden("separation of duties: the requester may not decide their own request")
             if row["require_role_separation"] and approver.role == row["requester_role"]:
                 raise ApprovalForbidden(
-                    "segregation of duties: this tool requires an approver with a different role from the "
+                    "segregation of duties: this request requires an approver with a different role from the "
                     f"requester ({row['requester_role']!r}), not just a different person")
             c.execute("UPDATE approvals SET status=?, decided_by=?, decided_role=?, decided_at=?, note=? WHERE id=?",
                       ("approved" if approve else "denied", approver.user_id, approver.role, time.time(), note, approval_id))
