@@ -145,8 +145,8 @@ def main():
     out_dir = gs.CACHE / "onnx" / args.run
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    tok = AutoTokenizer.from_pretrained(run_dir)
-    model = AutoModelForSequenceClassification.from_pretrained(run_dir).eval()
+    tok = AutoTokenizer.from_pretrained(run_dir)  # nosec B615 - a local training-run directory, not a Hub download
+    model = AutoModelForSequenceClassification.from_pretrained(run_dir).eval()  # nosec B615 - local directory
     tok.save_pretrained(out_dir)
     tokenizer_json = out_dir / "tokenizer.json"
     vocab = json.loads(tokenizer_json.read_text(encoding="utf-8"))["model"]["vocab"]

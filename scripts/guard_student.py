@@ -52,6 +52,7 @@ RUNS = CACHE / "runs"
 REPORT = REPO_ROOT / "reports" / "p3_guard_student.json"
 LOSO_REPORT = REPO_ROOT / "reports" / "p3_guard_student_loso.json"
 BASE_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+BASE_MODEL_REVISION = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"  # the snapshot the shipped student was trained from
 MAX_LEN = 256
 SETS_WITH_BOTH = ("own_corpus", "deepset_test", "safeguard_test", "jackhhao_test")         # ROC-AUC needs both classes
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -111,7 +112,7 @@ def data(exclude=None):
 # ---- teacher --------------------------------------------------------------------------------------------------------------
 
 def _h(t: str) -> str:
-    return hashlib.sha1(t.encode("utf-8")).hexdigest()  # nosec B324 - a cache key, not a security use  # nosemgrep: python.lang.security.insecure-hash-algorithms-sha1.insecure-hash-algorithm-sha1 - cache key
+    return hashlib.sha256(t.encode("utf-8")).hexdigest()  # cache key
 
 
 _TEACHER = None
@@ -182,8 +183,8 @@ def train_student(variant, seed, d, epochs=4, batch=32, lr=5e-5, temperature=2.0
 
     torch.manual_seed(seed)
     random.seed(seed)
-    tok = AutoTokenizer.from_pretrained(BASE_MODEL)
-    model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, num_labels=2).to(DEVICE)
+    tok = AutoTokenizer.from_pretrained(BASE_MODEL, revision=BASE_MODEL_REVISION)
+    model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, revision=BASE_MODEL_REVISION, num_labels=2).to(DEVICE)
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
     steps = epochs * ((len(texts) + batch - 1) // batch)
     sched = get_linear_schedule_with_warmup(opt, int(0.06 * steps), steps)
@@ -358,8 +359,8 @@ def cmd_report(_args):
         "trained on public data that includes jackhhao/jailbreak-classification: its jackhhao and jailbreak_llms numbers may be inflated by memorisation")
     runs = sorted(p for p in RUNS.glob("*-seed*") if (p / "config.json").exists()) if RUNS.exists() else []
     for run in runs:
-        tok = AutoTokenizer.from_pretrained(run)
-        model = AutoModelForSequenceClassification.from_pretrained(run).to(DEVICE).eval()
+        tok = AutoTokenizer.from_pretrained(run)  # nosec B615 - a local training-run directory, not a Hub download
+        model = AutoModelForSequenceClassification.from_pretrained(run).to(DEVICE).eval()  # nosec B615 - local directory
         results["systems"][f"student {run.name}"] = evaluate_scorer(
             f"student_{run.name}", lambda texts, max_length, m=model, t=tok: student_margins(m, t, texts, max_length), d)
     for entry in results["systems"].values():

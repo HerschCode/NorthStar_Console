@@ -59,7 +59,7 @@ def post(i, text):
     body = json.dumps({"prompt": text, "session_id": f"mem-{i}", "role": "employee", "backend": "stub_ops_agent", "user_id": "mem"}).encode()
     req = urllib.request.Request(f"http://127.0.0.1:{PORT}/gateway/chat", data=body, headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=60) as r:
+        with urllib.request.urlopen(req, timeout=60) as r:  # nosec B310 - fixed http://127.0.0.1 URL  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected - fixed localhost URL
             return r.status, json.loads(r.read()).get("allowed")
     except Exception as exc:  # noqa: BLE001 -- a failed request is a result
         return type(exc).__name__, None
@@ -85,7 +85,7 @@ def run_one(backend: str, cap_mb: int, texts) -> dict:
                 result["stderr_tail"] = proc.stderr.read().decode("utf-8", "replace")[-400:]
                 return result
             try:
-                urllib.request.urlopen(f"http://127.0.0.1:{PORT}/health", timeout=2).read()
+                urllib.request.urlopen(f"http://127.0.0.1:{PORT}/health", timeout=2).read()  # nosec B310 - fixed http://127.0.0.1 URL  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected - fixed localhost URL
                 break
             except Exception:  # noqa: BLE001
                 time.sleep(0.3)
