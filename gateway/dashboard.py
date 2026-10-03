@@ -154,18 +154,51 @@ DASHBOARD_HTML = f"""<!DOCTYPE html>
 <title>Dashboard — LLM Security Gateway</title>
 <style>{SHARED_CSS}
   .block {{ color: var(--bad); }} .allow {{ color: var(--good); }}
-  .stale {{ font-size: 12px; margin-bottom: 10px; }}
+  .dashboard-hero {{ display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }}
+  .dashboard-hero .sub {{ margin-bottom: 22px; }}
+  .live-indicator {{ display: inline-flex; align-items: center; gap: 8px; color: var(--good);
+                     background: color-mix(in srgb, var(--good) 8%, var(--surface));
+                     border: 1px solid color-mix(in srgb, var(--good) 28%, var(--border));
+                     border-radius: 999px; padding: 6px 11px; font-size: 11px; font-weight: 700;
+                     margin-bottom: 22px; white-space: nowrap; }}
+  .live-indicator::before {{ content: ""; width: 7px; height: 7px; background: currentColor; border-radius: 50%;
+                             box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 16%, transparent); }}
+  .dash-help {{ background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+                border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+                border-radius: 10px; margin: 0 0 12px; color: var(--text); }}
+  .dash-help summary {{ display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none;
+                        padding: 11px 14px; color: var(--accent); font-size: 12px; font-weight: 700; }}
+  .dash-help summary::-webkit-details-marker {{ display: none; }}
+  .dash-help summary::before {{ content: "i"; display: grid; place-items: center; flex: 0 0 20px; height: 20px;
+                               border-radius: 50%; background: var(--accent); color: var(--surface); font-size: 12px;
+                               font-weight: 800; font-style: normal; }}
+  .dash-help summary::after {{ content: "Expand"; margin-left: auto; font-size: 10px; letter-spacing: .04em;
+                               text-transform: uppercase; color: var(--muted); }}
+  .dash-help[open] summary::after {{ content: "Collapse"; }}
+  .dash-help summary:hover {{ background: color-mix(in srgb, var(--accent) 6%, transparent); border-radius: 9px; }}
+  .dash-help .help-content {{ padding: 0 14px 13px 44px; color: var(--muted); font-size: 12px; }}
+  .dash-help .help-content p {{ margin: 0; }}
+  .dash-help code {{ color: var(--text); }}
+  .layer-tiles {{ grid-template-columns: repeat(3, 1fr); }}
+  .stale {{ font-size: 12px; margin-bottom: 14px; }}
+  .stale > div {{ background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--warn);
+                  border-radius: 10px; padding: 16px 18px; max-width: 680px; box-shadow: var(--shadow); }}
+  @media (max-width: 720px) {{ .layer-tiles {{ grid-template-columns: repeat(2, 1fr); }} }}
+  @media (max-width: 600px) {{ .dashboard-hero {{ display: block; }} .live-indicator {{ margin: 0 0 16px; }} }}
 </style>
-</head><body>
+</head><body class="dashboard-page">
 {nav_html('dashboard')}
 <div class="wrap">
-  <h1>Live dashboard</h1>
-  <div class="sub">From the same JSONL log every request writes. Auto-refreshes every 2s ·
-    window: last 5 minutes. &nbsp;<a href="/gateway/demo">Generate some traffic →</a></div>
+  <div class="dashboard-hero">
+    <div>
+      <h1>Security dashboard</h1>
+      <div class="sub">Live gateway telemetry · rolling 5-minute window · refreshes every 2 seconds</div>
+    </div>
+    <span class="live-indicator">LIVE MONITORING</span>
+  </div>
 
   <div id="stale" class="stale" hidden>
-    <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--warn);
-                border-radius:8px;padding:16px 18px;max-width:680px;">
+    <div>
       <b style="color:var(--text)">No traffic in the last 5 minutes.</b><br>
       <span style="color:var(--muted);font-size:12px">The gateway is running and ready &mdash;
       send a test prompt on the <a href="/gateway/demo">demo page</a> to see live detection in action.</span>
@@ -174,24 +207,22 @@ DASHBOARD_HTML = f"""<!DOCTYPE html>
   <div class="tiles" id="tiles"></div>
 
   <h2>Detection by layer</h2>
-  <div class="tiles" id="layer-tiles" style="grid-template-columns:repeat(3,1fr)"></div>
+  <div class="tiles layer-tiles" id="layer-tiles"></div>
 
   <h2>Recent events (last 20)</h2>
-  <p style="font-size:11px;color:var(--muted);margin:0 0 6px">
-    <b>phase:</b> pre_flight = checked before reaching LLM &nbsp;|&nbsp; post_flight = checked after LLM response &nbsp;&nbsp;
-    <b>decision:</b> block = stopped &nbsp;|&nbsp; allow = passed
-  </p>
+  <details class="dash-help">
+    <summary>How to read these events</summary>
+    <div class="help-content"><p><b>Phase</b>: <code>pre_flight</code> is checked before reaching the LLM; <code>post_flight</code> is checked after the response. <b>Decision</b>: <code>block</code> was stopped; <code>allow</code> passed.</p></div>
+  </details>
   <table id="events">
     <thead><tr><th>Session</th><th>Phase</th><th>Decision</th><th>Layer</th><th>Matched pattern</th><th>ms</th></tr></thead>
     <tbody></tbody>
   </table>
-
   <h2>Pending actions (action firewall)</h2>
-  <p style="font-size:11px;color:var(--muted);margin:0 0 6px">
-    Write actions the firewall will not run on its own. Decisions use the trusted proxy identity when
-    enabled, otherwise <code>GATEWAY_APPROVER_TOKEN</code>; the requester cannot approve their own request.
-    <b>risk high</b> = an argument was copied from untrusted content.
-  </p>
+  <details class="dash-help">
+    <summary>About approvals and risk indicators</summary>
+    <div class="help-content"><p>These write actions are held for review and are never executed automatically. Decisions use trusted proxy identity when enabled, otherwise <code>GATEWAY_APPROVER_TOKEN</code>; requesters cannot approve their own actions. <b>High risk</b> means an argument was copied from untrusted content.</p></div>
+  </details>
   <table id="actions">
     <thead><tr><th>Id</th><th>Requested by</th><th>Tool</th><th>Arguments</th><th>Risk</th><th>Why / evidence</th><th></th></tr></thead>
     <tbody></tbody>

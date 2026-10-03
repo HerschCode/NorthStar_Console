@@ -272,8 +272,8 @@ _DEMO_HTML = """
 <style>
 __SHARED_CSS__
   body { padding: 0; }
-  .democontent { padding: 24px; max-width: 1000px; margin: 0 auto; }
-  h1 { color: var(--accent); margin: 0 0 4px; font-size: 20px; }
+  .democontent { padding: 34px 24px 48px; max-width: 1120px; margin: 0 auto; }
+  h1 { color: var(--text); margin: 0 0 8px; font-size: clamp(25px, 3vw, 34px); line-height: 1.2; letter-spacing: -.04em; }
   .sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; max-width: 780px; }
   .sub a { color: var(--accent); }
   .banner { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--warn);
@@ -285,14 +285,14 @@ __SHARED_CSS__
   select, textarea, button { font-family: inherit; font-size: 13px; background: var(--surface);
          color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
   textarea { width: 100%; min-height: 90px; resize: vertical; margin-bottom: 12px; }
-  button { background: #238636; border-color: #2ea043; color: #fff; cursor: pointer; font-weight: 600; padding: 9px 18px; }
+  button { background: var(--accent); border-color: var(--accent); color: #fff; cursor: pointer; font-weight: 700; padding: 9px 18px; }
   button:disabled { opacity: .5; cursor: default; }
   .case-vector { font-size: 12px; color: var(--muted); margin: -4px 0 4px; }
   .case-explain { font-size: 12px; color: var(--muted); margin: 0 0 10px; font-style: italic; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
   @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
-  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
-  .panel h2 { font-size: 13px; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 13px; padding: 18px; box-shadow: var(--shadow); }
+  .panel h2 { font-size: 13px; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
   .verdict { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
   .allowed { color: var(--bad); }     /* bypass panel: backend complied = bad */
   .passed  { color: var(--good); }   /* gateway panel: correctly allowed = good */
@@ -309,14 +309,16 @@ __SHARED_CSS__
   .explanation { font-size: 12px; color: var(--muted); margin-top: 8px; font-style: italic; }
   .foot { margin-top: 20px; font-size: 12px; color: var(--muted); }
   .foot a { color: var(--accent); }
-  .guide { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; margin-bottom: 20px; max-width: 780px; }
-  .guide-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; cursor: pointer; user-select: none; font-size: 13px; }
-  .guide-header:hover { background: var(--surface2); border-radius: 7px; }
-  .guide-toggle { font-size: 11px; color: var(--muted); }
+  .guide { background: color-mix(in srgb, var(--accent) 5%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border)); border-radius: 11px; margin-bottom: 20px; max-width: 820px; box-shadow: var(--shadow); }
+  .guide-header { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 12px 15px; cursor: pointer; user-select: none; list-style: none; font-size: 13px; color: var(--accent); font-weight: 700; }
+  .guide-header::-webkit-details-marker { display: none; }
+  .guide-header::after { content: "Expand guide  +"; margin-left: auto; color: var(--muted); font-size: 10px; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
+  .guide[open] .guide-header::after { content: "Collapse guide  −"; }
+  .guide-header:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); border-radius: 10px; }
   .guide-body { padding: 0 14px 14px; }
   .guide-steps { display: flex; flex-direction: column; gap: 10px; margin: 8px 0 14px; }
   .guide-step { display: flex; gap: 12px; align-items: flex-start; }
-  .step-num { background: var(--accent); color: var(--bg); font-weight: 700; font-size: 11px; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+  .step-num { background: var(--accent); color: #fff; font-weight: 700; font-size: 11px; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
   .guide-step div { font-size: 13px; }
   .guide-step p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
   .guide-glossary { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 5px; border-top: 1px solid var(--border); padding-top: 10px; }
@@ -339,11 +341,8 @@ __NAV__
   </div>
   __LITE_BANNER__
 
-  <div class="guide">
-    <div class="guide-header" onclick="toggleGuide()">
-      <span>&#8505; <b>How to use this demo</b></span>
-      <span class="guide-toggle" id="guide-toggle">&#x25B2; hide</span>
-    </div>
+  <details class="guide">
+    <summary class="guide-header"><span>&#8505; &nbsp;How to use this demo</span></summary>
     <div class="guide-body" id="guide-body">
       <div class="guide-steps">
         <div class="guide-step">
@@ -371,8 +370,7 @@ __NAV__
         <div><b>layer</b> &mdash; which stage triggered the block: <em>rule_based</em> (regex / keyword patterns), <em>embedding_similarity</em> (distance to known attack embeddings), <em>scratch_classifier</em> (NumPy MLP trained on the attack corpus), or <em>post_flight_checks</em> (response-side scan for leaks &amp; compliance).</div>
         <div><b>Attack categories:</b> &#x1F534;&nbsp;Direct Injection (override system prompt) &middot; &#x1F7E0;&nbsp;Indirect Injection (payload hidden in content) &middot; &#x1F7E1;&nbsp;Multi-turn Jailbreak (gradual behavioural drift) &middot; &#x1F7E3;&nbsp;Encoding Obfuscation (base64&nbsp;/&nbsp;Unicode evasion) &middot; &#x1F535;&nbsp;Tool Scope Escalation (out-of-scope tool calls)</div>
       </div>
-    </div>
-  </div>
+  </details>
 
   <div class="controls">
     <div>
@@ -570,14 +568,6 @@ $('run').addEventListener('click', async () => {
     $('run').disabled = false; $('run').textContent = 'Run';
   }
 });
-
-function toggleGuide() {
-  const body = document.getElementById('guide-body');
-  const lbl = document.getElementById('guide-toggle');
-  const hidden = body.style.display === 'none';
-  body.style.display = hidden ? '' : 'none';
-  lbl.textContent = hidden ? '▲ hide' : '▼ show';
-}
 
 loadCases();
 loadBackends();

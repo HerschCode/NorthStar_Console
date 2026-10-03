@@ -27,15 +27,26 @@ def client(monkeypatch):
 
 
 def test_home_and_pages_are_html_with_shared_nav(client):
+    pages = {}
     for path in ("/", "/gateway/demo", "/gateway/dashboard"):
         r = client.get(path)
         assert r.status_code == 200
         assert "text/html" in r.headers["content-type"]
         body = r.text
+        pages[path] = body
         # shared nav links every page to the others -- no URL typing
         assert 'href="/gateway/demo"' in body
         assert 'href="/gateway/dashboard"' in body
         assert 'href="/"' in body
+
+    assert "color-scheme: light" in pages["/"]
+    assert '[data-theme="dark"]' in pages["/"]
+    assert "if (t === 'dark')" in pages["/"]
+    assert '<details class="guide">' in pages["/gateway/demo"]
+    assert '<details class="guide" open>' not in pages["/gateway/demo"]
+    assert '<details class="dash-help">' in pages["/gateway/dashboard"]
+    assert '<details class="dash-help" open>' not in pages["/gateway/dashboard"]
+    assert "How to read these events" in pages["/gateway/dashboard"]
 
 
 def test_demo_run_blocks_direct_injection(client):
