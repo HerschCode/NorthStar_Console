@@ -50,6 +50,13 @@ genuinely invalid JSON, and valid JSON missing required keys. All three fall bac
 says plainly in `limitations` that structured compilation failed -- a degraded-but-honest report,
 not a crash and not a silently wrong one.
 
+## Claim-level evidence report
+Every `AgentResponse` now includes a non-blocking `grounding` report. It checks answer sentences against successful
+data-tool results and retrieved policy text, labels claims as supported, supported across sources, or needing review,
+and lists supporting source references where lexical checks can identify one. `/chat`, `/demo/chat`, and the demo
+stream expose this report additively. It is a diagnostic heuristic, not a faithfulness guarantee or answer gate:
+unsupported answers are still returned for inspection, and mixed-source claims may need human review.
+
 ## What's NOT built yet
 - **Conversational context now exists** (built in a later session) -- `src/agent/conversation_store.py`
   keeps simple text Q/A pairs per `conversation_id`, replayed as context on the next `/chat` call.

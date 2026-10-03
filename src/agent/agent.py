@@ -91,6 +91,11 @@ class AgentResponse:
     # Set when PROMPT_CACHE=1: tokens served from the Anthropic prompt cache
     # across all rounds of this turn (sum of cache_read_input_tokens).
     cache_read_input_tokens: int | None = None
+    grounding: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        from src.evaluation.claim_support import agent_grounding_report
+        self.grounding = agent_grounding_report(self.answer, self.tool_calls)
 
 
 def _default_client():

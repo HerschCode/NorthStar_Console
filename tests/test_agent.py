@@ -153,6 +153,49 @@ def test_extract_citations_skips_document_search_with_no_results():
     assert _extract_citations(tool_calls) == []
 
 
+def test_agent_response_reports_claim_level_evidence_without_blocking_answer():
+    from src.agent.agent import AgentResponse
+
+    response = AgentResponse(
+        answer="The approval limit is 10 business days, according to the procurement policy.",
+        tool_calls=[ToolCallRecord(
+            name="search_policy_documents",
+            input={"query": "approval limit"},
+            result={"found": True, "results": [{
+                "citation": "Procurement Policy, Section 4.2",
+                "text": "The approval limit is 10 business days.",
+            }]},
+        )],
+    )
+
+    assert response.answer.startswith("The approval limit")
+    assert response.grounding["status"] == "supported"
+    assert response.grounding["claims"][0]["status"] == "supported"
+    assert response.grounding["evidence_sources"] == [{
+        "kind": "document", "reference": "Procurement Policy, Section 4.2",
+    }]
+
+
+def test_agent_response_flags_unsupported_claim_without_replacing_it():
+    from src.agent.agent import AgentResponse
+
+    response = AgentResponse(
+        answer="The approval limit is 90 business days, according to the procurement policy.",
+        tool_calls=[ToolCallRecord(
+            name="search_policy_documents",
+            input={"query": "approval limit"},
+            result={"found": True, "results": [{
+                "citation": "Procurement Policy, Section 4.2",
+                "text": "The approval limit is 10 business days.",
+            }]},
+        )],
+    )
+
+    assert response.answer.startswith("The approval limit is 90")
+    assert response.grounding["status"] == "needs_review"
+    assert response.grounding["claims"][0]["numbers_supported"] is False
+
+
 @patch("src.agent.agent.call_tool")
 def test_system_prompt_is_never_mutated_with_tool_content(mock_call_tool):
     """Structural guardrail regression test: even when a tool result contains text

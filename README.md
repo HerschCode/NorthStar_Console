@@ -4,8 +4,8 @@
 
 **🔗 [Live demo](https://operations-assistant.onrender.com)** — ask a real question, get a real
 answer from a Groq-backed agent over live data and real policy documents. Free-tier hosting,
-so the first request after idling may take 30–60 s to wake up. The demo UI lets you switch
-between **Gemini Flash**, **Groq Llama**, and **Claude** without restarting.
+so the first request after idling may take 30–60 s to wake up. The public demo lets you switch
+between **Gemini Flash** and **Groq** without restarting.
 
 An operations investigation assistant for **Northstar Manufacturing** that answers questions
 about procurement process analytics, SLA performance, and policy using a hybrid RAG pipeline
@@ -23,7 +23,7 @@ over 10 policy/SOP documents plus live P1 metrics — grounded, cited, and willi
 | Answer gate — off-context pass rate | **3.1–6.2%** | same 32 correct answers scored against chunks from a different question |
 | Agent tool-selection smoke test | **25/25 (100%)** — but these questions were written by the same person who tuned the prompt, so this is a regression guard, not a generalization estimate; see v2 eval for a larger independent set | [`docs/agent-eval.md`](docs/agent-eval.md) |
 | Semantic cache false-hit rate | **0%** at t=0.97 (paraphrase recall also 0%; cache fires on exact repeats only at this threshold) | 15 hand-written question pairs; [`docs/cache-calibration.md`](docs/cache-calibration.md) |
-| Provider count | **5** | Groq direct, Gemini, Anthropic, LangChain, LangGraph — one interface |
+| Public demo provider choices | **2** | Gemini Flash and Groq; the demo defaults to Groq |
 
 Consumes the data model and analytics built in [`operations-performance`](../operations-performance)
 via a small set of controlled tools rather than re-implementing that logic.
@@ -236,6 +236,14 @@ Full analysis: [`docs/llm-gate-eval.md`](docs/llm-gate-eval.md)
 ---
 
 ## Agent evaluation
+
+### Runtime claim-evidence diagnostics
+
+Every agent response now includes a non-blocking `grounding` report for successful tool-backed answers. It checks
+answer sentences against returned data and policy text, identifies supporting data/document references where possible,
+and flags unsupported claims for review. The report is exposed by `/chat`, `/demo/chat`, and the demo stream; it does
+not rewrite or suppress the answer. This is a lexical diagnostic, not a faithfulness guarantee. Its false-positive and
+false-negative behavior still needs a larger, independent labeled evaluation.
 
 ### Smoke test (25 questions)
 

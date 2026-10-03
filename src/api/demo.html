@@ -103,6 +103,14 @@
     display: flex; align-items: center; gap: 6px;
     border-left: 3px solid var(--accent-dim); padding-left: 8px;
   }
+  #guideBody {
+    max-height: min(62vh, 680px); overflow-y: auto; overscroll-behavior: contain;
+    scrollbar-width: thin; scrollbar-color: var(--muted) var(--surface);
+  }
+  #guideBody::-webkit-scrollbar { width: 9px; }
+  #guideBody::-webkit-scrollbar-track { background: var(--surface); border-radius: 8px; }
+  #guideBody::-webkit-scrollbar-thumb { background: var(--muted); border: 2px solid var(--surface); border-radius: 8px; }
+  #guideBody::-webkit-scrollbar-thumb:hover { background: var(--accent); }
   .guide-chips { display: flex; flex-wrap: wrap; gap: 5px; }
   .chip {
     font-size: 0.73rem; color: var(--accent);
@@ -331,6 +339,7 @@
   @media (max-width: 900px) {
     .layout { grid-template-columns: 1fr; }
     .topbar-sub { display: none; }
+    #guideBody { max-height: min(52vh, 520px); }
   }
   @media (max-width: 600px) {
     .outer { padding: 12px 10px 0; }
@@ -346,7 +355,7 @@
 <div class="topbar">
   <div class="topbar-brand">
     <span class="topbar-logo">Northstar Procurement Assistant</span>
-    <span class="topbar-sub">RAG · LangChain · Groq</span>
+    <span class="topbar-sub">Grounded analytics · procurement policy</span>
   </div>
   <div class="topbar-right">
     <div class="status-pill">
@@ -361,7 +370,7 @@
 <!-- Quota / free-tier notice bar -->
 <div class="notice-bar" id="noticeBar">
   <span class="notice-bar-text">
-    <strong>Free-tier demo</strong> — defaults to Groq (gpt-oss-120b, the model the evaluations used). Switch between Groq / Gemini / Claude with the model selector. <strong>5 questions / 10 min</strong> per visitor.
+    <strong>Free-tier demo</strong> — defaults to Groq (gpt-oss-120b, the model the evaluations used). Switch between Groq and Gemini with the model selector. <strong>5 questions / 10 min</strong> per visitor.
     If you see a <em>"provider rate-limited"</em> error, the daily token quota may be exhausted — try again after midnight UTC.
   </span>
   <button class="notice-dismiss" id="noticeDismiss" title="Dismiss notice" aria-label="Dismiss notice">×</button>
@@ -378,9 +387,9 @@
     <div class="card-header" id="guideHeader">
       <div class="card-header-left">
         <span class="card-title">What can I ask?</span>
-        <span class="card-sub">click a question to try it</span>
+        <span class="card-sub">scroll for examples · click to try</span>
       </div>
-      <button class="collapse-btn" id="guideCollapseBtn" aria-label="Collapse guide">▾ Expand</button>
+      <button class="collapse-btn" id="guideCollapseBtn" aria-label="Expand guide" aria-expanded="false">▾ Expand</button>
     </div>
     <div class="card-body hidden" id="guideBody">
 
@@ -470,7 +479,7 @@
         <div class="arch-rows">
           <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">LangChain <strong>bind_tools</strong> · 9-tool belt · max 6 calls/turn</span></div>
           <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">Tools: <em>get_cycle_time, get_sla_metrics, get_bottlenecks, get_supplier_performance, predict_sla_risk, get_management_report, get_pipeline_status, get_conformance, search_policy_documents</em></span></div>
-          <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">Provider-swappable: Groq · Anthropic · Gemini via env vars</span></div>
+          <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">Provider-swappable: Groq · Gemini via env vars</span></div>
           <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">Reads live data from the <strong>operations-performance</strong> API</span></div>
         </div>
         <div class="arch-tags">
@@ -518,9 +527,8 @@
 
     <div class="provider-row">
       <span class="provider-label">Model</span>
-      <button class="provider-btn" data-provider="gemini" title="Gemini 2.0 Flash — Google free tier">⚡ Gemini Flash</button>
+      <button class="provider-btn" data-provider="gemini" title="Gemini Flash via Google AI">⚡ Gemini Flash</button>
       <button class="provider-btn active" data-provider="groq" title="gpt-oss-120b via Groq — free tier">🦙 Groq</button>
-      <button class="provider-btn" data-provider="anthropic" title="Claude Haiku — Anthropic (requires ANTHROPIC_API_KEY)">🤖 Claude</button>
     </div>
     <form id="form">
       <input id="question" type="text" placeholder="Ask about cycle time, SLA breaches, suppliers, or procurement policy…" autocomplete="off" />
@@ -654,6 +662,8 @@ function updateRateCounter() {
 function toggleGuideBody() {
   const hidden = guideBody.classList.toggle('hidden');
   guideCollapseBtn.textContent = hidden ? '▾ Expand' : '▴ Collapse';
+  guideCollapseBtn.setAttribute('aria-label', hidden ? 'Expand guide' : 'Collapse guide');
+  guideCollapseBtn.setAttribute('aria-expanded', String(!hidden));
   guideCollapsedByUser = hidden;
 }
 guideHeader.addEventListener('click', e => { if (e.target !== guideCollapseBtn) toggleGuideBody(); });
@@ -662,6 +672,8 @@ guideReopenBtn.addEventListener('click', () => {
   guidePanel.style.display = '';
   guideBody.classList.remove('hidden');
   guideCollapseBtn.textContent = '▴ Collapse';
+  guideCollapseBtn.setAttribute('aria-label', 'Collapse guide');
+  guideCollapseBtn.setAttribute('aria-expanded', 'true');
   guideReopen.classList.remove('visible');
   guideCollapsedByUser = false;
 });

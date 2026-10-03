@@ -114,3 +114,70 @@ def answer_supported(answer: str, chunks: list[str], min_recall: float) -> tuple
     ok = bool(sents) and all(d["numbers_supported"] and d["key_terms_supported"] and d["content_recall"] >= min_recall
                              for d in detail)
     return ok, detail
+
+
+def agent_grounding_report(answer: str, tool_calls: list, min_recall: float = 0.65) -> dict:
+    """Audit agent claims against successful tool evidence without blocking answers."""
+    evidence = []
+    sources = []
+    for tool_call in tool_calls:
+        if getattr(tool_call, "error", None) or tool_call.result is None:
+            continue
+        if tool_call.name == "search_policy_documents":
+            result = tool_call.result
+            if not isinstance(result, dict) or not result.get("found"):
+                continue
+            for item in result.get("results", []):
+                text = item.get("text", "")
+                reference = item.get("citation", tool_call.name)
+                if text:
+                    evidence.append({"kind": "document", "reference": reference, "text": text})
+                    sources.append({"kind": "document", "reference": reference})
+        else:
+            evidence.append({"kind": "data", "reference": tool_call.name, "text": str(tool_call.result)})
+            sources.append({"kind": "data", "reference": tool_call.name})
+
+    claims = []
+    for sentence in split_sentences(answer):
+        evidence_texts = [item["text"] for item in evidence]
+        details = sentence_support(sentence, evidence_texts)
+        supporting_sources = []
+        for item in evidence:
+            source_details = sentence_support(sentence, [item["text"]])
+            if (
+                source_details["numbers_supported"]
+                and source_details["key_terms_supported"]
+                and source_details["content_recall"] >= min_recall
+            ):
+                supporting_sources.append({"kind": item["kind"], "reference": item["reference"]})
+        pooled_support = (
+            details["numbers_supported"]
+            and details["key_terms_supported"]
+            and details["content_recall"] >= min_recall
+        )
+        if supporting_sources:
+            status = "supported"
+        elif pooled_support:
+            status = "supported_across_sources"
+        else:
+            status = "needs_review"
+        claims.append({
+            "sentence": sentence,
+            "status": status,
+            "supported_by": supporting_sources,
+            **details,
+        })
+
+    if not evidence or not claims:
+        status = "not_checked"
+    elif all(claim["status"] != "needs_review" for claim in claims):
+        status = "supported"
+    else:
+        status = "needs_review"
+
+    return {
+        "status": status,
+        "min_content_recall": min_recall,
+        "evidence_sources": sources,
+        "claims": claims,
+    }

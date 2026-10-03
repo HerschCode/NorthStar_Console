@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Added Gemini as an injectable LLM-gate evaluation provider and tightened parsing so
+  truncated or malformed labels are retried/fail closed, not counted as successful blocks.
+- Excluded API/parse failures from judge classification metrics and report them separately.
+- Added a SHA-256-bound frozen retrieval-context snapshot for repeatable gate evaluation.
+- Updated Gemini's default judge model and stopped retrying permanent provider 4xx errors;
+  the configured AI Studio project currently denies generation access (403). Each result
+  now persists immediately, and `--resume` retries operational failures.
+- Removed Anthropic from the public demo's provider choices and restricted both demo chat
+  endpoints to Groq/Gemini, defaulting omitted provider selections to Groq. The question
+  guide now has a clear scroll affordance and its own visible, height-limited scrollbar.
+
 ## v1.0.0 -- Freeze
 
 All 24 originally-planned phases have been touched; 22 are genuinely complete (Phase 19 remains

@@ -39,6 +39,25 @@ router = APIRouter()
 # rather than an API key a site visitor obviously can't be expected to have.
 health_router = APIRouter()
 
+_DEMO_PROVIDERS = {
+    "gemini": ("gemini", "gemini-3.8-flash"),
+    "groq": ("groq", "openai/gpt-oss-120b"),
+}
+
+
+def _validate_demo_provider(provider: str | None) -> None:
+    if provider is not None and provider not in _DEMO_PROVIDERS:
+        raise HTTPException(
+            status_code=422,
+            detail="Unsupported demo provider. Choose 'gemini' or 'groq'.",
+        )
+
+
+def _demo_provider_config(config: dict, provider: str | None) -> dict:
+    _validate_demo_provider(provider)
+    selected_provider, model = _DEMO_PROVIDERS[provider or "groq"]
+    return {**config, "provider": selected_provider, "model": model}
+
 
 @health_router.get("/health", response_model=HealthResponse)
 def health():
@@ -116,6 +135,8 @@ def demo_chat(request: ChatRequest, http_request: Request):
     rate-limited per client IP instead of requiring an API key -- see
     src/api/rate_limit.py for why a site visitor can't reasonably be asked to have
     one."""
+    _validate_demo_provider(request.provider)
+
     # Behind a reverse proxy (Render, this project's actual deployment target),
     # request.client.host is the proxy's own internal address for every request, not
     # the real visitor's IP -- which would rate-limit every demo visitor as a single
@@ -134,19 +155,7 @@ def demo_chat(request: ChatRequest, http_request: Request):
 
     from src.agent.agent import load_agent_config
     from src.evaluation.cost_estimator import calculate_cost
-    cfg = load_agent_config()
-
-    # Provider switcher: demo visitors can pick gemini/groq/anthropic per-request.
-    # Validated against the allowed set so the field can't be used to inject arbitrary
-    # provider strings into the config dict.
-    _DEMO_PROVIDERS = {
-        "gemini": ("gemini", "gemini-2.0-flash"),
-        "groq":   ("groq",   "openai/gpt-oss-120b"),  # the model the agent evals ran on
-        "anthropic": ("anthropic", "claude-haiku-4-5-20251001"),  # pinned: agent.yaml's default is a pricier model
-    }
-    if request.provider and request.provider in _DEMO_PROVIDERS:
-        prov, mdl = _DEMO_PROVIDERS[request.provider]
-        cfg = {**cfg, "provider": prov, "model": mdl}
+    cfg = _demo_provider_config(load_agent_config(), request.provider)
 
     t0 = time.monotonic()
     try:
@@ -184,6 +193,7 @@ def demo_chat(request: ChatRequest, http_request: Request):
         input_tokens=result.prompt_tokens,
         output_tokens=result.completion_tokens,
         cost_usd=cost_usd,
+        grounding=result.grounding,
     )
     log_trace(
         tools_used=result.tools_used,
@@ -209,6 +219,8 @@ def demo_chat_stream(question: str, http_request: Request, provider: str | None 
       {"type": "answer",     "answer": "...", "tools_used": [...], "latency_ms": N}
       {"type": "error",      "detail": "..."}        — agent raised
     """
+    _validate_demo_provider(provider)
+
     import queue
     import threading
     import json as _json
@@ -234,15 +246,7 @@ def demo_chat_stream(question: str, http_request: Request, provider: str | None 
             on_event({"type": "thinking"})
             from src.agent.agent import load_agent_config
             from src.evaluation.cost_estimator import calculate_cost
-            cfg = load_agent_config()
-            _DEMO_PROVIDERS_STREAM = {
-                "gemini": ("gemini", "gemini-2.0-flash"),
-                "groq":   ("groq",   "openai/gpt-oss-120b"),  # the model the agent evals ran on
-                "anthropic": ("anthropic", "claude-haiku-4-5-20251001"),  # pinned: agent.yaml's default is a pricier model
-            }
-            if provider and provider in _DEMO_PROVIDERS_STREAM:
-                prov, mdl = _DEMO_PROVIDERS_STREAM[provider]
-                cfg = {**cfg, "provider": prov, "model": mdl}
+            cfg = _demo_provider_config(load_agent_config(), provider)
             result = run_agent(question, config_override=cfg, event_cb=on_event)
             latency_ms = round((time.monotonic() - t0) * 1000, 1)
 
@@ -277,6 +281,7 @@ def demo_chat_stream(question: str, http_request: Request, provider: str | None 
                 "latency_ms": latency_ms,
                 "model": disp_m or None,
                 "cost_usd": cost_usd,
+                "grounding": result.grounding,
             })
         except Exception as exc:
             on_event({"type": "error", "detail": str(exc)})
@@ -369,6 +374,7 @@ def chat(request: ChatRequest):
                 tools_used=tools_used,
                 citations=citations,
                 conversation_id=conversation_id,
+                grounding=cached.get("grounding"),
             )
 
     try:
@@ -381,6 +387,7 @@ def chat(request: ChatRequest):
             "answer": result.answer,
             "tools_used": result.tools_used,
             "citations": result.citations,
+            "grounding": result.grounding,
         })
 
     append_turn(conversation_id, request.question, result.answer)
@@ -395,6 +402,7 @@ def chat(request: ChatRequest):
         tools_used=result.tools_used,
         citations=[SourceCitation(kind=c["kind"], reference=c["reference"]) for c in result.citations],
         conversation_id=conversation_id,
+        grounding=result.grounding,
     )
 
 

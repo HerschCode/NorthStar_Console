@@ -17,6 +17,29 @@ def test_demo_page_serves_html_without_auth():
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert "Northstar Procurement Assistant" in response.text
+    assert 'data-provider="anthropic"' not in response.text
+    assert 'data-provider="gemini"' in response.text
+    assert 'data-provider="groq"' in response.text
+    assert "max-height: min(62vh, 680px); overflow-y: auto" in response.text
+
+
+@patch("src.api.routes.run_agent")
+def test_demo_chat_rejects_anthropic_provider(mock_run_agent):
+    response = client.post(
+        "/demo/chat",
+        json={"question": "what is the cycle time", "provider": "anthropic"},
+    )
+    assert response.status_code == 422
+    assert "Choose 'gemini' or 'groq'" in response.json()["detail"]
+    mock_run_agent.assert_not_called()
+
+
+def test_demo_stream_rejects_anthropic_provider():
+    response = client.get(
+        "/demo/chat/stream",
+        params={"question": "what is the cycle time", "provider": "anthropic"},
+    )
+    assert response.status_code == 422
 
 
 @patch("src.api.routes.run_agent")
@@ -28,6 +51,23 @@ def test_demo_chat_works_without_api_key(mock_run_agent):
     assert response.status_code == 200
     assert response.json()["answer"] == "Mean cycle time is 48 hours."
     assert response.json()["conversation_id"] == "demo"
+    assert mock_run_agent.call_args.kwargs["config_override"]["provider"] == "groq"
+    assert mock_run_agent.call_args.kwargs["config_override"]["model"] == "openai/gpt-oss-120b"
+
+
+@patch("src.api.routes.run_agent")
+def test_demo_chat_can_select_gemini(mock_run_agent):
+    mock_run_agent.return_value = AgentResponse(
+        answer="Mean cycle time is 48 hours.", tool_calls=[], tools_used=[], citations=[],
+    )
+    response = client.post(
+        "/demo/chat",
+        json={"question": "what is the cycle time", "provider": "gemini"},
+    )
+    assert response.status_code == 200
+    config = mock_run_agent.call_args.kwargs["config_override"]
+    assert config["provider"] == "gemini"
+    assert config["model"] == "gemini-3.8-flash"
 
 
 @patch("src.api.routes.run_agent")

@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -15,7 +17,7 @@ class ChatRequest(BaseModel):
     )
     provider: str | None = Field(
         default=None,
-        description="Override the server's default provider for this request: 'gemini', 'groq', or 'anthropic'. Demo endpoint only; ignored on authenticated /chat.",
+        description="Override the server's default demo provider: 'gemini' or 'groq'. Ignored on authenticated /chat.",
     )
 
 
@@ -34,6 +36,7 @@ class ChatResponse(BaseModel):
     input_tokens: int | None = None
     output_tokens: int | None = None
     cost_usd: float | None = None
+    grounding: dict[str, Any] | None = None
 
 
 class InvestigateRequest(BaseModel):

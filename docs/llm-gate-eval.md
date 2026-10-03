@@ -5,7 +5,21 @@
 
 The lexical gate (`claim_support.py`, `support@0.65`) cannot detect polarity flips
 (`included` vs `excluded`, `Yes` vs `No`, `required` vs `optional`).
-The LLM judge catches these by checking semantic entailment, not term overlap.
+The LLM judge is intended to assess semantic entailment rather than term overlap.
+The evaluation measures whether it catches these cases; it does not assume that it does.
+
+> **Historical results below need to be rerun.** The stored run evaluated 80 of the
+> possible 96 rows and used a parser that treated truncated outputs and API failures as
+> ordinary UNFAITHFUL decisions. These figures therefore do not measure judge quality.
+> The current evaluator retries malformed labels, excludes operational failures from the
+> classification metrics, and supports Gemini: `python -m scripts.evaluate_llm_gate
+> --provider gemini --model gemini-3.8-flash
+> --context-snapshot data/evaluation/p2_gate_contexts.json`
+> (requires `GEMINI_API_KEY`). The frozen evidence snapshot covers 32 question IDs.
+> The configured account currently receives 403 access denied for `gemini-3.8-flash`;
+> resolve Google AI Studio project access before rerunning. Permanent 4xx errors now
+> stop immediately instead of consuming retry time/quota. Use `--resume` after access
+> is restored; failed rows are retried and each completed row is saved immediately.
 
 ## Overall scores
 
@@ -147,17 +161,21 @@ The LLM judge catches these by checking semantic entailment, not term overlap.
 
 ## Design notes
 
-- **Same evaluation set**: compared on the existing 96-question labeled set
+- **Same evaluation set**: compared on the existing labeled set
   (`reports/gate_labeled_eval.json`), not a new holdout. Results measure
-  within-sample performance; an independent holdout would be stronger.
-- **Chunks**: retrieved fresh from the live index via `hybrid_search(top_k=5)`
-  at eval time. Off-context rows use the recorded `partner` question's chunks.
+  within-sample performance; correct answers were labeled by one author. An independent
+  holdout and second annotator would be stronger.
+- **Chunks**: freeze exact evidence with
+  `python -m scripts.evaluate_llm_gate --freeze-contexts data/evaluation/p2_gate_contexts.json`
+  and reuse it with `--context-snapshot data/evaluation/p2_gate_contexts.json`. The snapshot
+  records hashes of the labeled answer/question source files. Off-context rows use the
+  recorded `partner` question's chunks.
 - **Labeling**: `correct` answers were hand-checked against the policy documents
   (same author as this eval — disclosed in `data/evaluation/gate_labels.json`).
 - **Polarity flips**: `wrong_fact` rows include mutated numbers, swapped team
-  names, and yes/no inversions. The lexical gate catches number mutations reliably
-  but misses yes/no inversions; the LLM judge catches all three.
-- **Groq rate limiting**: from row ~75 onwards the Groq free-tier daily token
-  quota (200k TPD) was exhausted. All LLM calls returned `api error 429`; these
-  default to UNFAITHFUL (conservative). LLM recall is understated — the judge
-  architecture is sound but the evaluation was Groq-capacity-constrained.
+  names, and yes/no inversions. Results should be reported by mutation type; no catch
+  rate is presumed.
+- **Provider failures**: API errors and unparseable/truncated responses are excluded
+  from classification metrics and counted separately; they are not successful blocks.
+- **Provider selection**: Groq is the default; use `--provider gemini` with a configured
+  `GEMINI_API_KEY` to evaluate through Google AI Studio.

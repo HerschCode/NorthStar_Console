@@ -33,6 +33,7 @@ def test_chat_endpoint_returns_answer_and_citations(mock_run_agent):
     body = response.json()
     assert body["answer"] == "Orders above $10,000 need secondary approval."
     assert body["citations"][0]["kind"] == "document"
+    assert body["grounding"]["status"] == "not_checked"
     assert "conversation_id" in body
 
 

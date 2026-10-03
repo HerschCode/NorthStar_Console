@@ -9,10 +9,11 @@ The judge returns a boolean (FAITHFUL / UNFAITHFUL) plus a one-sentence reason.
 It makes a single LLM call per answer and is intentionally cheap: the prompt is short
 and the only output is a label + one sentence.
 
-Supported providers (OpenAI-compatible Groq API):
+Supported providers:
   from src.evaluation.llm_gate import LLMGate
   gate = LLMGate()                          # uses GROQ_API_KEY, gpt-oss-120b
   gate = LLMGate(model="openai/gpt-oss-20b")
+  gate = LLMGate(provider="gemini")         # uses GEMINI_API_KEY, gemini-2.0-flash
   result = gate.judge(question, answer, chunks)
   # result.faithful: bool
   # result.reason:   str
@@ -62,40 +63,98 @@ class JudgeResult:
 
 def _parse(raw: str) -> JudgeResult:
     text = raw.strip()
+    if text.startswith("{"):
+        try:
+            import json
+
+            parsed = json.loads(text)
+            faithful = parsed.get("faithful")
+            if isinstance(faithful, bool):
+                return JudgeResult(
+                    faithful=faithful,
+                    reason=str(parsed.get("reason", "")),
+                    raw=raw,
+                )
+        except (json.JSONDecodeError, AttributeError):
+            pass
+
     m = re.match(r"(FAITHFUL|UNFAITHFUL)\s*:?\s*(.*)", text, re.IGNORECASE | re.DOTALL)
     if m:
         label = m.group(1).upper()
         reason = m.group(2).strip()
         return JudgeResult(faithful=(label == "FAITHFUL"), reason=reason, raw=raw)
-    upper = text.upper()
-    # Handle truncated prefixes (API returning partial response under load)
-    if upper.startswith("FAITHF"):   # "FAITHF..." → FAITHFUL
-        return JudgeResult(faithful=True, reason=f"[truncated] {text[:120]}", raw=raw)
-    if upper.startswith("UNFAITHF"):  # "UNFAITHF..." → UNFAITHFUL
-        return JudgeResult(faithful=False, reason=f"[truncated] {text[:120]}", raw=raw)
-    # Fallback: look for the keyword anywhere in the response
-    if "UNFAITHFUL" in upper:
-        return JudgeResult(faithful=False, reason=text[:200], raw=raw)
-    if "FAITHFUL" in upper:
-        return JudgeResult(faithful=True, reason=text[:200], raw=raw)
-    # Cannot parse — treat as UNFAITHFUL (conservative)
     return JudgeResult(faithful=False, reason=f"[parse error] {text[:120]}", raw=raw)
 
 
 class LLMGate:
-    """LLM-based faithfulness judge using a Groq-hosted model."""
+    """LLM-based faithfulness judge using Groq or Google Gemini."""
 
     def __init__(
         self,
-        model: str = "openai/gpt-oss-120b",
+        model: str | None = None,
         api_key: str | None = None,
+        provider: str = "groq",
+        client=None,
     ):
+        if provider not in {"groq", "gemini"}:
+            raise ValueError("provider must be 'groq' or 'gemini'")
+        self.provider = provider
+        self.model = model or (
+            "openai/gpt-oss-120b" if provider == "groq" else "gemini-3.8-flash"
+        )
+        self._client = client or self._make_client(api_key)
+
+    def _make_client(self, api_key: str | None):
+        if self.provider == "groq":
+            try:
+                import groq  # type: ignore
+            except ImportError as exc:
+                raise ImportError("groq package required: pip install groq") from exc
+            return groq.Groq(api_key=api_key or os.environ.get("GROQ_API_KEY"))
+
         try:
-            import groq  # type: ignore
+            from google import genai
         except ImportError as exc:
-            raise ImportError("groq package required: pip install groq") from exc
-        self._client = groq.Groq(api_key=api_key or os.environ.get("GROQ_API_KEY"))
-        self.model = model
+            raise ImportError("google-genai package required: pip install google-genai") from exc
+        key = api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        if not key:
+            raise ValueError("GEMINI_API_KEY (or GOOGLE_API_KEY) is required for Gemini")
+        return genai.Client(api_key=key)
+
+    def _generate(self, prompt: str) -> str:
+        if self.provider == "gemini":
+            response = self._client.models.generate_content(
+                model=self.model,
+                contents=prompt,
+                config={
+                    "system_instruction": _SYSTEM,
+                    "temperature": 0.0,
+                    "max_output_tokens": 256,
+                },
+            )
+            return (response.text or "").strip()
+
+        response = self._client.chat.completions.create(
+            model=self.model,
+            max_tokens=256,
+            temperature=0.0,
+            messages=[
+                {"role": "system", "content": _SYSTEM},
+                {"role": "user", "content": prompt},
+            ],
+        )
+        return (response.choices[0].message.content or "").strip()
+
+    @staticmethod
+    def _status_code(exc: Exception) -> int | None:
+        for value in (
+            getattr(exc, "status_code", None),
+            getattr(exc, "code", None),
+            getattr(getattr(exc, "response", None), "status_code", None),
+        ):
+            if isinstance(value, int):
+                return value
+        return None
 
     def judge(self, question: str, answer: str, chunks: list[str], retries: int = 3) -> JudgeResult:
         """Return FAITHFUL/UNFAITHFUL for this answer given the retrieved chunks."""
@@ -107,27 +166,19 @@ class LLMGate:
             question=question.strip(),
             answer=answer.strip(),
         )
-        messages = [
-            {"role": "system", "content": _SYSTEM},
-            {"role": "user", "content": prompt},
-        ]
         raw = ""
         for attempt in range(retries + 1):
             try:
-                resp = self._client.chat.completions.create(
-                    model=self.model,
-                    max_tokens=120,
-                    temperature=0.0,
-                    messages=messages,
-                )
-                raw = (resp.choices[0].message.content or "").strip()
-                upper = raw.upper()
-                if raw and ("FAITHFUL" in upper or upper.startswith("FAITHF") or upper.startswith("UNFAITHF")):
-                    return _parse(raw)
+                raw = self._generate(prompt)
+                result = _parse(raw)
+                if not result.reason.startswith("[parse error]"):
+                    return result
                 if attempt < retries:
-                    time.sleep(2.0)  # short wait before retrying empty/truncated response
+                    time.sleep(2.0)
             except Exception as exc:
-                # Extract "retry in Xs" from Groq rate-limit messages
+                status_code = self._status_code(exc)
+                if status_code is not None and 400 <= status_code < 500 and status_code not in {408, 429}:
+                    return JudgeResult(faithful=False, reason=f"[api error] {str(exc)[:120]}", raw="")
                 delay = 15.0
                 m = _re.search(r"try again in\s+([\d.]+)s", str(exc), _re.IGNORECASE)
                 if m:
@@ -136,4 +187,4 @@ class LLMGate:
                     time.sleep(delay)
                 else:
                     return JudgeResult(faithful=False, reason=f"[api error] {str(exc)[:120]}", raw="")
-        return _parse(raw)  # return last attempt even if unparseable
+        return _parse(raw)
