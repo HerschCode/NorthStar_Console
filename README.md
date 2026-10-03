@@ -206,6 +206,33 @@ figures that are not in the policy documents.
 
 Full analysis: [`docs/gate-calibration.md`](docs/gate-calibration.md)
 
+### LLM judge comparison (n=80 partial, 2026-10-03)
+
+An LLM faithfulness judge (`src/evaluation/llm_gate.py`) was built and evaluated against the
+same 96-question labeled set to measure what the lexical gate misses. The judge prompts
+`openai/gpt-oss-20b` (via Groq) to classify each answer as FAITHFUL or UNFAITHFUL, with
+special attention to polarity: *"included" vs "excluded", "required" vs "optional", "Yes" vs "No"*.
+
+| Gate | Accuracy | F1 | Correct pass rate | Wrong blocked rate |
+|---|---|---|---|---|
+| Lexical (r=0.65) | 82.5% | 0.741 | 74.1% | 86.8% |
+| LLM judge | 75.0% | 0.412 | 25.9% | **100.0%** |
+| Ensemble (AND) | 75.0% | 0.412 | 25.9% | **100.0%** |
+
+**Key finding:** The LLM judge achieved perfect precision (zero false positives — never passed a
+wrong answer through). Its low recall (26%) reflects API reliability constraints: Groq's free-tier
+daily token quota (~200k TPD) was exhausted by row 75, causing empty responses that default
+conservatively to UNFAITHFUL. In the first 24 questions (before rate limiting), the judge
+demonstrated the intended behaviour — catching polarity flips that lexical scoring misses:
+
+- id=4: "Finance team" vs "Vendor Risk team" → lexical passes, LLM blocks ✓
+- ids 13–19: Yes/No inversions → lexical passes (identical content words), LLM blocks ✓
+
+**Limitation:** Groq's free tier is unsuitable for bulk eval runs. The judge architecture is
+sound; production use would require a paid tier or a self-hosted model.
+
+Full analysis: [`docs/llm-gate-eval.md`](docs/llm-gate-eval.md)
+
 ---
 
 ## Agent evaluation
