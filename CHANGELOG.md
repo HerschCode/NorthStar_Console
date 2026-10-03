@@ -2,6 +2,12 @@
 
 ## Unreleased -- Post-v1.0.0 upgrade work
 
+### Analysis: model vs rules with causal features and bootstrap CIs (2026-10-03)
+- `scripts/model_vs_rules.py` -> `reports/model_vs_rules.json`; write-up `docs/model-vs-rules.md`.
+- Negative result: adding supplier workload features does not beat the rules at 5-10% treated. Found that
+  `supplier_historical_breach_rate` uses unfinished earlier cases' outcomes (look-ahead); strictly causal it ~ random.
+  Retraining with a causal history is flagged, not yet done.
+
 ### Fix: CI failure from an unpinned scikit-learn vs a pickled model (2026-10-03)
 - After the 9,228-case resample, gradient boosting won model selection. Its pickle embeds sklearn-internal
   loss classes, so `models/sla_risk_model.joblib` failed to load on CI's newer sklearn ("No module named

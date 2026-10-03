@@ -28,15 +28,13 @@ figures above come from percentile-based targets with 25–55% base rates. Detai
 *Ranges widened on 2026-09-29's 9,228-case resample (was 3,000) -- a larger, more representative sample
 surfaces more variance across the p50/p75 targets and k values, not less; see the finance-module changelog entry.*
 
-**Does the model beat a simple rule? Not at small treated shares, on the current resample.** In the intervention
-simulation on the realistic (p75, 25% base rate) target, at 5% treated the busiest-supplier rule (precision 0.76)
-and the supplier-history rule (0.69) both **beat the model (0.47)**; at 10% supplier-history still edges it out
-(0.57 vs 0.52). The model only pulls ahead from 20% treated on (0.46 vs 0.45, then 0.46 vs 0.37 at 30%). This
-flipped from the previous (3,000-case) resample, where the model won at every share -- a genuine finding from a
-larger, more representative sample, not a regression to hide. "Highest order value first" now runs (order value
-was recovered from the source data in the finance module, 2026-09-28) and sits between the rules and random at
-every share. Effect sizes throughout are assumptions (SIMULATION). Method and grid:
-[`docs/uplift-method.md`](docs/uplift-method.md).
+**Does the model beat a simple rule? Not at small treated shares -- and part of the rules' edge is a look-ahead
+leak.** At 5% treated, the busiest-supplier rule (0.79) and the supplier-history rule (0.69) beat the model (0.47); at
+10% supplier-history ties it; the model wins from 20% on (+0.10 over the best deployable rule, CI excludes 0).
+Adding the rules' features (supplier workload) did not help, and the supplier-history feature -- the model's strongest --
+uses outcomes of earlier-started cases that may not have ended yet. Made strictly causal, that rule falls to random and
+model ROC-AUC drops 0.789 -> 0.764. Details, bootstrap CIs and caveats (cases cluster by purchase order, so CIs are too
+narrow): [`docs/model-vs-rules.md`](docs/model-vs-rules.md). Effect sizes elsewhere are assumptions (SIMULATION).
 
 **Bug found and fixed (2026-09-25):** the served model's probability calibration had been fitted on the same rows
 the forest trained on, cutting its ranking ROC-AUC from 0.986 to 0.665 while `meta.json` reported the raw
