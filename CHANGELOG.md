@@ -2,6 +2,10 @@
 
 ## Unreleased -- Post-v1.0.0 upgrade work
 
+### Dashboard visual refresh (2026-10-03)
+- Set the dashboard to a light-first theme with refined typography, color contrast, and card styling;
+  retain the dark theme toggle. The dashboard guide now starts collapsed with a clear expand button.
+
 ### Dashboard navigation and responsive layout (2026-10-03)
 - Added sticky in-page section navigation and clearer visual grouping for summary, process/risk,
   controls/finance, and platform-health sections. Risk worklists now reflow for narrow screens.
