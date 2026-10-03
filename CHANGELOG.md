@@ -2,6 +2,9 @@
 
 ## Unreleased -- Post-v1.0.0 upgrade work
 
+### External validation on public data (2026-10-03)
+- `scripts/external_validation.py`, `docs/external-validation.md`: AP controls on UCI Online Retail II and SEC EDGAR 2024q1. C4: 21x lift vs reversal proxy; C6 flags ~55% of ordinary real data (negative result, not tuned).
+
 ### Analysis: model vs rules with causal features and bootstrap CIs (2026-10-03)
 - `scripts/model_vs_rules.py` -> `reports/model_vs_rules.json`; write-up `docs/model-vs-rules.md`.
 - Negative result: adding supplier workload features does not beat the rules at 5-10% treated. Found that
