@@ -1,5 +1,9 @@
 # Sequence model (GRU/LSTM) vs prefix random forest (Phase 5)
 
+**Evaluation status:** these results use the older case-level temporal split and have not been rerun with
+purchase-order-grouped holdouts. Do not compare these numbers directly with the updated full-case model
+results until the sequence evaluation is repeated under the same protocol.
+
 Reproduce: `python -m scripts.sequence_model_bpi2019` (≈2 min on CPU; writes
 `reports/sequence_model_results.json`, logs every run to MLflow experiment `sequence_vs_prefix_rf`).
 Code: `src/ml/sequence_model.py`. Install torch first (`requirements-sequence.txt`).

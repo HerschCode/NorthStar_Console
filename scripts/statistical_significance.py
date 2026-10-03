@@ -7,11 +7,10 @@ single number per model with no test of whether the gap could be noise.
 Two things, both using data this pipeline already computes, no new model
 training beyond what src/ml/train.py already does:
 
-1. Bootstrap 95% CI on the deployed model's held-out ROC-AUC -- resamples the
-   FIXED test-set predictions (not refitting), the standard nonparametric way
-   to put an uncertainty band on an AUC computed from one held-out split.
-2. A paired significance test (RF vs LR) across the SAME 5 TimeSeriesSplit
-   folds `cross_validate_time_series` produces for each model -- paired
+1. Purchase-order cluster bootstrap 95% CI on the deployed model's held-out
+    ROC-AUC -- resamples fixed test predictions by PO (not refitting).
+2. A paired significance test (RF vs LR) across the SAME 5 PO-grouped temporal
+    folds `cross_validate_time_series` produces for each model -- paired
    because both models see identical train/test windows per fold, so the
    per-fold DIFFERENCE is the right quantity to test, not the two fold-score
    distributions independently. Reports both a paired t-test AND a Wilcoxon
@@ -40,18 +39,16 @@ N_BOOTSTRAP = 2000
 RANDOM_STATE = 42
 
 
-def bootstrap_auc_ci(y_true: np.ndarray, y_prob: np.ndarray, n_boot: int = N_BOOTSTRAP,
-                      random_state: int = RANDOM_STATE) -> dict:
-    """Percentile bootstrap: resample (true, prob) pairs with replacement n_boot
-    times, recompute ROC-AUC each time, report the 2.5/97.5 percentiles as a
-    95% CI. Resamples predictions from the one fixed held-out split -- doesn't
-    retrain, doesn't need to; this is a standard way to attach uncertainty to
-    a metric computed on one already-fixed test set."""
+def bootstrap_auc_ci(y_true: np.ndarray, y_prob: np.ndarray, cluster_ids: np.ndarray,
+                     n_boot: int = N_BOOTSTRAP, random_state: int = RANDOM_STATE) -> dict:
+    """Percentile bootstrap of fixed predictions, resampling whole POs."""
     rng = np.random.default_rng(random_state)
-    n = len(y_true)
+    codes, unique_clusters = np.unique(cluster_ids, return_inverse=True)
+    cluster_members = [np.flatnonzero(unique_clusters == code) for code in range(len(codes))]
     boot_scores = []
     for _ in range(n_boot):
-        idx = rng.integers(0, n, size=n)
+        sampled_clusters = rng.integers(0, len(cluster_members), size=len(cluster_members))
+        idx = np.concatenate([cluster_members[cluster] for cluster in sampled_clusters])
         y_b, p_b = y_true[idx], y_prob[idx]
         if len(np.unique(y_b)) < 2:
             continue  # a resample with only one class can't score AUC -- skip, don't crash
@@ -115,15 +112,22 @@ def main():
     from src.ml.train import time_based_split
     _, test_idx = time_based_split(evaluated)
     y_test = y.loc[test_idx].to_numpy()
+    if "purchase_order_id" in evaluated.columns:
+        cluster_ids = evaluated.loc[test_idx, "purchase_order_id"].where(
+            evaluated.loc[test_idx, "purchase_order_id"].notna(),
+            evaluated.loc[test_idx, "case_id"],
+        ).astype(str).to_numpy()
+    else:
+        cluster_ids = evaluated.loc[test_idx, "case_id"].astype(str).to_numpy()
 
     print("=== 1. Bootstrap 95% CI on deployed model's (random forest) held-out ROC-AUC ===")
-    ci = bootstrap_auc_ci(y_test, probs)
+    ci = bootstrap_auc_ci(y_test, probs, cluster_ids)
     print(f"  point estimate: {ci['point_estimate']:.4f}")
     print(f"  95% CI: [{ci['ci_95_low']:.4f}, {ci['ci_95_high']:.4f}]  "
           f"(bootstrap std={ci['bootstrap_std']:.4f}, {ci['n_bootstrap_resamples_used']}/{N_BOOTSTRAP} resamples used)")
 
     # --- 2. Paired significance test: RF vs LR across the SAME 5 CV folds ---
-    print("\n=== 2. Paired significance: random forest vs logistic regression (5 TimeSeriesSplit folds) ===")
+    print("\n=== 2. Paired significance: random forest vs logistic regression (5 PO-grouped temporal folds) ===")
     cv_rf = cross_validate_time_series(X, y, evaluated, model_name="random_forest")
     cv_lr = cross_validate_time_series(X, y, evaluated, model_name="logistic_regression")
     sig = paired_significance(cv_rf["fold_roc_auc"], cv_lr["fold_roc_auc"], "random_forest", "logistic_regression")

@@ -1,7 +1,7 @@
 # Prediction-time availability: what the model can actually see, and when
 
-Reproduce: `python -m scripts.prediction_time_check` (5-fold `TimeSeriesSplit`, 3,000 cases,
-93.8% breach rate).
+Reproduce: `python -m scripts.prediction_time_check` (5 PO-grouped temporal folds, measurable
+cases only; 95.5% configured-target breach rate).
 
 ## The finding
 
@@ -15,32 +15,30 @@ purchase order is created:
 | `last_activity_*` | the case's final activity |
 | `unique_activity_count`, `rework_count` | computed over the whole event sequence |
 
-The supplier-history features (`supplier_historical_*`) use only earlier-starting cases, but
-an earlier case's breach/cycle time is only known once *it* has ended, which may be after the
-current case starts. They are closer to prediction-time-safe than the list above, but not
-strictly so.
+The supplier-history features (`supplier_historical_*`) now use only cases whose `end_time` is
+strictly before the scored case's `start_time`. Cases ending at the same timestamp are excluded.
+Cases without completed supplier history receive explicit sentinel values, not statistics from
+the full dataset.
 
 ## Measured effect (mean ROC-AUC over 5 time-ordered folds)
 
 | Feature set | Logistic regression | Random forest |
 |---|---|---|
-| All 15 families (as deployed) | 0.949 | 0.944 |
-| Drop the completion-time features | 0.697 | 0.690 |
-| Creation-time only (also drop supplier history) | 0.595 | 0.540 |
+| All features | 0.968 | 0.960 |
+| Drop end-only activity features | 0.734 | 0.678 |
+| Creation-time only (also drop supplier history) | 0.737 | 0.679 |
 
-Per-fold values are printed by the script; the creation-time-only folds range from 0.13 to
-0.93 (one fold is well below chance), so that configuration is not just weaker but unstable
-across time periods.
+These are means over five PO-grouped folds. Creation-time-only RF varies from 0.455 to 0.801;
+the all-feature RF varies from 0.885 to 0.987. The configured target is highly imbalanced, so
+these scores should not be read as evidence of useful creation-time decision quality.
 
 ## What this means
 
-- The deployed model is best described as a **completion-time / late-stage risk classifier**
-  (useful for triage of in-flight cases as events accumulate, and for post-hoc analysis), not
-  a model that scores a case "at creation, before it closes."
-- Almost all of the headline ~0.95 comes from features that encode how long or complicated
-  the case already was. That correlates strongly with breaching an SLA defined on cycle time.
-- The honest path to a true creation-time model is a **prefix-based** formulation: build
+- The model should be described as a **case-progress-aware risk classifier**, not as a validated
+  creation-time predictor. The full-case features become available as events accumulate.
+- The configured-target AUC is inflated by the 95.5% breach base rate and completion-time features.
+- A stronger creation-time claim needs a **prefix-based** formulation: build
   features from only the first *k* events (or first *t* hours) of each case and evaluate
   performance as a function of *k*. That is not implemented; this document only measures
   the gap.
-- The dominant 93.8% breach rate also means ROC-AUC is measured on a heavily imbalanced set.
+- The dominant 95.5% breach rate also means configured-target ROC-AUC is measured on a heavily imbalanced set.

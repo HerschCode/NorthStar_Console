@@ -3,6 +3,7 @@
 -- src/analytics/sla_analysis.py's own default target for a category with no configured rule.
 select
     pc.case_id,
+    pc.purchase_order_id,
     pc.category,
     pc.supplier_id,
     pc.start_time,

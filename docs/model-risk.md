@@ -16,9 +16,9 @@ points at.
 
 ## Intended use and limitations, stated where a reviewer would look for them
 - **SLA-risk model**: `docs/evaluation.md` states the model's skill comes mostly from late-case
-  features (event count, activity sequence), not creation-time information, and reports the
-  realistic-target range (0.84-0.88 ROC-AUC) next to the degenerate-target number it replaced.
-  `README.md`'s headline states this before any other claim.
+  features (event count, activity sequence), not creation-time information. Current PO-grouped
+  realistic-target results are in [`less-degenerate-target.md`](less-degenerate-target.md);
+  `README.md` distinguishes them from older sequence/prefix studies.
 - **AP controls**: `docs/ap-controls.md` states explicitly that these are rule violations / anomalies
   on an unlabeled dataset, not fraud findings, in its first paragraph, and documents each control's
   known false-positive sources.
@@ -26,9 +26,9 @@ points at.
   warning string, so a caller cannot use it without seeing the caveat.
 
 ## Validation evidence
-- **Temporal train/test split** for every model (`time_based_split`), never a random shuffle --
-  the model is validated only on cases that start after every training case, matching how it would
-  actually be used.
+- **Temporal, purchase-order-grouped train/test split** for the current SLA-risk evaluation
+  (`time_based_split`); orders crossing the cutoff are excluded. Older sequence/prefix artifacts
+  are flagged as awaiting the same validation protocol.
 - **Independent-dataset validation**: the same pipeline scored against BPI 2012
   (`docs/external-validation-bpi2012.md`), a dataset this project's label was never designed around.
 - **Feature ablation**: which feature families drive the score (`docs/less-degenerate-target.md`,

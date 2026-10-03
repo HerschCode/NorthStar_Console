@@ -1,6 +1,7 @@
 -- One row per case -- the grain everything else in this mart layer joins against.
 select
     s.case_id,
+    s.purchase_order_id,
     s.category,
     s.supplier_id,
     s.start_time,

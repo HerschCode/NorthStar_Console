@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 
 # SQL source mapping (both SQL and Python consume the same case-level data):
@@ -13,13 +14,13 @@ import pandas as pd
 #                          sql/analysis/sla_performance.sql
 #   first_activity      -- sourced from build_process_cases() (first event per case)
 #   supplier_historical_breach_rate -- no SQL equivalent; computed in Python only
-#                          (requires row-level shift/expanding logic not in SQL layer)
+#                          from supplier cases completed before each case starts
 
 # Feature families for ablation study (scripts/ablation_study.py):
 #   baseline         — structural case-level signals available immediately
 #   temporal         — time-of-day / calendar signals from start_time only
 #   process          — process-mining signals from the event sequence
-#   supplier_history — causal per-supplier history, shift(1) prevents leakage
+#   supplier_history — only supplier cases completed before the current case
 # All families together = FEATURE_COLUMNS below.
 
 FEATURE_COLUMNS = [
@@ -40,8 +41,8 @@ FEATURE_COLUMNS = [
     "rework_count",            # repeated activities = re-work or system glitch; correlates
                                # with delay and non-conformance (see conformance analysis)
     # ── supplier history ────────────────────────────────────────────────
-    "supplier_historical_breach_rate",      # expanding mean, shift(1) — no leakage
-    "supplier_historical_median_cycle_time",# expanding median, shift(1) — no leakage
+    "supplier_historical_breach_rate",      # completed-case-only supplier history
+    "supplier_historical_median_cycle_time",# completed-case-only duration history
     "sla_target_hours",    # SLA threshold for this case's category; set by config before
                            # the case ends, so this is not leakage — tighter targets make
                            # breach more likely and give the model a direct numeric signal
@@ -72,35 +73,41 @@ def _add_derived_features(df: pd.DataFrame) -> pd.DataFrame:
         df["start_month"] = df["start_time"].dt.month
         df["start_quarter"] = df["start_time"].dt.quarter
 
-    # Causal (expanding, shifted) per-supplier breach rate -- at the time each
-    # case STARTS, what fraction of that supplier's PRIOR cases (sorted by
-    # start_time, strictly before this one) breached SLA. shift(1) excludes the
-    # current row itself, so a supplier's first-ever case sees no history (NaN,
-    # filled with the training set's overall breach rate as a neutral prior)
-    # rather than peeking at its own outcome.
-    if "supplier_id" in df.columns and "sla_breach" in df.columns:
-        ordered = df.sort_values("start_time")
-        expanding_rate = (
-            ordered.groupby("supplier_id")["sla_breach"]
-            .apply(lambda s: s.shift(1).expanding().mean())
-            .reset_index(level=0, drop=True)
-        )
-        df["supplier_historical_breach_rate"] = expanding_rate.reindex(df.index)
-        overall_prior = df["sla_breach"].astype(int).mean()
-        df["supplier_historical_breach_rate"] = df["supplier_historical_breach_rate"].fillna(overall_prior)
+    # A prior case is usable only after it has ended. Earlier start order alone
+    # is insufficient because cases overlap in time. Fixed sentinels avoid using
+    # full-dataset target/duration statistics for cases with no completed history.
+    if (
+        {"supplier_id", "start_time", "end_time", "sla_breach", "cycle_time_hours"}
+        <= set(df.columns)
+    ):
+        df["supplier_historical_breach_rate"] = 0.5
+        df["supplier_historical_median_cycle_time"] = -1.0
 
-    # Causal per-supplier median cycle time — expanding median of prior completed
-    # cases, shift(1) prevents peeking at the current case's own cycle time.
-    if "supplier_id" in df.columns and "cycle_time_hours" in df.columns:
-        ordered = df.sort_values("start_time")
-        expanding_med = (
-            ordered.groupby("supplier_id")["cycle_time_hours"]
-            .apply(lambda s: s.shift(1).expanding().median())
-            .reset_index(level=0, drop=True)
-        )
-        df["supplier_historical_median_cycle_time"] = expanding_med.reindex(df.index)
-        overall_med = df["cycle_time_hours"].median()
-        df["supplier_historical_median_cycle_time"] = df["supplier_historical_median_cycle_time"].fillna(overall_med)
+        for _, supplier_cases in df.dropna(subset=["supplier_id"]).groupby("supplier_id", sort=False):
+            query_starts = supplier_cases["start_time"].to_numpy()
+
+            completed_breaches = supplier_cases.dropna(subset=["end_time", "sla_breach"]).sort_values("end_time")
+            if not completed_breaches.empty:
+                completion_times = completed_breaches["end_time"].to_numpy()
+                completed_counts = np.searchsorted(completion_times, query_starts, side="left")
+                breach_values = completed_breaches["sla_breach"].astype(int).to_numpy()
+                breach_rates = np.cumsum(breach_values) / np.arange(1, len(breach_values) + 1)
+                has_history = completed_counts > 0
+                df.loc[supplier_cases.index[has_history], "supplier_historical_breach_rate"] = breach_rates[
+                    completed_counts[has_history] - 1
+                ]
+
+            completed_durations = supplier_cases.dropna(
+                subset=["end_time", "cycle_time_hours"]
+            ).sort_values("end_time")
+            if not completed_durations.empty:
+                completion_times = completed_durations["end_time"].to_numpy()
+                completed_counts = np.searchsorted(completion_times, query_starts, side="left")
+                prefix_medians = completed_durations["cycle_time_hours"].expanding().median().to_numpy()
+                has_history = completed_counts > 0
+                df.loc[supplier_cases.index[has_history], "supplier_historical_median_cycle_time"] = prefix_medians[
+                    completed_counts[has_history] - 1
+                ]
 
     return df
 
@@ -154,7 +161,7 @@ def load_evaluated_cases_from_dbt_marts(engine) -> pd.DataFrame:
     -- build_features() only pulls columns it recognizes from FEATURE_COLUMNS)."""
     return pd.read_sql(
         """
-        select case_id, category, supplier_id, start_time, end_time, cycle_time_hours,
+        select case_id, purchase_order_id, category, supplier_id, start_time, end_time, cycle_time_hours,
                sla_target_hours, sla_breach, event_count, variant, variant_frequency,
                first_activity, last_activity
         from dbt_marts.fct_cases

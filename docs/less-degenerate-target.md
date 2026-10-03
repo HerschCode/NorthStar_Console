@@ -1,47 +1,45 @@
 # Re-evaluating on a less degenerate SLA target
 
-Reproduce: `python -m scripts.target_sensitivity`
+Reproduce: `python -m scripts.target_sensitivity` (PO-isolated temporal holdout and grouped folds)
 
 ## Why
 
 The configured SLA targets (`config/sla.yaml`, 10–14 days) are far below BPI 2019's real cycle
-times (median ≈ 84 days), so 93.8% of cases breach and the held-out split (last 20% by start
-time) is **97.0% breaches — 18 negatives out of 600**. ROC-AUC there is computed over 18
-negatives and is high-variance. This re-runs the same models and features with the breach label
-redefined from data, so the metric is measured where negatives are not rare.
+times (median ≈ 84 days), so 95.5% of measurable cases breach under the configured rules. The
+latest PO-isolated holdout is **96.3% breaches — 63 negatives out of 1,708**. ROC-AUC on this
+target remains sensitive to the small negative class. Percentile targets provide a more balanced
+evaluation, but are evaluation labels, not contractual SLAs.
 
 Target definitions: per-category percentile of cycle time computed on the **training window only**
-(first 80% of cases by start time; categories with < 30 training cases fall back to the global
-percentile), so the test period never influences the label. Models: logistic regression and
-random forest, same hyperparameters as `src/ml/train.py`. `sla_target_hours` and the
-supplier-history features are recomputed from the new label.
+(first 80% of purchase-order groups by start time; categories with < 30 training cases fall back to
+the global percentile), so the test period never influences the label. Models: logistic regression
+and random forest. Holdout groups and 5-fold validation keep purchase orders intact. Supplier-history
+features use only cases completed strictly before each case starts.
 
 ## Results
 
 | Target | Holdout base rate (negatives) | Feature set | Model | Holdout ROC-AUC | Holdout PR-AUC | 5-fold mean ROC-AUC (min–max) |
 |---|---|---|---|---|---|---|
-| Configured (10–14 d) | 97.0% (18) | all | LR | 0.910 | 0.997 | 0.949 (0.860–0.999) |
-| | | all | RF | 0.985 | 1.000 | 0.944 (0.847–0.976) |
-| | | creation-time only | LR / RF | 0.740 / 0.707 | 0.982 / 0.984 | 0.595 / 0.540 (0.13–0.93) |
-| p50 (85 d default) | 51.7% (290) | all | LR | 0.783 | 0.826 | 0.908 (0.827–0.955) |
-| | | all | RF | 0.830 | 0.812 | 0.898 (0.825–0.945) |
-| | | creation-time only | LR / RF | 0.515 / 0.514 | 0.497 / 0.520 | 0.669 / 0.626 (0.49–0.85) |
-| p75 (113 d default) | 27.0% (438) | all | LR | 0.833 | 0.690 | 0.902 (0.860–0.937) |
-| | | all | RF | 0.885 | 0.745 | 0.909 (0.890–0.941) |
-| | | creation-time only | LR / RF | 0.648 / 0.648 | 0.379 / 0.371 | 0.717 / 0.691 (0.60–0.81) |
+| Configured (10–14 d) | 96.3% (63) | all | LR | 0.950 | 0.995 | 0.968 (0.943–0.998) |
+| | | all | RF | 0.983 | 0.999 | 0.963 (0.897–0.988) |
+| | | creation-time only | LR / RF | 0.752 / 0.702 | 0.984 / 0.981 | 0.737 / 0.666 (0.388–0.871) |
+| p50 (78 d default) | 54.5% (777) | all | LR | 0.861 | 0.826 | 0.843 (0.768–0.904) |
+| | | all | RF | 0.865 | 0.889 | 0.821 (0.730–0.872) |
+| | | creation-time only | LR / RF | 0.869 / 0.814 | 0.882 / 0.852 | 0.838 / 0.803 (0.715–0.904) |
+| p75 (108 d default) | 24.5% (1,290) | all | LR | 0.763 | 0.454 | 0.795 (0.740–0.832) |
+| | | all | RF | 0.763 | 0.559 | 0.792 (0.742–0.847) |
+| | | creation-time only | LR / RF | 0.704 / 0.641 | 0.337 / 0.300 | 0.767 / 0.723 (0.670–0.857) |
 
 ## What this says
 
-1. **The 0.986 headline overstates skill.** With a non-degenerate label the same model and
-   features score **0.83–0.89 holdout ROC-AUC** (0.90–0.91 averaged over 5 folds). Still a real
-   signal, but not near-perfect ranking.
-2. **PR-AUC is the honest number on the configured target.** 0.997–1.000 there is essentially the
-   base rate (0.970); on p75 PR-AUC 0.745 against a base rate of 0.270 is a genuine lift.
-3. **Creation-time-only features are close to chance on the balanced target** (holdout 0.51 at
-   p50, 0.65 at p75), consistent with `docs/prediction-time-availability.md`: the model's skill
-   comes from features that describe a case that has already progressed.
-4. **RF vs LR** ordering on holdout (RF ahead) is within the fold-to-fold spread and matches the
-   earlier paired test (`docs/statistical-significance.md`) finding no significant difference.
+1. **Configured-target ROC-AUC is misleadingly high.** The holdout has only 63 negatives, and
+   PR-AUC 0.995–0.999 is close to the 0.963 base rate.
+2. **Realistic-target results depend on target definition.** Full-feature holdout ROC-AUC is
+   0.763–0.865; p75 PR-AUC is 0.454 (LR) / 0.559 (RF), against a 0.245 base rate.
+3. **Creation-time performance is not uniformly weak, but is unstable by target/model.** It
+   ranges from 0.641 (p75 RF) to 0.869 (p50 LR); p75 RF grouped-fold AUC ranges 0.670–0.798.
+4. **Treat these as offline experiments, not deployment results.** The deployed model has not
+   been retrained with the revised feature code and group-aware split.
 
 ## Not done
 
@@ -49,8 +47,8 @@ supplier-history features are recomputed from the new label.
   API semantics and is a product decision, not an evaluation one.
 - Percentile targets are a modelling choice for testing, not a real contractual SLA.
 
-## Regenerated 2026-09-28 (zero-duration cases excluded)
-104 truncated cases with zero measured duration were labelled "not breached"; they are now excluded (2,896 cases,
-580 held out). Holdout ROC-AUC, all features: p50 LR 0.879 / RF 0.876; p75 LR 0.841 / RF 0.870 -> **0.84-0.88**
-(was 0.83-0.89). Creation-time only: 0.62-0.67 (was 0.51-0.65). Configured target: RF 0.972, 15 negatives of 580.
-Reproduce: `python -m scripts.target_sensitivity`. Tables above are the previous run.
+## Regenerated 2026-10-03
+The current table uses 9,108 measurable cases, a 1,708-case holdout, and PO-isolated grouped folds.
+The configured target has 63 held-out negatives; p50 and p75 targets have 777 and 1,290 respectively.
+Logistic regression emitted convergence warnings in two evaluation folds; interpret its results cautiously
+until the evaluation pipeline scales numeric inputs or otherwise verifies convergence.

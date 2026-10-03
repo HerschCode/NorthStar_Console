@@ -11,6 +11,7 @@ def sample_events():
             "2024-01-05 09:00", "2024-01-05 15:00",
         ]),
         "supplier_id": ["S1", "S1", "S1", "S2", "S2"],
+        "purchase_order_id": ["PO1", "PO1", "PO1", "PO2", "PO2"],
         "category": ["3-way match", "3-way match", "3-way match", "Consignment", "Consignment"],
     })
 
@@ -58,6 +59,7 @@ def test_build_process_cases_variant_frequency_counts_shared_variants():
 def test_build_process_cases_carries_optional_columns_when_present():
     cases = build_process_cases(sample_events())
     assert "supplier_id" in cases.columns
+    assert cases.set_index("case_id")["purchase_order_id"].to_dict() == {"C1": "PO1", "C2": "PO2"}
     assert "category" in cases.columns
 
 

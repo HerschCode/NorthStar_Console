@@ -1,5 +1,15 @@
 # Evaluation, caveats and design notes
 
+## Current evaluation status (2026-10-03)
+
+The current authoritative results are in [`less-degenerate-target.md`](less-degenerate-target.md),
+[`prediction-time-availability.md`](prediction-time-availability.md), and
+[`model-vs-rules.md`](model-vs-rules.md). These use purchase-order-isolated temporal holdouts and
+grouped folds; rule-comparison confidence intervals resample purchase orders. The older numeric
+tables below were generated before that split and are retained as experiment history only. Do not
+quote them as current performance. The deployed model has not been retrained with the corrected
+features or grouped split.
+
 Moved out of the README in the Phase 7 rewrite so the README can lead with the honest headline. Nothing was removed: every measured caveat, table and design decision below is the original text. Some framing (e.g. the "Status" and 15-feature wording) predates Phases 1-6; newer work is in [`sequence-model.md`](sequence-model.md), [`feature-drift.md`](feature-drift.md), [`orchestration.md`](orchestration.md), [`dbt-project.md`](dbt-project.md), [`sql-window-functions.md`](sql-window-functions.md) and [`uplift-method.md`](uplift-method.md).
 
 # Supply Chain SLA Breach Predictor
@@ -198,8 +208,7 @@ Containerised and stateless per-request (all state lives in Postgres, not in-pro
 manifests are checked in since there's no cluster here to test them against honestly.
 
 ## ML experiment tracking
-`src/ml/tune.py` runs `RandomizedSearchCV` (with `TimeSeriesSplit`, not a random k-fold —
-this is process data, a random split would leak future information into training) for the
+`src/ml/tune.py` runs `RandomizedSearchCV` with PO-grouped, forward-in-time folds for the
 SLA-risk model, logging every run to MLflow. Real experiment history, not a config file:
 model name, hyperparameters searched, per-run ROC-AUC, all queryable via `mlflow ui`.
 
@@ -216,16 +225,16 @@ per-prediction SHAP values, not just global feature importance filtered to a row
 
 `src/ml/features.py` builds 15 features across four families (run `scripts/ablation_study.py` to reproduce):
 
-**Ablation study — 5-fold TimeSeriesSplit, Logistic Regression:**
+**Ablation study — 5 PO-grouped temporal folds, Logistic Regression (configured SLA label):**
 
 | Feature set | ROC-AUC | PR-AUC | F1 | # features |
 |---|---|---|---|---|
-| Baseline (event_count, variant_frequency, category, supplier_id) | 0.807 | 0.981 | 0.948 | 506 |
-| + Temporal (start_hour, start_dayofweek, start_month, start_quarter) | 0.812 | 0.980 | 0.947 | 510 |
-| + Process (unique_activity_count, rework_count, first_activity, last_activity) | **0.965** | **0.997** | **0.978** | 538 |
-| + Supplier history (breach_rate, median_cycle_time, sla_target_hours) | 0.875 | 0.982 | 0.957 | 541 |
+| Baseline (event_count, variant_frequency, category, supplier_id) | 0.861 | 0.991 | 0.950 | 837 |
+| + Temporal (start_hour, start_dayofweek, start_month, start_quarter) | 0.865 | 0.992 | 0.948 | 841 |
+| + Process (unique_activity_count, rework_count, first_activity, last_activity) | **0.978** | **0.999** | 0.965 | 872 |
+| + Supplier history (breach_rate, median_cycle_time, sla_target_hours) | 0.934 | 0.991 | **0.975** | 875 |
 
-The process family drives the largest gain (+0.152 ROC-AUC) — `unique_activity_count` and `rework_count` are the strongest predictors. The supplier-history drop (-0.090) when added on top of the process features is a real finding, not a red flag: LR's L2 penalty compresses coefficients of correlated features under high dimensionality (541 columns), and `supplier_historical_median_cycle_time` is correlated with the process signals at the case level. The CV values above reflect LR's mean across fold boundaries, not the final test score. On the held-out test split, LR (all families) scores 0.910 ROC-AUC — lower than the deployed Random Forest (0.986), which is why RF is the serving model (see **Model Performance** and **Why Random Forest?** above). This ablation uses LR specifically because LR's linear additive structure cleanly isolates each feature family's marginal contribution; RF's ensemble masking would obscure the same signal.
+The process family drives the largest gain (+0.113 ROC-AUC); supplier history reduces ROC-AUC but improves F1. These scores use the configured label, whose high breach base rate makes ROC-AUC/PR-AUC appear strong; use the realistic-target results above for model quality. This ablation uses LR to compare feature-family contributions, not to claim a deployment winner.
 
 Feature families:
 
@@ -233,12 +242,11 @@ Feature families:
   `variant_frequency` are aggregates over the finished case and are **not** (see the prediction-time note below).
 - **Temporal** — `start_hour`, `start_dayofweek`, `start_month`, `start_quarter`: cases starting late in a shift, before weekends, or at year-end have less runway before SLA clocks expire. Month/quarter capture intra-year seasonality.
 - **Process** — `first_activity`, `last_activity`, `unique_activity_count`, `rework_count`: the breadth of the process path (`unique_activity_count`) and the count of repeated activities (`rework_count`, the process-mining definition of rework) are the most predictive signals in the dataset.
-- **Supplier history** — `supplier_historical_breach_rate` and `supplier_historical_median_cycle_time`: *causal* features built with `shift(1)` + expanding window so each case only sees its supplier's *prior* history — no future-case leakage. A supplier's first case uses the overall prior as neutral fallback. `sla_target_hours` is the SLA threshold for this case's category (not derived from `end_time` or `cycle_time_hours`, so not leakage — it's a configuration input, not a case outcome).
+- **Supplier history** — `supplier_historical_breach_rate` and `supplier_historical_median_cycle_time` use only same-supplier cases that ended strictly before the scored case starts. Cases ending at the same timestamp are not prior; cases without history use fixed sentinels, not a full-data prior. `sla_target_hours` is a configured input.
 
-Every feature derived from `end_time` or `cycle_time_hours` was deliberately
-**excluded** — `sla_breach` (the label) is defined directly from
-`cycle_time_hours`, so any feature derived from it would let the model see its
-own target.
+The current case's own `end_time` and `cycle_time_hours` are not model inputs.
+Historical durations/outcomes are used only when the prior case completed before the
+prediction timestamp, preventing the model from seeing its own target or future outcomes.
 
 ## Sample analytical SQL
 10 files in [`sql/analysis/`](sql/analysis/) covering `LAG`/`LEAD`, `RANK`/`DENSE_RANK`,

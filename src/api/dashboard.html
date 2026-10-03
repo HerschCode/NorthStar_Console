@@ -45,10 +45,10 @@
     color: var(--text);
     min-height: 100vh;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    padding: 28px 20px;
+    padding: clamp(16px, 3vw, 32px) clamp(12px, 2.5vw, 28px);
     transition: background 0.25s, color 0.25s;
   }
-  .container { max-width: 1200px; margin: 0 auto; }
+  .container { max-width: 1320px; margin: 0 auto; }
 
   /* ── Header ──────────────────────────────────────────────────────────────── */
   header { margin-bottom: 16px; }
@@ -64,6 +64,31 @@
   .subtitle { color: var(--muted); font-size: 0.85rem; line-height: 1.5; }
   .subtitle a { color: var(--accent); text-decoration: none; }
   .subtitle a:hover { text-decoration: underline; }
+  :target { scroll-margin-top: 82px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .dashboard-nav {
+    position: sticky; top: 8px; z-index: 20; display: flex; gap: 6px;
+    width: fit-content; max-width: 100%; margin: 12px 0 18px; padding: 6px;
+    overflow-x: auto; border: 1px solid var(--border); border-radius: 10px;
+    background: color-mix(in srgb, var(--panel) 94%, transparent);
+    box-shadow: 0 4px 16px var(--shadow); scrollbar-width: thin;
+  }
+  .dashboard-nav a {
+    flex: 0 0 auto; padding: 7px 11px; border-radius: 7px;
+    color: var(--muted); font-size: 0.78rem; font-weight: 600;
+    text-decoration: none; white-space: nowrap;
+  }
+  .dashboard-nav a:hover, .dashboard-nav a:focus-visible {
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .dashboard-section { margin: 0 0 24px; scroll-margin-top: 74px; }
+  .section-heading { margin: 0 0 11px; }
+  .section-heading h2 { margin: 0; font-size: 1rem; letter-spacing: -0.01em; }
+  .section-heading p {
+    margin: 0 0 4px; color: var(--accent); font-size: 0.68rem;
+    font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+  }
 
   .header-controls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
@@ -339,6 +364,17 @@
   }
   footer a { color: var(--accent); text-decoration: none; }
   footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 620px) {
+    .dashboard-nav { width: 100%; top: 4px; scroll-snap-type: x proximity; }
+    .dashboard-nav a { scroll-snap-align: start; }
+    .header-controls { width: 100%; justify-content: space-between; }
+    .order-item { grid-template-columns: minmax(0, 1fr) auto; gap: 5px 10px; }
+    .order-item-id { grid-column: 1; }
+    .order-item-sup { grid-column: 1; grid-row: 2; }
+    .order-item-prob { grid-column: 2; grid-row: 1 / span 2; text-align: right; }
+    .order-item-factors { grid-column: 1 / -1; }
+  }
 </style>
 </head>
 <body>
@@ -362,6 +398,13 @@
     </div>
   </header>
 
+  <nav class="dashboard-nav" aria-label="Dashboard sections">
+    <a href="#overview-section">Overview</a>
+    <a href="#process-section">Process &amp; risk</a>
+    <a href="#controls-section">Controls &amp; finance</a>
+    <a href="#platform-section">Platform health</a>
+  </nav>
+
   <!-- ── Explainer panel ── -->
   <div class="explainer" id="explainer">
     <div class="explainer-header" id="explainer-toggle" role="button" aria-expanded="true" tabindex="0">
@@ -381,109 +424,123 @@
     </div>
   </div>
 
-  <!-- ── Key finding callout ── -->
-  <div class="callout good" id="callout" hidden></div>
-
-  <!-- ── KPI strip ── -->
-  <div class="kpi-grid" id="kpi-grid">
-    <div class="kpi visible" style="grid-column:1/-1">
-      <div class="skeleton tall"></div>
-      <div class="skeleton short"></div>
-      <div class="skeleton" style="width:80%"></div>
+  <section class="dashboard-section" id="overview-section" aria-labelledby="overview-heading">
+    <div class="section-heading">
+      <p>01 · Summary</p>
+      <h2 id="overview-heading">Operations at a glance</h2>
     </div>
-  </div>
-
-  <!-- ── Orders Needing Attention ── -->
-  <div class="card" id="attention-card" hidden>
-    <h2>🚨 Orders Needing Attention <span class="badge">top HIGH-risk · ranked by breach probability</span></h2>
-    <div class="card-sublabel">Highest predicted breach probability. Click an order to see the full risk explanation via the API.</div>
-    <div class="order-worklist" id="attention-body"></div>
-  </div>
-
-  <!-- ── Bottlenecks + Risk Distribution ── -->
-  <div class="grid-2">
-    <div class="card">
-      <h2>Top Bottlenecks <span class="badge">avg delay by process stage</span></h2>
-      <div class="card-sublabel">Longest average delays by process stage (hours). The top bottleneck explains most SLA breaches.</div>
-      <div id="bottlenecks-body">
-        <div class="skeleton"></div><div class="skeleton short"></div><div class="skeleton" style="width:70%"></div>
+    <div class="callout good" id="callout" hidden></div>
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi visible" style="grid-column:1/-1">
+        <div class="skeleton tall"></div>
+        <div class="skeleton short"></div>
+        <div class="skeleton" style="width:80%"></div>
       </div>
     </div>
-    <div class="card">
-      <h2>SLA Risk Distribution <span class="badge">ML-predicted · all cases</span></h2>
-      <div class="card-sublabel">Each order scored by risk of exceeding its SLA deadline.</div>
-      <div id="risk-body">
+  </section>
+
+  <section class="dashboard-section" id="process-section" aria-labelledby="process-heading">
+    <div class="section-heading">
+      <p>02 · Triage</p>
+      <h2 id="process-heading">Process performance &amp; risk</h2>
+    </div>
+    <div class="card" id="attention-card" hidden>
+      <h2>🚨 Orders Needing Attention <span class="badge">top HIGH-risk · ranked by breach probability</span></h2>
+      <div class="card-sublabel">Highest predicted breach probability. Click an order to see the full risk explanation via the API.</div>
+      <div class="order-worklist" id="attention-body"></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>Top Bottlenecks <span class="badge">avg delay by process stage</span></h2>
+        <div class="card-sublabel">Longest average delays by process stage (hours). The top bottleneck explains most SLA breaches.</div>
+        <div id="bottlenecks-body">
+          <div class="skeleton"></div><div class="skeleton short"></div><div class="skeleton" style="width:70%"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>SLA Risk Distribution <span class="badge">ML-predicted · all cases</span></h2>
+        <div class="card-sublabel">Each order scored by risk of exceeding its SLA deadline.</div>
+        <div id="risk-body">
+          <div class="skeleton"></div><div class="skeleton short"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>Supplier Performance <span class="badge">min 3 orders · click headers to sort</span></h2>
+        <div class="card-sublabel">Breach rate colour: <span class="breach-good">green &lt;10%</span> · <span class="breach-warn">yellow 10–25%</span> · <span class="breach-bad">red &gt;25%</span></div>
+        <input id="supplier-filter" class="supplier-filter" type="text" placeholder="Filter by supplier ID…" aria-label="Filter suppliers" />
+        <div class="table-wrap" id="suppliers-body">
+          <div class="skeleton"></div><div class="skeleton short"></div><div class="skeleton" style="width:85%"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Process Conformance</h2>
+        <div class="card-sublabel">% of orders that follow the expected activity sequence.</div>
+        <div id="conformance-body">
+          <div class="skeleton tall"></div><div class="skeleton short"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="dashboard-section" id="controls-section" aria-labelledby="controls-heading">
+    <div class="section-heading">
+      <p>03 · Governance</p>
+      <h2 id="controls-heading">Controls &amp; working capital</h2>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h2>AP Controls <span class="badge">anomaly triage, not fraud -- BPI 2019 has no fraud labels</span></h2>
+        <div class="card-sublabel">Rule violations / statistical anomalies from the real event log. See <a href="/docs" style="color:var(--accent)">docs/ap-controls.md</a> for what each control tests and its known false-positive sources.</div>
+        <div id="ap-controls-body">
+          <div class="skeleton tall"></div><div class="skeleton short"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Working Capital</h2>
+        <div class="card-sublabel">Late-payment exposure and an early-payment-discount scenario. Payment terms are a stated assumption (net 30 / 2-10 net 30).</div>
+        <div id="working-capital-body">
+          <div class="skeleton tall"></div><div class="skeleton short"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="actions-card" hidden>
+      <h2>💡 Recommended Actions <span class="badge">derived from current data</span></h2>
+      <ul class="action-list" id="actions-list"></ul>
+    </div>
+  </section>
+
+  <section class="dashboard-section" id="platform-section" aria-labelledby="platform-heading">
+    <div class="section-heading">
+      <p>04 · Reliability</p>
+      <h2 id="platform-heading">Platform health</h2>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h2>Recent Pipeline Runs <span class="badge">last 5</span></h2>
+        <div id="runs-body">
+          <div class="skeleton"></div><div class="skeleton short"></div>
+        </div>
+      </div>
+
+      <div class="card" id="model-health-card" hidden>
+        <h2>Model Health <span class="badge">sla_risk_predictor · calibrated (best of RF/LR/GB)</span></h2>
+        <div id="model-health-body">
+          <div class="skeleton"></div><div class="skeleton short"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="data-quality-card" hidden>
+      <h2>Data Quality <span class="badge">pipeline checks</span></h2>
+      <div id="data-quality-body">
         <div class="skeleton"></div><div class="skeleton short"></div>
       </div>
     </div>
-  </div>
-
-  <!-- ── Suppliers + Conformance ── -->
-  <div class="grid-2">
-    <div class="card">
-      <h2>Supplier Performance <span class="badge">min 3 orders · click headers to sort</span></h2>
-      <div class="card-sublabel">Breach rate colour: <span class="breach-good">green &lt;10%</span> · <span class="breach-warn">yellow 10–25%</span> · <span class="breach-bad">red &gt;25%</span></div>
-      <input id="supplier-filter" class="supplier-filter" type="text" placeholder="Filter by supplier ID…" aria-label="Filter suppliers" />
-      <div class="table-wrap" id="suppliers-body">
-        <div class="skeleton"></div><div class="skeleton short"></div><div class="skeleton" style="width:85%"></div>
-      </div>
-    </div>
-    <div class="card">
-      <h2>Process Conformance</h2>
-      <div class="card-sublabel">% of orders that follow the expected activity sequence.</div>
-      <div id="conformance-body">
-        <div class="skeleton tall"></div><div class="skeleton short"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── AP Controls + Working Capital ── -->
-  <div class="grid-2">
-    <div class="card">
-      <h2>AP Controls <span class="badge">anomaly triage, not fraud -- BPI 2019 has no fraud labels</span></h2>
-      <div class="card-sublabel">Rule violations / statistical anomalies from the real event log. See <a href="/docs" style="color:var(--accent)">docs/ap-controls.md</a> for what each control tests and its known false-positive sources.</div>
-      <div id="ap-controls-body">
-        <div class="skeleton tall"></div><div class="skeleton short"></div>
-      </div>
-    </div>
-    <div class="card">
-      <h2>Working Capital</h2>
-      <div class="card-sublabel">Late-payment exposure and an early-payment-discount scenario. Payment terms are a stated assumption (net 30 / 2-10 net 30).</div>
-      <div id="working-capital-body">
-        <div class="skeleton tall"></div><div class="skeleton short"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Recommended Actions ── -->
-  <div class="card" id="actions-card" hidden>
-    <h2>💡 Recommended Actions <span class="badge">derived from current data</span></h2>
-    <ul class="action-list" id="actions-list"></ul>
-  </div>
-
-  <!-- ── Pipeline Runs ── -->
-  <div class="card">
-    <h2>Recent Pipeline Runs <span class="badge">last 5</span></h2>
-    <div id="runs-body">
-      <div class="skeleton"></div><div class="skeleton short"></div>
-    </div>
-  </div>
-
-  <!-- ── Model Health ── -->
-  <div class="card" id="model-health-card" hidden>
-    <h2>Model Health <span class="badge">sla_risk_predictor · calibrated (best of RF/LR/GB)</span></h2>
-    <div id="model-health-body">
-      <div class="skeleton"></div><div class="skeleton short"></div>
-    </div>
-  </div>
-
-  <!-- ── Data Quality ── -->
-  <div class="card" id="data-quality-card" hidden>
-    <h2>Data Quality <span class="badge">pipeline checks</span></h2>
-    <div id="data-quality-body">
-      <div class="skeleton"></div><div class="skeleton short"></div>
-    </div>
-  </div>
+  </section>
 
   <!-- ── Footer ── -->
   <footer>

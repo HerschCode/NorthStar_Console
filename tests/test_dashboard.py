@@ -56,6 +56,9 @@ def test_dashboard_page_serves_html_without_auth():
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert "Procure-to-Pay Intelligence" in response.text
+    assert 'aria-label="Dashboard sections"' in response.text
+    assert 'id="process-section"' in response.text
+    assert 'href="#platform-section"' in response.text
 
 
 def test_dashboard_data_works_without_auth_key():

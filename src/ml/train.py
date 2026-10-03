@@ -25,15 +25,61 @@ from src.ml.features import build_features
 
 
 def time_based_split(cases: pd.DataFrame, time_col: str = "start_time", test_size: float = 0.2):
-    """Split by time, not randomly. This is a temporal process -- a random split would let
-    the model see cases that started AFTER some of its test cases finished, which leaks
-    future information (e.g. a supplier's later performance) into training. Sort by start
-    time and take the last `test_size` fraction as test."""
+    """Split forward in time and keep purchase orders on one side of the split.
+
+    Groups crossing the temporal cutoff are excluded so neither train nor test
+    contains a purchase order whose cases straddle the boundary.
+    """
     ordered = cases.sort_values(time_col)
     cutoff = int(len(ordered) * (1 - test_size))
+    if "purchase_order_id" in cases.columns:
+        cutoff_time = ordered.iloc[cutoff][time_col]
+        group_ids = cases["purchase_order_id"].where(
+            cases["purchase_order_id"].notna(), cases["case_id"]
+        )
+        grouped_times = pd.DataFrame({"group_id": group_ids, "time": cases[time_col]}).groupby(
+            "group_id", sort=False
+        )["time"].agg(["min", "max"])
+        train_groups = grouped_times.index[grouped_times["max"] < cutoff_time]
+        test_groups = grouped_times.index[grouped_times["min"] >= cutoff_time]
+        if len(train_groups) == 0 or len(test_groups) == 0:
+            raise ValueError("Purchase-order temporal split produced an empty train or test set")
+        train_idx = cases.loc[group_ids.isin(train_groups)].sort_values(time_col).index
+        test_idx = cases.loc[group_ids.isin(test_groups)].sort_values(time_col).index
+        return train_idx, test_idx
+
     train_idx = ordered.index[:cutoff]
     test_idx = ordered.index[cutoff:]
     return train_idx, test_idx
+
+
+def time_series_group_splits(cases: pd.DataFrame, n_splits: int = 5, time_col: str = "start_time"):
+    """Yield expanding temporal folds without splitting a purchase order across sides."""
+    if "purchase_order_id" in cases.columns:
+        group_ids = cases["purchase_order_id"].astype("string")
+        if "case_id" in cases.columns:
+            group_ids = group_ids.fillna(cases["case_id"].astype("string"))
+    elif "case_id" in cases.columns:
+        group_ids = cases["case_id"].astype("string")
+    else:
+        group_ids = pd.Series(cases.index.astype(str), index=cases.index, dtype="string")
+
+    grouped = pd.DataFrame({"group_id": group_ids, "time": cases[time_col]}).groupby(
+        "group_id", sort=False
+    )["time"].agg(["min", "max"]).sort_values("min")
+    if len(grouped) <= n_splits:
+        return
+
+    splitter = TimeSeriesSplit(n_splits=n_splits)
+    for train_positions, test_positions in splitter.split(grouped):
+        candidate_train = grouped.iloc[train_positions]
+        candidate_test = grouped.iloc[test_positions]
+        test_start = candidate_test["min"].min()
+        train_groups = candidate_train.index[candidate_train["max"] < test_start]
+        test_groups = candidate_test.index[candidate_test["min"] >= test_start]
+        if len(train_groups) == 0 or len(test_groups) == 0:
+            continue
+        yield cases.index[group_ids.isin(train_groups)], cases.index[group_ids.isin(test_groups)]
 
 
 def train_models(
@@ -223,10 +269,6 @@ def cross_validate_time_series(
     model whose performance swings wildly across time windows is a real risk signal
     a single train/test split's single number can't show.
     """
-    ordered = cases.sort_values("start_time")
-    X_ordered = X.loc[ordered.index]
-    y_ordered = y.loc[ordered.index]
-
     model_factories = {
         "logistic_regression": lambda: LogisticRegression(max_iter=3000, class_weight="balanced"),
         "random_forest": lambda: RandomForestClassifier(
@@ -236,12 +278,11 @@ def cross_validate_time_series(
     if model_name not in model_factories:
         raise ValueError(f"cross_validate_time_series only supports {list(model_factories)} (gradient_boosting needs per-fold sample_weight handling, not added yet)")
 
-    tscv = TimeSeriesSplit(n_splits=n_splits)
     fold_scores = []
 
-    for fold_idx, (train_pos, test_pos) in enumerate(tscv.split(X_ordered)):
-        X_train_fold, X_test_fold = X_ordered.iloc[train_pos], X_ordered.iloc[test_pos]
-        y_train_fold, y_test_fold = y_ordered.iloc[train_pos], y_ordered.iloc[test_pos]
+    for train_idx, test_idx in time_series_group_splits(cases, n_splits=n_splits):
+        X_train_fold, X_test_fold = X.loc[train_idx], X.loc[test_idx]
+        y_train_fold, y_test_fold = y.loc[train_idx], y.loc[test_idx]
 
         if y_train_fold.nunique() < 2 or y_test_fold.nunique() < 2:
             continue  # a fold with only one class present can't compute ROC-AUC meaningfully -- skip rather than crash

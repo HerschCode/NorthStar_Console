@@ -1,753 +1,723 @@
 {
-  "design": "Week-4 question: can P1's model beat the simple supplier rules at small treated shares -- and if not, why?\n\nContext (docs/uplift-method.md): on the p75 target, treating the top 5-10% of held-out cases, a one-feature\nsupplier-history rule and a \"busiest supplier\" rule had HIGHER precision than the calibrated model.\n\nDesign, written down BEFORE running (so a result cannot be tuned toward):\n  Population: p75 target (cycle time above the training-window per-category p75), measurable cases only,\n              held-out = last 20% by start time (same split as scripts/roi_sensitivity.py).\n  Models (all RF, calibrated on a held-out temporal slice by src/ml/train.py::fit_calibrated, seed 42):\n    M0 current  : the model's current feature set (reproduces roi_sensitivity's \"model\").\n    M1 +workload: M0 + causal supplier features computed only from information available at case start:\n                  prior case count, cases still open, ended-case breach rate (outcomes already KNOWN),\n                  and that rate shrunk toward the training prior (m=10).\n    M2 compact  : numeric + category only (no 800 one-hot supplier/activity columns) + the M1 features.\n  Rules (score = rank key):\n    rule_started: supplier_historical_breach_rate AS SHIPPED -- expanding mean over EARLIER-STARTED cases,\n                  which includes cases that had not finished yet (their outcome is not knowable at start time).\n    rule_ended  : the same idea using only cases that had ENDED before this one started (strictly causal).\n    rule_shrunk : ended-case rate shrunk toward the prior.\n    volume_train / volume_prior : busiest-supplier by training-window count (as before) / by causal prior count.\n    order_value, random.\n  Metrics: precision@k for k in {5,10,20,30}% of the held-out window, ROC-AUC; paired bootstrap (500 resamples\n           over held-out cases) for every strategy's precision and for (M1 - rule) differences.\n  Diagnosis: permutation importance of the best model on the held-out window; at k=5%, overlap between model and\n             rule picks and the precision of the rule-only vs model-only picks.\n  Pre-stated reading: the model \"beats the rules\" at a share only if the paired 95% CI of\n             (model - best rule) precision excludes 0 in the model's favour. Anything else is reported as a tie\n             or a loss, not tuned away.\n\n",
-  "n_test": 1822,
-  "base_rate": 0.2486,
+  "design": "Week-4 question: can P1's model beat the simple supplier rules at small treated shares -- and if not, why?\n\nContext (docs/uplift-method.md): on the p75 target, treating the top 5-10% of held-out cases, a one-feature\nsupplier-history rule and a \"busiest supplier\" rule had HIGHER precision than the calibrated model.\n\nDesign, written down BEFORE running (so a result cannot be tuned toward):\n  Population: p75 target (cycle time above the training-window per-category p75), measurable cases only,\n              held-out = last 20% by start time (same split as scripts/roi_sensitivity.py).\n  Models (all RF, calibrated on a held-out temporal slice by src/ml/train.py::fit_calibrated, seed 42):\n    M0 current  : the model's current feature set (reproduces roi_sensitivity's \"model\").\n    M1 +workload: M0 + causal supplier features computed only from information available at case start:\n                  prior case count, cases still open, ended-case breach rate (outcomes already KNOWN),\n                  and that rate shrunk toward the training prior (m=10).\n    M2 compact  : numeric + category only (no 800 one-hot supplier/activity columns) + the M1 features.\n  Rules (score = rank key):\n    rule_supplier_history: supplier breach rate using only cases that had ENDED before this one started.\n    rule_shrunk : ended-case rate shrunk toward the prior.\n    volume_train / volume_prior : busiest-supplier by training-window count (as before) / by causal prior count.\n    order_value, random.\n  Metrics: precision@k for k in {5,10,20,30}% of the held-out window, ROC-AUC; paired bootstrap (500 resamples\n           over held-out cases) for every strategy's precision and for (M1 - rule) differences.\n  Diagnosis: permutation importance of the best model on the held-out window; at k=5%, overlap between model and\n             rule picks and the precision of the rule-only vs model-only picks.\n  Pre-stated reading: the model \"beats the rules\" at a share only if the paired 95% CI of\n             (model - best rule) precision excludes 0 in the model's favour. Anything else is reported as a tie\n             or a loss, not tuned away.\n\n",
+  "bootstrap_unit": "purchase_order_id",
+  "n_test": 1708,
+  "base_rate": 0.2447,
   "roc_auc": {
-    "M0_current": 0.7894,
-    "M1_plus_workload": 0.7935,
-    "M2_compact": 0.7884,
-    "M3_leak_free_history": 0.7643,
-    "M4_no_supplier_history": 0.7253,
-    "rule_started (as shipped)": 0.7522,
-    "rule_ended (strictly causal)": 0.5345,
-    "rule_shrunk": 0.5125,
-    "volume_train": 0.4259,
-    "volume_prior (causal)": 0.4225,
-    "order_value": 0.5964
+    "M0_current": 0.7184,
+    "M1_plus_workload": 0.752,
+    "M2_compact": 0.7365,
+    "M3_leak_free_history": 0.7534,
+    "M4_no_supplier_history": 0.7382,
+    "rule_supplier_history (completed only)": 0.5368,
+    "rule_shrunk": 0.5197,
+    "volume_train": 0.3973,
+    "volume_prior (causal)": 0.415,
+    "order_value": 0.607
   },
   "precision_at_k": {
     "M0_current": {
       "5%": {
-        "precision": 0.4725,
+        "precision": 0.3294,
         "ci95": [
-          0.3516,
-          0.5992
+          0.1146,
+          0.699
         ]
       },
       "10%": {
-        "precision": 0.5165,
+        "precision": 0.2632,
         "ci95": [
-          0.4231,
-          0.6044
+          0.0997,
+          0.5797
         ]
       },
       "20%": {
-        "precision": 0.456,
+        "precision": 0.4035,
         "ci95": [
-          0.4011,
-          0.5027
+          0.1957,
+          0.5688
         ]
       },
       "30%": {
-        "precision": 0.4644,
+        "precision": 0.4238,
         "ci95": [
-          0.4186,
-          0.4992
+          0.3103,
+          0.5197
         ]
       }
     },
     "M1_plus_workload": {
       "5%": {
-        "precision": 0.1758,
+        "precision": 0.1059,
         "ci95": [
-          0.0989,
-          0.2585
+          0.023,
+          0.3334
         ]
       },
       "10%": {
-        "precision": 0.2253,
+        "precision": 0.1404,
         "ci95": [
-          0.1593,
-          0.2886
+          0.0696,
+          0.5793
         ]
       },
       "20%": {
-        "precision": 0.5,
+        "precision": 0.4561,
         "ci95": [
-          0.4464,
-          0.5522
+          0.1943,
+          0.6672
         ]
       },
       "30%": {
-        "precision": 0.5155,
+        "precision": 0.4902,
         "ci95": [
-          0.4744,
-          0.5539
+          0.3689,
+          0.6036
         ]
       }
     },
     "M2_compact": {
       "5%": {
-        "precision": 0.3187,
+        "precision": 0.2353,
         "ci95": [
-          0.2198,
-          0.4066
+          0.0247,
+          0.6137
         ]
       },
       "10%": {
-        "precision": 0.2692,
+        "precision": 0.2982,
         "ci95": [
-          0.1978,
-          0.3352
+          0.0491,
+          0.5879
         ]
       },
       "20%": {
-        "precision": 0.489,
+        "precision": 0.462,
         "ci95": [
-          0.4244,
-          0.5344
+          0.2113,
+          0.6497
         ]
       },
       "30%": {
-        "precision": 0.5229,
+        "precision": 0.4492,
         "ci95": [
-          0.479,
-          0.5631
+          0.345,
+          0.5788
         ]
       }
     },
     "M3_leak_free_history": {
       "5%": {
-        "precision": 0.1868,
+        "precision": 0.1765,
         "ci95": [
-          0.1099,
-          0.2637
+          0.0225,
+          0.3626
         ]
       },
       "10%": {
-        "precision": 0.2253,
+        "precision": 0.2222,
         "ci95": [
-          0.1648,
-          0.2857
+          0.072,
+          0.6013
         ]
       },
       "20%": {
-        "precision": 0.4863,
+        "precision": 0.462,
         "ci95": [
-          0.4299,
-          0.5357
+          0.2063,
+          0.6476
         ]
       },
       "30%": {
-        "precision": 0.5101,
+        "precision": 0.4688,
         "ci95": [
-          0.468,
-          0.5476
+          0.3577,
+          0.594
         ]
       }
     },
     "M4_no_supplier_history": {
       "5%": {
-        "precision": 0.3626,
+        "precision": 0.8235,
         "ci95": [
-          0.2527,
-          0.4835
+          0.7039,
+          0.9419
         ]
       },
       "10%": {
-        "precision": 0.2418,
+        "precision": 0.5614,
         "ci95": [
-          0.1868,
-          0.3106
+          0.447,
+          0.7469
         ]
       },
       "20%": {
-        "precision": 0.4643,
+        "precision": 0.4298,
         "ci95": [
-          0.4134,
-          0.5137
+          0.3143,
+          0.5982
         ]
       },
       "30%": {
-        "precision": 0.4497,
+        "precision": 0.4277,
         "ci95": [
-          0.404,
-          0.4927
+          0.3264,
+          0.533
         ]
       }
     },
-    "rule_started (as shipped)": {
+    "rule_supplier_history (completed only)": {
       "5%": {
-        "precision": 0.6923,
+        "precision": 0.2353,
         "ci95": [
-          0.5714,
-          0.775
+          0.0107,
+          0.3605
         ]
       },
       "10%": {
-        "precision": 0.5714,
+        "precision": 0.269,
         "ci95": [
-          0.5055,
-          0.6484
+          0.1243,
+          0.3432
         ]
       },
       "20%": {
-        "precision": 0.4533,
+        "precision": 0.2632,
         "ci95": [
-          0.3874,
-          0.5014
+          0.1912,
+          0.3328
         ]
       },
       "30%": {
-        "precision": 0.3766,
+        "precision": 0.2754,
         "ci95": [
-          0.34,
-          0.4214
-        ]
-      }
-    },
-    "rule_ended (strictly causal)": {
-      "5%": {
-        "precision": 0.1978,
-        "ci95": [
-          0.1099,
-          0.2747
-        ]
-      },
-      "10%": {
-        "precision": 0.2143,
-        "ci95": [
-          0.1813,
-          0.3022
-        ]
-      },
-      "20%": {
-        "precision": 0.228,
-        "ci95": [
-          0.2143,
-          0.3022
-        ]
-      },
-      "30%": {
-        "precision": 0.2614,
-        "ci95": [
-          0.2322,
-          0.3053
+          0.2094,
+          0.3259
         ]
       }
     },
     "rule_shrunk": {
       "5%": {
-        "precision": 0.1978,
+        "precision": 0.2353,
         "ci95": [
-          0.1099,
-          0.2747
+          0.0107,
+          0.3605
         ]
       },
       "10%": {
-        "precision": 0.2143,
+        "precision": 0.269,
         "ci95": [
-          0.1813,
-          0.3022
+          0.1243,
+          0.3432
         ]
       },
       "20%": {
-        "precision": 0.228,
+        "precision": 0.2632,
         "ci95": [
-          0.2143,
-          0.3022
+          0.1912,
+          0.3328
         ]
       },
       "30%": {
-        "precision": 0.2614,
+        "precision": 0.2754,
         "ci95": [
-          0.2322,
-          0.3053
+          0.2094,
+          0.3259
         ]
       }
     },
     "volume_train": {
       "5%": {
-        "precision": 0.7912,
+        "precision": 0.2353,
         "ci95": [
-          0.6264,
-          0.8901
+          0.0539,
+          0.4375
         ]
       },
       "10%": {
-        "precision": 0.4725,
+        "precision": 0.2164,
         "ci95": [
-          0.4011,
-          0.5633
+          0.081,
+          0.5169
         ]
       },
       "20%": {
-        "precision": 0.3022,
+        "precision": 0.3158,
         "ci95": [
-          0.2527,
-          0.3558
+          0.1406,
+          0.488
         ]
       },
       "30%": {
-        "precision": 0.234,
+        "precision": 0.2285,
         "ci95": [
-          0.1965,
-          0.2679
+          0.1202,
+          0.3749
         ]
       }
     },
     "volume_prior (causal)": {
       "5%": {
-        "precision": 0.2637,
+        "precision": 0.2824,
         "ci95": [
-          0.1648,
-          0.3736
+          0.0494,
+          0.6486
         ]
       },
       "10%": {
-        "precision": 0.2582,
+        "precision": 0.2456,
         "ci95": [
-          0.2033,
-          0.3326
+          0.0806,
+          0.5811
         ]
       },
       "20%": {
-        "precision": 0.3104,
+        "precision": 0.3246,
         "ci95": [
-          0.2541,
-          0.3613
+          0.1443,
+          0.4906
         ]
       },
       "30%": {
-        "precision": 0.2303,
+        "precision": 0.2344,
         "ci95": [
-          0.1956,
-          0.2679
+          0.1211,
+          0.376
         ]
       }
     },
     "order_value": {
       "5%": {
-        "precision": 0.5824,
+        "precision": 0.6,
         "ci95": [
-          0.4725,
-          0.6871
+          0.4884,
+          0.725
         ]
       },
       "10%": {
-        "precision": 0.456,
+        "precision": 0.4678,
         "ci95": [
-          0.3872,
-          0.5385
+          0.3895,
+          0.5574
         ]
       },
       "20%": {
-        "precision": 0.3571,
+        "precision": 0.3626,
         "ci95": [
-          0.3049,
-          0.4121
+          0.2993,
+          0.4227
         ]
       },
       "30%": {
-        "precision": 0.3218,
+        "precision": 0.3301,
         "ci95": [
-          0.2852,
-          0.3656
+          0.2767,
+          0.3787
         ]
       }
     },
     "random": {
       "5%": {
-        "precision": 0.2747,
+        "precision": 0.2706,
         "ci95": [
-          0.1648,
-          0.3354
+          0.16,
+          0.3541
         ]
       },
       "10%": {
-        "precision": 0.2308,
+        "precision": 0.2281,
         "ci95": [
-          0.1868,
-          0.3132
+          0.1818,
+          0.3273
         ]
       },
       "20%": {
-        "precision": 0.2308,
+        "precision": 0.269,
         "ci95": [
-          0.2088,
-          0.2954
+          0.1885,
+          0.3112
         ]
       },
       "30%": {
-        "precision": 0.2267,
+        "precision": 0.2539,
         "ci95": [
-          0.2139,
-          0.2852
+          0.1946,
+          0.3033
         ]
       }
     }
   },
   "model_vs_best_rule": {
     "M0_current @ 5%": {
-      "best_rule": "volume_train",
-      "diff": -0.3187,
+      "best_rule": "order_value",
+      "diff": -0.2706,
       "diff_ci95": [
-        -0.4615,
-        -0.1099
+        -0.5247,
+        0.0972
       ],
-      "verdict": "model loses"
+      "verdict": "tie (CI includes 0)"
     },
     "M1_plus_workload @ 5%": {
-      "best_rule": "volume_train",
-      "diff": -0.6154,
+      "best_rule": "order_value",
+      "diff": -0.4941,
       "diff_ci95": [
-        -0.7363,
-        -0.4338
+        -0.6556,
+        -0.2514
       ],
       "verdict": "model loses"
     },
     "M2_compact @ 5%": {
-      "best_rule": "volume_train",
-      "diff": -0.4725,
+      "best_rule": "order_value",
+      "diff": -0.3647,
       "diff_ci95": [
-        -0.6044,
-        -0.2857
+        -0.6129,
+        0.023
       ],
-      "verdict": "model loses"
+      "verdict": "tie (CI includes 0)"
     },
     "M3_leak_free_history @ 5%": {
-      "best_rule": "volume_train",
-      "diff": -0.6044,
+      "best_rule": "order_value",
+      "diff": -0.4235,
       "diff_ci95": [
-        -0.7253,
-        -0.4118
+        -0.6338,
+        -0.2126
       ],
       "verdict": "model loses"
     },
     "M4_no_supplier_history @ 5%": {
-      "best_rule": "volume_train",
-      "diff": -0.4286,
+      "best_rule": "order_value",
+      "diff": 0.2235,
       "diff_ci95": [
-        -0.5824,
-        -0.2198
+        0.0919,
+        0.3526
       ],
-      "verdict": "model loses"
+      "verdict": "model wins"
     },
     "M0_current @ 10%": {
-      "best_rule": "rule_started (as shipped)",
-      "diff": -0.0549,
+      "best_rule": "order_value",
+      "diff": -0.2047,
       "diff_ci95": [
-        -0.1402,
-        0.0165
+        -0.387,
+        0.081
       ],
       "verdict": "tie (CI includes 0)"
     },
     "M1_plus_workload @ 10%": {
-      "best_rule": "rule_started (as shipped)",
-      "diff": -0.3462,
+      "best_rule": "order_value",
+      "diff": -0.3275,
       "diff_ci95": [
-        -0.4341,
-        -0.2637
+        -0.4273,
+        0.0917
       ],
-      "verdict": "model loses"
+      "verdict": "tie (CI includes 0)"
     },
     "M2_compact @ 10%": {
-      "best_rule": "rule_started (as shipped)",
-      "diff": -0.3022,
+      "best_rule": "order_value",
+      "diff": -0.1696,
       "diff_ci95": [
-        -0.3985,
-        -0.2198
+        -0.4199,
+        0.1193
       ],
-      "verdict": "model loses"
+      "verdict": "tie (CI includes 0)"
     },
     "M3_leak_free_history @ 10%": {
-      "best_rule": "rule_started (as shipped)",
-      "diff": -0.3462,
+      "best_rule": "order_value",
+      "diff": -0.2456,
       "diff_ci95": [
-        -0.4286,
-        -0.2637
+        -0.41,
+        0.1019
       ],
-      "verdict": "model loses"
+      "verdict": "tie (CI includes 0)"
     },
     "M4_no_supplier_history @ 10%": {
-      "best_rule": "rule_started (as shipped)",
-      "diff": -0.3297,
+      "best_rule": "order_value",
+      "diff": 0.0936,
       "diff_ci95": [
-        -0.4095,
-        -0.2308
+        -0.03,
+        0.2532
       ],
-      "verdict": "model loses"
+      "verdict": "tie (CI includes 0)"
     },
     "M0_current @ 20%": {
-      "best_rule": "rule_started (as shipped)",
-      "diff": 0.0027,
+      "best_rule": "order_value",
+      "diff": 0.0409,
       "diff_ci95": [
-        -0.044,
-        0.0522
+        -0.162,
+        0.2081
       ],
       "verdict": "tie (CI includes 0)"
     },
     "M1_plus_workload @ 20%": {
-      "best_rule": "rule_started (as shipped)",
-      "diff": 0.0467,
+      "best_rule": "order_value",
+      "diff": 0.0936,
       "diff_ci95": [
-        -0.0082,
-        0.1003
+        -0.1573,
+        0.3151
       ],
       "verdict": "tie (CI includes 0)"
     },
     "M2_compact @ 20%": {
-      "best_rule": "rule_started (as shipped)",
-      "diff": 0.0357,
+      "best_rule": "order_value",
+      "diff": 0.0994,
       "diff_ci95": [
-        -0.0289,
-        0.0879
+        -0.1463,
+        0.2923
       ],
       "verdict": "tie (CI includes 0)"
     },
     "M3_leak_free_history @ 20%": {
-      "best_rule": "rule_started (as shipped)",
-      "diff": 0.033,
+      "best_rule": "order_value",
+      "diff": 0.0994,
       "diff_ci95": [
-        -0.0234,
-        0.099
+        -0.1467,
+        0.2784
       ],
       "verdict": "tie (CI includes 0)"
     },
     "M4_no_supplier_history @ 20%": {
-      "best_rule": "rule_started (as shipped)",
-      "diff": 0.011,
+      "best_rule": "order_value",
+      "diff": 0.0673,
       "diff_ci95": [
-        -0.0372,
-        0.0701
+        -0.0474,
+        0.235
       ],
       "verdict": "tie (CI includes 0)"
     },
     "M0_current @ 30%": {
-      "best_rule": "rule_started (as shipped)",
-      "diff": 0.0878,
+      "best_rule": "order_value",
+      "diff": 0.0938,
       "diff_ci95": [
-        0.0475,
-        0.1097
+        -0.0072,
+        0.1885
       ],
-      "verdict": "model wins"
+      "verdict": "tie (CI includes 0)"
     },
     "M1_plus_workload @ 30%": {
-      "best_rule": "rule_started (as shipped)",
-      "diff": 0.1389,
+      "best_rule": "order_value",
+      "diff": 0.1602,
       "diff_ci95": [
-        0.1005,
-        0.1673
+        0.0466,
+        0.2757
       ],
       "verdict": "model wins"
     },
     "M2_compact @ 30%": {
-      "best_rule": "rule_started (as shipped)",
-      "diff": 0.1463,
+      "best_rule": "order_value",
+      "diff": 0.1191,
       "diff_ci95": [
-        0.1079,
-        0.1728
+        0.0131,
+        0.2577
       ],
       "verdict": "model wins"
     },
     "M3_leak_free_history @ 30%": {
-      "best_rule": "rule_started (as shipped)",
-      "diff": 0.1335,
+      "best_rule": "order_value",
+      "diff": 0.1387,
       "diff_ci95": [
-        0.0878,
-        0.1682
+        0.028,
+        0.2689
       ],
       "verdict": "model wins"
     },
     "M4_no_supplier_history @ 30%": {
-      "best_rule": "rule_started (as shipped)",
-      "diff": 0.0731,
+      "best_rule": "order_value",
+      "diff": 0.0977,
       "diff_ci95": [
-        0.0265,
-        0.1079
+        0.0039,
+        0.1972
       ],
       "verdict": "model wins"
     }
   },
   "model_vs_best_deployable_rule": {
     "M0_current @ 5%": {
-      "best_deployable_rule": "volume_train",
-      "diff": -0.3187,
+      "best_deployable_rule": "order_value",
+      "diff": -0.2706,
       "diff_ci95": [
-        -0.4615,
-        -0.1099
+        -0.5247,
+        0.0972
       ],
-      "verdict": "model loses"
+      "verdict": "tie (CI includes 0)"
     },
     "M1_plus_workload @ 5%": {
-      "best_deployable_rule": "volume_train",
-      "diff": -0.6154,
+      "best_deployable_rule": "order_value",
+      "diff": -0.4941,
       "diff_ci95": [
-        -0.7363,
-        -0.4338
+        -0.6556,
+        -0.2514
       ],
       "verdict": "model loses"
     },
     "M2_compact @ 5%": {
-      "best_deployable_rule": "volume_train",
-      "diff": -0.4725,
+      "best_deployable_rule": "order_value",
+      "diff": -0.3647,
       "diff_ci95": [
-        -0.6044,
-        -0.2857
+        -0.6129,
+        0.023
       ],
-      "verdict": "model loses"
+      "verdict": "tie (CI includes 0)"
     },
     "M3_leak_free_history @ 5%": {
-      "best_deployable_rule": "volume_train",
-      "diff": -0.6044,
+      "best_deployable_rule": "order_value",
+      "diff": -0.4235,
       "diff_ci95": [
-        -0.7253,
-        -0.4118
+        -0.6338,
+        -0.2126
       ],
       "verdict": "model loses"
     },
     "M4_no_supplier_history @ 5%": {
-      "best_deployable_rule": "volume_train",
-      "diff": -0.4286,
+      "best_deployable_rule": "order_value",
+      "diff": 0.2235,
       "diff_ci95": [
-        -0.5824,
-        -0.2198
+        0.0919,
+        0.3526
       ],
-      "verdict": "model loses"
+      "verdict": "model wins"
     },
     "M0_current @ 10%": {
-      "best_deployable_rule": "volume_train",
-      "diff": 0.044,
+      "best_deployable_rule": "order_value",
+      "diff": -0.2047,
       "diff_ci95": [
-        -0.0879,
-        0.1374
+        -0.387,
+        0.081
       ],
       "verdict": "tie (CI includes 0)"
     },
     "M1_plus_workload @ 10%": {
-      "best_deployable_rule": "volume_train",
-      "diff": -0.2473,
+      "best_deployable_rule": "order_value",
+      "diff": -0.3275,
       "diff_ci95": [
-        -0.338,
-        -0.1729
+        -0.4273,
+        0.0917
       ],
-      "verdict": "model loses"
+      "verdict": "tie (CI includes 0)"
     },
     "M2_compact @ 10%": {
-      "best_deployable_rule": "volume_train",
-      "diff": -0.2033,
+      "best_deployable_rule": "order_value",
+      "diff": -0.1696,
       "diff_ci95": [
-        -0.3077,
-        -0.1345
+        -0.4199,
+        0.1193
       ],
-      "verdict": "model loses"
+      "verdict": "tie (CI includes 0)"
     },
     "M3_leak_free_history @ 10%": {
-      "best_deployable_rule": "volume_train",
-      "diff": -0.2473,
+      "best_deployable_rule": "order_value",
+      "diff": -0.2456,
       "diff_ci95": [
-        -0.3407,
-        -0.1758
+        -0.41,
+        0.1019
       ],
-      "verdict": "model loses"
+      "verdict": "tie (CI includes 0)"
     },
     "M4_no_supplier_history @ 10%": {
-      "best_deployable_rule": "volume_train",
-      "diff": -0.2308,
+      "best_deployable_rule": "order_value",
+      "diff": 0.0936,
       "diff_ci95": [
-        -0.3352,
-        -0.151
+        -0.03,
+        0.2532
       ],
-      "verdict": "model loses"
+      "verdict": "tie (CI includes 0)"
     },
     "M0_current @ 20%": {
       "best_deployable_rule": "order_value",
-      "diff": 0.0989,
+      "diff": 0.0409,
       "diff_ci95": [
-        0.0275,
-        0.1621
+        -0.162,
+        0.2081
       ],
-      "verdict": "model wins"
+      "verdict": "tie (CI includes 0)"
     },
     "M1_plus_workload @ 20%": {
       "best_deployable_rule": "order_value",
-      "diff": 0.1429,
+      "diff": 0.0936,
       "diff_ci95": [
-        0.0769,
-        0.2033
+        -0.1573,
+        0.3151
       ],
-      "verdict": "model wins"
+      "verdict": "tie (CI includes 0)"
     },
     "M2_compact @ 20%": {
       "best_deployable_rule": "order_value",
-      "diff": 0.1319,
+      "diff": 0.0994,
       "diff_ci95": [
-        0.0562,
-        0.1965
+        -0.1463,
+        0.2923
       ],
-      "verdict": "model wins"
+      "verdict": "tie (CI includes 0)"
     },
     "M3_leak_free_history @ 20%": {
       "best_deployable_rule": "order_value",
-      "diff": 0.1291,
+      "diff": 0.0994,
       "diff_ci95": [
-        0.0632,
-        0.1978
+        -0.1467,
+        0.2784
       ],
-      "verdict": "model wins"
+      "verdict": "tie (CI includes 0)"
     },
     "M4_no_supplier_history @ 20%": {
       "best_deployable_rule": "order_value",
-      "diff": 0.1071,
+      "diff": 0.0673,
       "diff_ci95": [
-        0.0412,
-        0.1676
+        -0.0474,
+        0.235
       ],
-      "verdict": "model wins"
+      "verdict": "tie (CI includes 0)"
     },
     "M0_current @ 30%": {
       "best_deployable_rule": "order_value",
-      "diff": 0.1426,
+      "diff": 0.0938,
       "diff_ci95": [
-        0.0941,
-        0.1846
+        -0.0072,
+        0.1885
       ],
-      "verdict": "model wins"
+      "verdict": "tie (CI includes 0)"
     },
     "M1_plus_workload @ 30%": {
       "best_deployable_rule": "order_value",
-      "diff": 0.1938,
+      "diff": 0.1602,
       "diff_ci95": [
-        0.1463,
-        0.2386
+        0.0466,
+        0.2757
       ],
       "verdict": "model wins"
     },
     "M2_compact @ 30%": {
       "best_deployable_rule": "order_value",
-      "diff": 0.2011,
+      "diff": 0.1191,
       "diff_ci95": [
-        0.1536,
-        0.2441
+        0.0131,
+        0.2577
       ],
       "verdict": "model wins"
     },
     "M3_leak_free_history @ 30%": {
       "best_deployable_rule": "order_value",
-      "diff": 0.1883,
+      "diff": 0.1387,
       "diff_ci95": [
-        0.1426,
-        0.2303
+        0.028,
+        0.2689
       ],
       "verdict": "model wins"
     },
     "M4_no_supplier_history @ 30%": {
       "best_deployable_rule": "order_value",
-      "diff": 0.128,
+      "diff": 0.0977,
       "diff_ci95": [
-        0.0786,
-        0.1755
+        0.0039,
+        0.1972
       ],
       "verdict": "model wins"
     }
   },
   "clustering": {
-    "n_cases": 1822,
-    "distinct_purchase_orders": 716,
-    "distinct_suppliers": 364,
+    "n_cases": 1708,
+    "distinct_purchase_orders": 658,
+    "distinct_suppliers": 336,
     "top5pct[M0_current]": {
-      "distinct_suppliers": 23,
-      "distinct_purchase_orders": 33
+      "distinct_suppliers": 3,
+      "distinct_purchase_orders": 15
     },
     "top5pct[M1_plus_workload]": {
       "distinct_suppliers": 1,
@@ -757,76 +727,76 @@
       "distinct_suppliers": 1,
       "distinct_purchase_orders": 7
     },
-    "top5pct[rule_started (as shipped)]": {
+    "top5pct[rule_supplier_history (completed only)]": {
       "distinct_suppliers": 53,
-      "distinct_purchase_orders": 80
+      "distinct_purchase_orders": 54
     },
     "top5pct[volume_train]": {
-      "distinct_suppliers": 2,
-      "distinct_purchase_orders": 26
+      "distinct_suppliers": 1,
+      "distinct_purchase_orders": 13
     },
     "note": "Items of one purchase order share vendor, timing and (often) outcome, so held-out cases are NOT independent; the case-level bootstrap CIs above understate the true uncertainty, most of all at k=5% where the picks come from few suppliers/POs."
   },
   "permutation_importance_best_model": [
     [
-      "supplier_historical_breach_rate",
-      0.0404
+      "sup_open_cases",
+      0.03519
     ],
     [
       "last_activity_Record Invoice Receipt",
-      0.01069
+      0.01165
     ],
     [
-      "sup_open_cases",
-      0.00559
-    ],
-    [
-      "rework_count",
-      0.00559
-    ],
-    [
-      "variant_frequency",
-      0.00414
-    ],
-    [
-      "last_activity_Cancel Invoice Receipt",
-      0.00272
-    ],
-    [
-      "sup_shrunk_rate",
-      0.00247
-    ],
-    [
-      "sup_prior_cases",
-      0.0021
-    ],
-    [
-      "supplier_historical_median_cycle_time",
-      0.00196
+      "sup_ended_n",
+      0.00957
     ],
     [
       "sup_ended_median",
-      0.00186
-    ],
-    [
-      "event_count",
-      0.00123
+      0.00721
     ],
     [
       "last_activity_Record Goods Receipt",
-      0.00118
+      0.00683
+    ],
+    [
+      "variant_frequency",
+      0.00668
+    ],
+    [
+      "rework_count",
+      0.00658
+    ],
+    [
+      "unique_activity_count",
+      0.00614
+    ],
+    [
+      "start_hour",
+      0.00525
+    ],
+    [
+      "sup_shrunk_rate",
+      0.00503
+    ],
+    [
+      "supplier_id_vendorID_0182",
+      0.00382
+    ],
+    [
+      "event_count",
+      0.00341
     ]
   ],
   "overlap_at_5pct": {
-    "model": "M1_plus_workload",
-    "k": 91,
-    "overlap": 2,
-    "precision_model_only": 0.1685,
-    "precision_rule_only": 0.6966,
-    "precision_both": 0.5,
+    "model": "M3_leak_free_history",
+    "k": 85,
+    "overlap": 0,
+    "precision_model_only": 0.1765,
+    "precision_rule_only": 0.2118,
+    "precision_both": null,
     "distinct_suppliers_in_model_top": 1,
     "distinct_suppliers_in_rule_top": 53,
-    "top_supplier_share_rule_top": 0.1868
+    "top_supplier_share_rule_top": 0.2824
   },
   "n_bootstrap": 500
 }

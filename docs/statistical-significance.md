@@ -1,4 +1,29 @@
-# Statistical significance: the "why random forest" story needed a real test, and the real test disagrees with it
+# Statistical significance: current PO-grouped results
+
+## Current analysis (2026-10-03)
+
+The analysis now uses a forward-in-time holdout with purchase orders kept intact and a 2,000-draw
+purchase-order cluster bootstrap. The test set contains 1,708 cases. On the configured SLA target,
+the random forest ROC-AUC is 0.9783 (95% cluster-bootstrap CI [0.9660, 0.9875]); this remains a
+weak business result because 96.3% of test cases breach.
+
+Five paired PO-grouped temporal folds compare random forest and logistic regression:
+
+```
+RF: [0.9586, 0.9841, 0.8851, 0.9868, 0.9839]
+LR: [0.9792, 0.9750, 0.9464, 0.9976, 0.9428]
+Mean RF - LR: -0.0085
+Paired t-test p=0.6413; Wilcoxon p=0.6250
+```
+
+There is no statistically clear algorithm winner across these folds. Logistic regression emitted
+convergence warnings in two folds, so its scores also need caution. With only five folds, the tests
+have limited power. Full raw output: [`statistical_significance_raw_result.json`](statistical_significance_raw_result.json).
+
+The analysis below is the earlier row-level evaluation. It is retained as history only; its bootstrap
+intervals and fold results are superseded by the PO-grouped results above.
+
+## Superseded row-level analysis
 
 Every number in this repo's model comparison — ROC-AUC 0.986 vs 0.910 — was a
 single point estimate from one train/test split, with no uncertainty

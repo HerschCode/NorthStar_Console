@@ -10,10 +10,8 @@ before deciding to adopt new hyperparameters, not a silent replacement.
 RandomizedSearchCV (not GridSearchCV) -- the parameter spaces below have enough
 combinations that an exhaustive grid would cost meaningfully more compute for
 diminishing returns; a randomized search over the same space finds comparably
-good hyperparameters for a fraction of the fits. cv=TimeSeriesSplit(...), not the
-default random k-fold -- reusing the exact same temporal-leakage reasoning
-train.py's cross_validate_time_series() already documents: a process-mining
-dataset's random split would leak future information into training.
+good hyperparameters for a fraction of the fits. Cross-validation is forward-in-time
+and purchase-order-grouped to prevent both temporal and same-order leakage.
 
 MLflow tracking uses a local SQLite file (`sqlite:///mlflow.db`), not the plain
 `file:./mlruns` directory backend that used to be MLflow's own default -- MLflow
@@ -26,9 +24,9 @@ infrastructure story for a single-developer portfolio project; `mlflow ui
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.model_selection import RandomizedSearchCV, TimeSeriesSplit
+from sklearn.model_selection import RandomizedSearchCV
 
-from src.ml.train import time_based_split, _evaluate
+from src.ml.train import time_based_split, time_series_group_splits, _evaluate
 
 RANDOM_FOREST_PARAM_SPACE = {
     "n_estimators": [100, 200, 300, 400],
@@ -43,6 +41,14 @@ GRADIENT_BOOSTING_PARAM_SPACE = {
     "learning_rate": [0.01, 0.05, 0.1, 0.2],
     "subsample": [0.6, 0.8, 1.0],
 }
+
+
+def _grouped_cv_splits(cases: pd.DataFrame, n_splits: int) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Convert shared group-fold row indexes into sklearn's positional CV indexes."""
+    return [
+        (cases.index.get_indexer(train_idx), cases.index.get_indexer(test_idx))
+        for train_idx, test_idx in time_series_group_splits(cases, n_splits=n_splits)
+    ]
 
 
 def _mlflow_log_run(run_name: str, params: dict, metrics: dict, tracking_uri: str = "sqlite:///mlflow.db"):
@@ -67,12 +73,13 @@ def tune_random_forest(
     train_idx, test_idx = time_based_split(cases)
     X_train, X_test = X.loc[train_idx], X.loc[test_idx]
     y_train, y_test = y.loc[train_idx], y.loc[test_idx]
+    cv_splits = _grouped_cv_splits(cases.loc[train_idx], n_splits)
 
     search = RandomizedSearchCV(
         RandomForestClassifier(class_weight="balanced", random_state=random_state),
         param_distributions=RANDOM_FOREST_PARAM_SPACE,
         n_iter=n_iter,
-        cv=TimeSeriesSplit(n_splits=n_splits),
+        cv=cv_splits,
         scoring="roc_auc",
         random_state=random_state,
         n_jobs=-1,
@@ -106,6 +113,7 @@ def tune_gradient_boosting(
     train_idx, test_idx = time_based_split(cases)
     X_train, X_test = X.loc[train_idx], X.loc[test_idx]
     y_train, y_test = y.loc[train_idx], y.loc[test_idx]
+    cv_splits = _grouped_cv_splits(cases.loc[train_idx], n_splits)
 
     # GradientBoostingClassifier doesn't support class_weight -- sample_weight is
     # the equivalent, same approach train.py's own train_models() already uses.
@@ -118,7 +126,7 @@ def tune_gradient_boosting(
         GradientBoostingClassifier(random_state=random_state),
         param_distributions=GRADIENT_BOOSTING_PARAM_SPACE,
         n_iter=n_iter,
-        cv=TimeSeriesSplit(n_splits=n_splits),
+        cv=cv_splits,
         scoring="roc_auc",
         random_state=random_state,
         n_jobs=-1,

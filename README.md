@@ -9,32 +9,36 @@ in [`operations-assistant`](https://operations-assistant.onrender.com).
 
 ## Headline
 
-> **Late-stage SLA triage model: 0.78–0.93 ROC-AUC on realistic targets; early-case 0.59–0.83.**
+> **PO-isolated SLA-risk evaluation: 0.76–0.87 ROC-AUC on realistic targets; creation-time-only 0.64–0.87.**
 
-This is a **late-stage triage score, not a creation-time predictor.** Most of the model's skill comes from
-features only known late in a case (event count, full activity path). On the configured SLA targets 97% of
-held-out cases breach, so the 0.981 the training script prints is inflated by a degenerate target; the
-figures above come from percentile-based targets with 25–55% base rates. Details and every caveat:
+This is a **case-progress-aware risk evaluation, not a validated creation-time predictor.** Full-case
+features are only available as a case progresses. The full-feature and creation-time analyses below hold
+out whole purchase orders across a temporal boundary; 1,708 measurable cases remain in the latest holdout.
+The configured SLA label still
+has a 96.3% holdout breach rate, so its high ROC-AUC is not a useful headline. The realistic-target
+figures below are separate percentile-label experiments, not the currently deployed model's measured
+performance. Details and every caveat:
 [`docs/evaluation.md`](docs/evaluation.md).
 
 | Setting | ROC-AUC | Where |
 |---|---|---|
-| Full-case features, realistic base rates (25–55%) | **0.78–0.93** | [`less-degenerate-target.md`](docs/less-degenerate-target.md) |
-| Creation-time features only | 0.62–0.86 | [`prediction-time-availability.md`](docs/prediction-time-availability.md) |
+| Full-case features, p50/p75 targets (holdout base rates 54.5% / 24.5%) | **0.763–0.865** | [`less-degenerate-target.md`](docs/less-degenerate-target.md) |
+| Creation-time-only features, same targets/models | 0.641–0.869 | [`prediction-time-availability.md`](docs/prediction-time-availability.md) |
 | Prefix (first k events) RF | 0.59–0.82 | [`prefix-model-bpi2019.md`](docs/prefix-model-bpi2019.md) |
 | GRU ensemble on the first k events (served, `/early-risk`) | 0.63–0.83 | [`sequence-model.md`](docs/sequence-model.md) |
 | Independent log (BPI 2012), first 3 events | 0.77–0.92 | [`external-validation-bpi2012.md`](docs/external-validation-bpi2012.md) |
 
-*Ranges widened on 2026-09-29's 9,228-case resample (was 3,000) -- a larger, more representative sample
-surfaces more variance across the p50/p75 targets and k values, not less; see the finance-module changelog entry.*
+*These current ranges use purchase-order-isolated temporal holdouts and folds. Creation-time-only results
+vary substantially by target and model; they are not a single expected production score.*
+*Prefix, GRU, and BPI 2012 rows are separate older experiments and have not yet been rerun with PO-grouped
+validation; do not compare them directly to the updated full-case and creation-time rows.*
 
-**Does the model beat a simple rule? Not at small treated shares -- and part of the rules' edge is a look-ahead
-leak.** At 5% treated, the busiest-supplier rule (0.79) and the supplier-history rule (0.69) beat the model (0.47); at
-10% supplier-history ties it; the model wins from 20% on (+0.10 over the best deployable rule, CI excludes 0).
-Adding the rules' features (supplier workload) did not help, and the supplier-history feature -- the model's strongest --
-uses outcomes of earlier-started cases that may not have ended yet. Made strictly causal, that rule falls to random and
-model ROC-AUC drops 0.789 -> 0.764. Details, bootstrap CIs and caveats (cases cluster by purchase order, so CIs are too
-narrow): [`docs/model-vs-rules.md`](docs/model-vs-rules.md). Effect sizes elsewhere are assumptions (SIMULATION).
+**Simple-rule comparison:** on the PO-isolated holdout, the existing model is statistically tied with
+order-value ranking at every tested share. Adding supplier-workload features produces a 30% precision of
+0.490 vs 0.330 for order value (cluster-bootstrap difference CI [0.047, 0.276]); this variant is not the
+currently deployed model. Intervals are wide, especially at small targeting shares. Supplier history now
+uses only cases completed before the scored case starts. Full results and limitations:
+[`docs/model-vs-rules.md`](docs/model-vs-rules.md). Effect sizes elsewhere are assumptions (SIMULATION).
 
 **Bug found and fixed (2026-09-25):** the served model's probability calibration had been fitted on the same rows
 the forest trained on, cutting its ranking ROC-AUC from 0.986 to 0.665 while `meta.json` reported the raw

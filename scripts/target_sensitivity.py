@@ -7,8 +7,8 @@ percentile of the TRAINING window's cycle time (computed on the first 80% of cas
 time only, so the test period never influences the label definition), giving base rates the
 model can actually be tested on.
 
-For each target definition it reports, on the time-ordered held-out last 20%:
-base rate, number of negatives, ROC-AUC, PR-AUC, and the same for 5-fold TimeSeriesSplit, with
+For each target definition it reports, on the latest purchase-order groups held out in time:
+base rate, number of negatives, ROC-AUC, PR-AUC, and the same for five PO-grouped temporal folds, with
 (a) all features and (b) creation-time-only features (see docs/prediction-time-availability.md).
 
 Run: python -m scripts.target_sensitivity   (writes docs/less-degenerate-target.md numbers to stdout)
@@ -21,12 +21,12 @@ from dotenv import load_dotenv
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score, roc_auc_score
-from sklearn.model_selection import TimeSeriesSplit
 
 from src.analytics.sla_analysis import evaluate_sla
 from src.cleaning.clean_events import clean_events
 from src.ingestion.load_event_log import load_event_log
 from src.ml.features import build_features
+from src.ml.train import time_based_split, time_series_group_splits
 from src.transformation.build_process_cases import build_process_cases
 
 warnings.filterwarnings("ignore")
@@ -42,7 +42,8 @@ def _end_only(c: str) -> bool:
 
 def targets_from_training_percentile(cases, pct: float, train_frac: float = 0.8) -> dict:
     ordered = cases[cases["cycle_time_hours"].astype(float) > 0].sort_values("start_time")   # measurable cases only
-    train = ordered.iloc[: int(len(ordered) * train_frac)]
+    train_idx, _ = time_based_split(ordered, test_size=1 - train_frac)
+    train = ordered.loc[train_idx]
     targets = {"default": float(train["cycle_time_hours"].quantile(pct / 100))}
     for cat, grp in train.groupby("category"):
         if len(grp) >= 30:
@@ -68,21 +69,19 @@ def evaluate(cases, label: str):
     X, y = build_features(cases)
     cols_all = list(X.columns)
     cols_early = [c for c in cols_all if not _end_only(c) and c not in HIST]
-    cut = int(len(X) * 0.8)
-    tr, te = np.arange(cut), np.arange(cut, len(X))
-    print(f"\n### {label}: overall base rate {y.mean():.3f} | holdout base rate {y.iloc[te].mean():.3f} "
-          f"| holdout negatives {(1 - y.iloc[te]).sum()} of {len(te)}")
-    tscv = TimeSeriesSplit(n_splits=5)
+    tr, te = time_based_split(cases)
+    print(f"\n### {label}: overall base rate {y.mean():.3f} | holdout base rate {y.loc[te].mean():.3f} "
+          f"| holdout negatives {(1 - y.loc[te]).sum()} of {len(te)}")
     for fs_name, cols in [("all features", cols_all), ("creation-time only", cols_early)]:
         for mname, mk in _models().items():
-            m = mk().fit(X.iloc[tr][cols], y.iloc[tr])
-            roc, pr = _score(y.iloc[te], m.predict_proba(X.iloc[te][cols])[:, 1])
+            m = mk().fit(X.loc[tr, cols], y.loc[tr])
+            roc, pr = _score(y.loc[te], m.predict_proba(X.loc[te, cols])[:, 1])
             folds = []
-            for a, b in tscv.split(X):
-                if y.iloc[a].nunique() < 2 or y.iloc[b].nunique() < 2:
+            for fold_train, fold_test in time_series_group_splits(cases, n_splits=5):
+                if y.loc[fold_train].nunique() < 2 or y.loc[fold_test].nunique() < 2:
                     continue
-                mm = mk().fit(X.iloc[a][cols], y.iloc[a])
-                folds.append(roc_auc_score(y.iloc[b], mm.predict_proba(X.iloc[b][cols])[:, 1]))
+                mm = mk().fit(X.loc[fold_train, cols], y.loc[fold_train])
+                folds.append(roc_auc_score(y.loc[fold_test], mm.predict_proba(X.loc[fold_test, cols])[:, 1]))
             print(f"  {fs_name:20s} {mname}: holdout ROC-AUC {roc:.3f}  PR-AUC {pr:.3f} "
                   f"(base {y.iloc[te].mean():.3f}) | 5-fold mean ROC-AUC {np.mean(folds):.3f} "
                   f"(min {np.min(folds):.3f}, max {np.max(folds):.3f})")

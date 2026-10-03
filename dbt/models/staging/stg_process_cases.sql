@@ -9,6 +9,7 @@ select
     end_time,
     cycle_time_hours,
     supplier_id,
+    purchase_order_id,
     category,
     variant,
     variant_frequency

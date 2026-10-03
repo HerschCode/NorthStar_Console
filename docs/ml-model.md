@@ -6,20 +6,22 @@ Binary classification: will this case's cycle time exceed its SLA target
 
 ## Training data
 BPI Challenge 2019 procurement cases, transformed via `build_process_cases.py` and labeled via
-`sla_analysis.evaluate_sla`. Split is **time-based, not random** (`train.py:time_based_split`):
-the earliest ~80% of cases by start time are training, the most recent ~20% are test. A random
-split would leak future information (e.g. a supplier's later performance trend) into training for
-a temporal process like this -- that would inflate reported metrics beyond what you'd actually see
-predicting forward in production.
+`sla_analysis.evaluate_sla`. Evaluation excludes zero-duration truncated cases. The current
+holdout is **forward-in-time and purchase-order-grouped** (`train.py:time_based_split`): all cases
+from one purchase order remain on one side, and boundary-crossing orders are excluded. This avoids
+same-order leakage as well as future-to-past leakage. The deployed artifact has not yet been
+retrained with this corrected split and supplier-history logic.
 
 ## Features
-`event_count`, `variant_frequency`, `category` (one-hot), `supplier_id` (one-hot) --
-see `src/ml/features.py`. This is a deliberately minimal starting feature set; the honest next
-step (not yet done) is adding supplier historical breach rate, order value, and elapsed-time-so-far
-as features once `supplier_analysis.py` and richer case fields are wired in.
+The model uses process-completion, calendar, category/supplier, and supplier-history features;
+see `src/ml/features.py`. Full-case features such as event count, final activity, rework, and
+variant frequency are unavailable at case creation, so this is not a creation-time predictor.
+Supplier breach-rate and median-duration features include only same-supplier cases that ended
+strictly before the current case starts. No-history cases use fixed sentinels rather than statistics
+computed from the full dataset.
 
 ## Models
-Three, compared on the same time-based split:
+Three, compared on the same PO-grouped time-based split:
 - Baseline: Logistic Regression (`class_weight="balanced"` to account for breach being the
   minority class)
 - Random Forest (200 trees, max_depth=8, same class balancing)
@@ -35,13 +37,10 @@ The better model by ROC-AUC on the time-based test split is saved to
 not a default assumption.
 
 ## Cross-validation
-`train.py:cross_validate_time_series` -- **`TimeSeriesSplit`, not standard `KFold`.** Standard
-k-fold would reintroduce exactly the temporal leakage `time_based_split` exists to avoid for the
-single train/test split (a fold's "training" data could easily include cases chronologically
-after some of its "test" data). `TimeSeriesSplit` instead builds expanding-window folds: every
-fold's test set is chronologically after everything in its training set, always. Verified directly
-by a test (`test_cross_validate_time_series_folds_are_chronologically_ordered`), not just trusted
-because the right sklearn class name is used.
+`train.py:cross_validate_time_series` uses expanding forward-in-time folds grouped by purchase
+order. Each fold keeps related cases together and removes orders crossing its temporal boundary.
+The same fold generator is used by target sensitivity, prediction-time analysis, ablation, and
+hyperparameter tuning.
 
 Reports per-fold ROC-AUC plus mean/std across folds -- the std matters as much as the mean. A
 model that scores well on one time window but swings wildly across others is a real stability risk
@@ -50,6 +49,14 @@ a single train/test split's one number can't reveal.
 ## Evaluation
 Precision, recall, F1, ROC-AUC, confusion matrix -- all computed in `train.py:_evaluate`.
 
+**Current offline evaluation:** realistic percentile-label experiments produce full-feature
+holdout ROC-AUC 0.763–0.865 and creation-time-only 0.641–0.869 across p50/p75 targets. The
+configured label has a 96.3% breach rate in the latest holdout, making its high AUC uninformative.
+The existing model does not show a statistically clear advantage over order-value ranking at
+5–30% intervention shares. See [`less-degenerate-target.md`](less-degenerate-target.md) and
+[`model-vs-rules.md`](model-vs-rules.md). These are offline experiments, not measured intervention
+lift or the performance of a newly retrained deployment.
+
 **Precision/recall trade-off, explicitly:** a false negative (predicted low-risk, actually
 breaches) means an at-risk order gets no intervention and a client SLA gets missed. A false
 positive (predicted high-risk, doesn't breach) means an analyst spends a few minutes reviewing an
@@ -57,30 +64,22 @@ order that was fine. Those costs aren't symmetric -- we'd rather over-flag than 
 is why `class_weight="balanced"` is used rather than optimizing for raw accuracy.
 
 ## Explainability
-`src/ml/explain.py` reports, per prediction, which of the model's globally important features are
-actually present/active for that specific case. This is **not SHAP** -- it's a lightweight
-approximation (global importance filtered to the row's active features), and it's described that
-way rather than oversold. SHAP is a legitimate Tier 3 upgrade if it's worth the added dependency.
+`src/ml/explain_shap.py` provides per-prediction SHAP explanations through
+`GET /orders/{case_id}/risk?explain=true`. Treat these as model attribution, not causal explanations
+of procurement delays.
 
-## Known limitations (updated -- several of these were closed after this doc was first written; left dated rather than silently correct with no trace)
-- ~~Feature set is minimal~~ **Closed.** 15 features across process, temporal, and
-  causal supplier-history families (`src/ml/features.py`) -- see README's ablation study.
-- ~~No monitoring for feature or label drift once trained~~ **Closed.**
-  `GET /observability/prediction-drift` compares live prediction distributions against a
-  training-time baseline; `GET /metrics` (Prometheus) tracks prediction volume by risk_level
-  in real time. Retraining itself is still manually triggered, not automated on a drift signal.
-- ~~Explainability is global-importance-based, not a true per-prediction attribution method~~
-  **Closed.** Real SHAP (`src/ml/explain_shap.py`, `shap.Explainer`) is wired into
-  `GET /orders/{case_id}/risk?explain=true` -- genuine per-prediction attribution, not a proxy.
-- **Still open:** no fairness/bias review across supplier or category segments has been done.
-- **Still open:** the single-split "which model wins" comparison this doc's model-selection
-  section describes doesn't hold up under a proper paired significance test across CV folds --
-  see [`docs/statistical-significance.md`](statistical-significance.md). Random forest and
-  logistic regression are statistically indistinguishable; RF is kept for operational reasons
-  (no scaling needed, no convergence warnings at 541 one-hot columns), not a proven accuracy edge.
+## Known limitations
+- No fresh labels or real-time event stream exists; the dataset is a static historical log.
+- Prediction-distribution drift is monitored, but no live calibration/precision/recall monitoring
+  is possible without later outcomes. Retraining is not automatically triggered by drift.
+- No fairness review across suppliers or categories has been completed.
+- Logistic regression emits convergence warnings in some grouped evaluation folds; its results
+  require caution until numeric scaling/convergence is addressed.
+- No real interventions have been run. ROI and uplift outputs are simulated or semi-synthetic.
+- The deployed model artifact has not been regenerated with the new completed-history features
+  and PO-grouped split. Do not describe the offline results as deployed model performance.
 
-## When to retrain
-No automated trigger yet (Tier 3: revisit once Phase 10 observability is in place). Manually,
-retrain when: the process/schema changes materially (new `config/process.yaml`), a new SLA
-category is added to `config/sla.yaml`, or the test-period metrics on a fresh pull noticeably
-diverge from what's reported here.
+## Retraining
+The pipeline has retraining checks and model promotion gates, but real-world performance monitoring
+still needs fresh labeled outcomes. Retrain and reevaluate when the process/schema changes, an SLA
+category is added, or a new time period has enough completed cases for a meaningful grouped holdout.

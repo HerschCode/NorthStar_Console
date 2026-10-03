@@ -11,8 +11,8 @@ Feature families (cumulative, in addition order):
   + supplier hist  — supplier_historical_breach_rate,
                      supplier_historical_median_cycle_time, sla_target_hours
 
-All models use 5-fold TimeSeriesSplit (temporal ordering preserved) so there's no
-future-leakage from random shuffling.
+All models use five expanding temporal folds grouped by purchase order, so related
+cases cannot cross a train/validation boundary.
 
 Run from repo root:
     python scripts/ablation_study.py
@@ -32,7 +32,6 @@ from sklearn.metrics import (
     f1_score,
     roc_auc_score,
 )
-from sklearn.model_selection import TimeSeriesSplit
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -48,6 +47,7 @@ from src.ml.features import (
     _add_derived_features,
     build_features,
 )
+from src.ml.train import time_series_group_splits
 
 
 FAMILY_ORDER = ["baseline", "temporal", "process", "supplier_history"]
@@ -79,17 +79,16 @@ def features_for_families(df: pd.DataFrame, families: list[str]) -> pd.DataFrame
     return X
 
 
-def cv_scores(X: pd.DataFrame, y: pd.Series) -> dict:
-    tscv = TimeSeriesSplit(n_splits=N_SPLITS)
+def cv_scores(X: pd.DataFrame, y: pd.Series, cases: pd.DataFrame) -> dict:
     pipe = Pipeline([
         ("scaler", StandardScaler()),
         ("lr", LogisticRegression(max_iter=1000, class_weight="balanced", random_state=42)),
     ])
 
     aucs, aps, f1s = [], [], []
-    for train_idx, val_idx in tscv.split(X):
-        X_tr, X_val = X.iloc[train_idx], X.iloc[val_idx]
-        y_tr, y_val = y.iloc[train_idx], y.iloc[val_idx]
+    for train_idx, val_idx in time_series_group_splits(cases, n_splits=N_SPLITS):
+        X_tr, X_val = X.loc[train_idx], X.loc[val_idx]
+        y_tr, y_val = y.loc[train_idx], y.loc[val_idx]
         if y_tr.nunique() < 2 or y_val.nunique() < 2:
             continue
         pipe.fit(X_tr, y_tr)
@@ -112,13 +111,14 @@ def main():
     raw = load_event_log(os.environ["RAW_EVENT_LOG_PATH"])
     cleaned, _ = clean_events(raw)
     cases = build_process_cases(cleaned)
+    cases = cases[cases["cycle_time_hours"] > 0].reset_index(drop=True)
     evaluated = evaluate_sla(cases, load_sla_targets())
 
     df = _add_derived_features(evaluated.copy())
     y = df["sla_breach"].astype(int)
 
     print(f"\n{'='*72}")
-    print(f"  Feature-family ablation  |  {N_SPLITS}-fold TimeSeriesSplit  |  LR")
+    print(f"  Feature-family ablation  |  {N_SPLITS} PO-grouped temporal folds  |  LR")
     print(f"{'='*72}")
     print(f"  {'Feature set':<52}  {'ROC-AUC':>7}  {'PR-AUC':>7}  {'F1':>6}  {'#feat':>6}")
     print(f"  {'-'*52}  {'-'*7}  {'-'*7}  {'-'*6}  {'-'*6}")
@@ -127,7 +127,7 @@ def main():
     for i, fam_name in enumerate(FAMILY_ORDER):
         families = cumulative_families(i)
         X = features_for_families(df, families)
-        scores = cv_scores(X, y)
+        scores = cv_scores(X, y, evaluated)
 
         delta = ""
         if prev_auc is not None:

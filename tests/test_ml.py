@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import pytest
 from src.ml.features import build_features
-from src.ml.train import time_based_split, train_models, cross_validate_time_series
+from src.ml.train import time_based_split, time_series_group_splits, train_models, cross_validate_time_series
 from src.ml.explain import explain_prediction, explain_batch
 
 
@@ -45,6 +45,39 @@ def test_build_features_raises_when_no_expected_columns_present():
         build_features(df)
 
 
+def test_supplier_history_uses_only_cases_completed_before_current_start():
+    cases = pd.DataFrame({
+        "supplier_id": ["S1", "S1", "S1", "S1"],
+        "start_time": pd.to_datetime(["2024-01-01", "2024-01-02", "2024-01-05", "2024-01-11"]),
+        "end_time": pd.to_datetime(["2024-01-10", "2024-01-03", "2024-01-06", "2024-01-12"]),
+        "cycle_time_hours": [216.0, 24.0, 24.0, 24.0],
+        "sla_breach": [1, 0, 0, 1],
+    })
+
+    features = build_features(cases)[0]
+
+    assert features["supplier_historical_breach_rate"].tolist() == [0.5, 0.5, 0.0, pytest.approx(1 / 3)]
+    assert features["supplier_historical_median_cycle_time"].tolist() == [-1.0, -1.0, 24.0, 24.0]
+
+
+def test_model_vs_rules_history_excludes_completion_at_prediction_time():
+    from scripts.model_vs_rules import causal_supplier_features
+
+    cases = pd.DataFrame({
+        "supplier_id": ["S1", "S1", "S1"],
+        "start_time": pd.to_datetime(["2024-01-01", "2024-01-05", "2024-01-08"]),
+        "end_time": pd.to_datetime(["2024-01-05", "2024-01-07", "2024-01-09"]),
+        "cycle_time_hours": [96.0, 48.0, 24.0],
+        "sla_breach": [1, 0, 0],
+    })
+
+    features = causal_supplier_features(cases, prior_rate=0.25, prior_median=12.0)
+
+    assert features["sup_ended_n"].tolist() == [0.0, 0.0, 2.0]
+    assert features["sup_ended_rate"].tolist() == [0.25, 0.25, 0.5]
+    assert features["sup_ended_median"].tolist() == [12.0, 12.0, 72.0]
+
+
 def test_time_based_split_respects_chronological_order():
     cases = sample_evaluated_cases()
     train_idx, test_idx = time_based_split(cases, test_size=0.2)
@@ -58,6 +91,35 @@ def test_time_based_split_sizes_roughly_match_test_size():
     train_idx, test_idx = time_based_split(cases, test_size=0.2)
     assert len(test_idx) == 20
     assert len(train_idx) == 80
+
+
+def test_time_based_split_keeps_purchase_orders_separate_and_drops_boundary_groups():
+    cases = sample_evaluated_cases(n=10).sample(frac=1, random_state=7)
+    cases["purchase_order_id"] = ["PO1", "PO2", "PO3", "PO4", "PO5", "PO6", "PO7", "PO7", "PO9", "PO10"]
+
+    train_idx, test_idx = time_based_split(cases, test_size=0.3)
+
+    train_orders = set(cases.loc[train_idx, "purchase_order_id"])
+    test_orders = set(cases.loc[test_idx, "purchase_order_id"])
+    assert train_orders.isdisjoint(test_orders)
+    assert "PO7" not in train_orders | test_orders
+    assert cases.loc[train_idx, "start_time"].max() < cases.loc[test_idx, "start_time"].min()
+    assert cases.loc[train_idx, "start_time"].is_monotonic_increasing
+    assert cases.loc[test_idx, "start_time"].is_monotonic_increasing
+
+
+def test_time_series_group_folds_keep_purchase_orders_separate():
+    cases = sample_evaluated_cases(n=120)
+    cases["purchase_order_id"] = [f"PO{i // 2}" for i in range(len(cases))]
+
+    folds = list(time_series_group_splits(cases, n_splits=5))
+
+    assert folds
+    for train_idx, test_idx in folds:
+        assert set(cases.loc[train_idx, "purchase_order_id"]).isdisjoint(
+            set(cases.loc[test_idx, "purchase_order_id"])
+        )
+        assert cases.loc[train_idx, "start_time"].max() < cases.loc[test_idx, "start_time"].min()
 
 
 def test_train_models_returns_both_models_with_metrics():

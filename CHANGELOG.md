@@ -2,6 +2,10 @@
 
 ## Unreleased -- Post-v1.0.0 upgrade work
 
+### Dashboard navigation and responsive layout (2026-10-03)
+- Added sticky in-page section navigation and clearer visual grouping for summary, process/risk,
+  controls/finance, and platform-health sections. Risk worklists now reflow for narrow screens.
+
 ### External validation on public data (2026-10-03)
 - `scripts/external_validation.py`, `docs/external-validation.md`: AP controls on UCI Online Retail II and SEC EDGAR 2024q1. C4: 21x lift vs reversal proxy; C6 flags ~55% of ordinary real data (negative result, not tuned).
 

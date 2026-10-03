@@ -1,46 +1,59 @@
-# Model vs. simple rules -- with causal features and uncertainty
+# Model vs. simple rules -- PO-isolated evaluation
 
-Reproduce: `PYTHONPATH=. python -m scripts.model_vs_rules` -> `reports/model_vs_rules.json`
-(500-draw paired bootstrap, 1,822 held-out cases, base breach rate 24.9%). The design was written in the
-script's docstring before the run; the question was "does adding the features the rules use make the model beat them?"
+Reproduce: `python -m scripts.model_vs_rules` -> `reports/model_vs_rules.json`.
+The current run uses 1,708 held-out cases from a forward-in-time split that keeps each purchase order
+on one side of the boundary. Confidence intervals use 500 paired bootstrap resamples of purchase
+orders, not individual cases. The target is the per-category p75 cycle-time threshold derived from
+the training window (holdout breach rate 24.4%).
 
-## Result: no, at small treated shares -- and the reason is a leak, not a weak model
-
-Precision@k, held-out latest 20% of cases (95% CI in `reports/model_vs_rules.json`):
+## Precision at treated shares
 
 | Strategy | 5% | 10% | 20% | 30% |
-|---|---|---|---|---|
-| Model as deployed (M0) | 0.47 | 0.52 | 0.46 | 0.46 |
-| Model + workload features (M1) | 0.18 | 0.23 | 0.50 | 0.52 |
-| Model, supplier history made strictly causal (M3) | 0.19 | 0.23 | 0.49 | 0.51 |
-| Model, no supplier history (M4) | 0.36 | 0.24 | 0.46 | 0.45 |
-| Rule: supplier breach rate, as shipped | 0.69 | 0.57 | 0.45 | 0.38 |
-| Rule: supplier breach rate, strictly causal (ended cases only) | 0.20 | 0.21 | 0.23 | 0.26 |
-| Rule: supplier volume (training window) | 0.79 | 0.47 | 0.30 | 0.23 |
-| Rule: order value | 0.58 | 0.46 | 0.36 | 0.32 |
-| Random | 0.28 | 0.23 | 0.23 | 0.23 |
+|---|---:|---:|---:|---:|
+| Existing feature set, completed-only history (M0) | 0.329 | 0.263 | 0.404 | 0.424 |
+| M0 + supplier workload features (M1) | 0.106 | 0.140 | 0.456 | 0.490 |
+| Compact features + workload (M2) | 0.235 | 0.298 | 0.462 | 0.449 |
+| Explicit completed-only history (M3) | 0.176 | 0.222 | 0.462 | 0.469 |
+| No supplier history (M4) | 0.824 | 0.561 | 0.430 | 0.428 |
+| Supplier-history rule (completed cases only) | 0.235 | 0.269 | 0.263 | 0.275 |
+| Supplier-volume rule (training window) | 0.235 | 0.216 | 0.316 | 0.229 |
+| Order-value rule | 0.600 | 0.468 | 0.363 | 0.330 |
+| Random | 0.271 | 0.228 | 0.269 | 0.254 |
 
-Findings:
+95% cluster-bootstrap intervals and paired model-minus-rule comparisons are in the JSON report.
+For the corrected M0, the model does not show a statistically clear advantage over order value at
+any tested share. At 30%, M0 precision is 0.424 vs 0.330 for order value; paired difference is
+0.094 (95% CI [-0.007, 0.189]). M1 has a 30% difference of 0.160 (95% CI [0.047, 0.276]),
+but it is an evaluation variant, not the currently deployed model.
 
-1. **Adding the rules' features did not make the model beat them.** M1/M2 were *worse* than M0 at 5-10%.
-2. **The shipped supplier-history feature looks ahead.** `supplier_historical_breach_rate` uses the outcomes of
-   earlier-*started* cases, some of which had not finished when the later case started. Restricting to cases that had
-   *ended* before the case began (`rule_ended`) drops that rule from 0.69 to 0.20 at 5% -- indistinguishable from
-   random. The same change cuts model ROC-AUC from 0.789 to 0.764 (M3) and, with history removed entirely, to 0.725 (M4).
-   So ~0.025-0.065 of the reported AUC and the rule's small-share advantage trace to this look-ahead.
-   It is the top permutation feature by 4x (0.040 vs <=0.011 for the next).
-3. **Volume's 5% win is concentration.** "Busiest supplier" picks come from 2 suppliers; it falls to random by 20%.
-4. **Against rules that are actually deployable** (everything except the look-ahead rule), the model loses at 5%,
-   ties at 10%, and wins at 20% (+0.10, CI [0.03, 0.16]) and 30% (+0.14, [0.09, 0.18]) over order-value.
-   The model's genuine advantage is at broad targeting (>=20% of cases), not at the top of the list.
-5. **Model top-5% is degenerate when workload features are added**: M1's top 5% is 7 purchase orders from one supplier.
-6. **Uncertainty is understated.** Items of one purchase order share vendor, timing and outcome (716 POs for 1,822
-   cases), so case-level bootstrap CIs are too narrow, most of all at 5%. Treat 5% comparisons as indicative only.
+## Findings and limits
 
-## What this changes
+1. Supplier-history breach rate and median cycle time now use only cases whose `end_time` is
+   strictly before the scored case's `start_time`; a tie at the timestamp is not treated as prior.
+2. The PO-aware temporal holdout removes boundary-crossing purchase orders. The confidence intervals
+   are much wider than the earlier case-level bootstrap, especially at 5–20% targeting.
+3. Order value is a strong baseline, particularly at small targeting shares. M0 does not establish
+   an advantage over it; M1's apparent 30% gain needs independent temporal validation.
+4. Top-ranked model cases are concentrated in one supplier, so precision does not establish that
+   the model generalizes across suppliers.
+5. This is an offline evaluation on a static historical event log. The revised model has not been
+   retrained and deployed, and no real interventions or outcomes are available to establish lift.
 
-- README and `docs/uplift-method.md` claims that the supplier-history rule is "causal" are withdrawn: it is causal
-  only in start order, not in outcome availability.
-- Not yet done (a behaviour change, so deliberately left for a decision): make `_add_derived_features` ended-only and
-  retrain. Expect headline ROC-AUC to fall by about 0.025 (0.789 -> 0.764 on this split) and the deployed model,
-  `meta.json`, and the ranges quoted in the docs to move with it.
+## Error analysis and feature importance
+
+The workload variant is not uniformly better: at 10% treated, M1 precision is 0.140 versus
+0.468 for the order-value rule; at 30%, M1 is 0.490 versus 0.330, with a paired 95% interval
+for the difference of [0.047, 0.276]. This argues against presenting workload features as a
+general win at every intervention capacity.
+
+The highest-AUC model in this run is M3 (leak-free completed-case history). Its top permutation
+importance is `sup_open_cases` (+0.0352 ROC-AUC), followed by the last activity
+`Record Invoice Receipt` (+0.0117), `sup_ended_n` (+0.0096), and `sup_ended_median` (+0.0072).
+These are permutation importances on this single held-out window, not causal effects.
+
+At 5%, the model's top set and the completed-case supplier-history rule's top set do not overlap:
+model-only precision is 0.1765 versus 0.2118 for rule-only selections. The model top set contains
+only one distinct supplier, compared with 53 suppliers in the rule top set. This concentration
+and the wide cluster-bootstrap intervals are material error-analysis findings, not evidence that
+the model generalizes better. All point estimates and 500-resample purchase-order bootstrap
+intervals remain in `reports/model_vs_rules.json`.

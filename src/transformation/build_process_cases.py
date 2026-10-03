@@ -32,6 +32,10 @@ def build_process_cases(events: pd.DataFrame) -> pd.DataFrame:
         supplier = grouped["supplier_id"].first()
         cases = cases.merge(supplier, on="case_id", how="left")
 
+    if "purchase_order_id" in events.columns:
+        purchase_order = grouped["purchase_order_id"].first()
+        cases = cases.merge(purchase_order, on="case_id", how="left")
+
     if "category" in events.columns:
         category = grouped["category"].first()
         cases = cases.merge(category, on="case_id", how="left")

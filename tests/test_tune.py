@@ -28,6 +28,7 @@ def synthetic_data():
 
     cases = pd.DataFrame({
         "case_id": [f"SYN{i}" for i in range(n)],
+        "purchase_order_id": [f"PO{i // 2}" for i in range(n)],
         "event_count": event_count, "category": category, "supplier_id": supplier_id,
         "variant_frequency": variant_frequency, "start_time": start_time, "sla_breach": sla_breach,
     })
@@ -73,13 +74,14 @@ def test_tune_does_not_log_when_disabled(mock_log, synthetic_data):
     mock_log.assert_not_called()
 
 
-def test_tuned_random_forest_uses_time_series_split_not_random(synthetic_data):
-    """The whole point of using TimeSeriesSplit here rather than sklearn's default
-    KFold -- verified by checking tune.py actually constructs a TimeSeriesSplit
-    with the requested n_splits, not just trusting the parameter name."""
+def test_tuned_random_forest_uses_purchase_order_grouped_temporal_folds(synthetic_data):
+    """Verify tuning uses the shared fold builder and requested fold count."""
     X, y, cases = synthetic_data
 
-    with patch("src.ml.tune.TimeSeriesSplit", wraps=__import__("sklearn.model_selection", fromlist=["TimeSeriesSplit"]).TimeSeriesSplit) as mock_tscv:
+    with patch("src.ml.tune.time_series_group_splits", wraps=__import__(
+        "src.ml.train", fromlist=["time_series_group_splits"]
+    ).time_series_group_splits) as mock_group_splits:
         tune_random_forest(X, y, cases, n_iter=2, n_splits=3, log_to_mlflow=False)
 
-    mock_tscv.assert_called_once_with(n_splits=3)
+    mock_group_splits.assert_called_once()
+    assert mock_group_splits.call_args.kwargs["n_splits"] == 3

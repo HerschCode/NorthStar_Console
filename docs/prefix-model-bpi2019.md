@@ -1,5 +1,9 @@
 # Early warning from the first k events (BPI 2019, this project's own data)
 
+**Evaluation status:** the results below use a case-level temporal split and have not been rerun with
+purchase-order-grouped holdouts. Treat the numeric comparison as historical until that evaluation is
+repeated; current full-case comparisons are in [`less-degenerate-target.md`](less-degenerate-target.md).
+
 Reproduce: `python -m scripts.prefix_model_bpi2019`
 
 **Question:** [`prediction-time-availability.md`](prediction-time-availability.md) showed the deployed
