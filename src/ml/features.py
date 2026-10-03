@@ -188,3 +188,13 @@ if __name__ == "__main__":
     X, y = build_features(evaluated)
     print(f"Feature matrix: {X.shape}, breach rate: {y.mean():.2%}")
     print(X.columns.tolist())
+
+
+def feature_code_hash() -> str:
+    """SHA-256 of this module's source (line endings normalised). Stored in the model metadata at train
+    time so a test can fail when the feature code changes without a retrain (train/serve mismatch)."""
+    import hashlib
+    from pathlib import Path
+
+    raw = Path(__file__).read_bytes().replace(bytes([13, 10]), bytes([10]))
+    return hashlib.sha256(raw).hexdigest()

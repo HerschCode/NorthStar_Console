@@ -138,3 +138,16 @@ def test_runtime_sklearn_matches_the_version_the_deployed_model_was_pickled_with
     assert meta.get("sklearn_version") == sklearn.__version__, (
         f"models/sla_risk_model.joblib was trained with scikit-learn {meta.get('sklearn_version')} "
         f"but {sklearn.__version__} is installed -- retrain, or fix the pin in requirements.txt")
+
+
+def test_deployed_model_was_trained_with_the_current_feature_code():
+    """Fails when src/ml/features.py changes without a retrain (the served model would see features
+    computed differently from how it was trained -- this happened on 2026-10-03 after the look-ahead fix)."""
+    import json
+    from pathlib import Path
+    from src.ml.features import feature_code_hash
+
+    meta = json.loads(Path("models/sla_risk_model.meta.json").read_text(encoding="utf-8"))
+    assert meta.get("feature_code_sha256") == feature_code_hash(), (
+        "src/ml/features.py changed since models/sla_risk_model.joblib was trained -- run `python -m src.ml.train` "
+        "and commit the regenerated model and meta.json")
