@@ -28,12 +28,24 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
-from gateway.detectors import rule_based  # noqa: E402
-from gateway.detectors.classifier_numpy import ScratchClassifierDetectorNumpy  # noqa: E402
-from gateway.detectors.embedding_similarity import EmbeddingSimilarityDetector  # noqa: E402
-from gateway.detectors.embedding_similarity_st import SentenceTransformerSimilarityDetector  # noqa: E402
-from scripts.baselines.run_guard_baselines import MODELS, SETS, guard_scores, load_guard, set_metrics  # noqa: E402
-from scripts.retrain_classifier_v2 import load_sources  # noqa: E402
+from gateway.detectors import rule_based
+from gateway.detectors.classifier_numpy import (
+    ScratchClassifierDetectorNumpy,
+)
+from gateway.detectors.embedding_similarity import (
+    EmbeddingSimilarityDetector,
+)
+from gateway.detectors.embedding_similarity_st import (
+    SentenceTransformerSimilarityDetector,
+)
+from scripts.baselines.run_guard_baselines import (
+    MODELS,
+    SETS,
+    guard_scores,
+    load_guard,
+    set_metrics,
+)
+from scripts.retrain_classifier_v2 import load_sources
 
 COMPOSITIONS = {
     "rule | tfidf | clf   (shipped)": ("rule", "tfidf", "clf"),

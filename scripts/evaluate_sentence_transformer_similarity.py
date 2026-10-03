@@ -52,12 +52,11 @@ def load_corpus():
 def main():
     from sentence_transformers import SentenceTransformer
     from sklearn.metrics.pairwise import cosine_similarity
-    import numpy as np
 
     print(f"Loading {MODEL_NAME} (downloads ~90MB on first run)...")
     model = SentenceTransformer(MODEL_NAME)
 
-    known_bad_texts, known_bad_ids = load_known_bad()
+    known_bad_texts, _known_bad_ids = load_known_bad()
     print(f"Encoding {len(known_bad_texts)} known-bad examples...")
     t0 = time.perf_counter()
     known_bad_vecs = model.encode(known_bad_texts, batch_size=64, show_progress_bar=False,

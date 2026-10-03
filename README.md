@@ -80,6 +80,18 @@ Aadhaar (Verhoeff checksum), PAN and Indian phone numbers are gated so order num
 
 <!-- headline:end -->
 
+### Experimental distilled detector (P3)
+
+An optional MiniLM ONNX student is packaged and can be enabled with
+`CLASSIFIER_BACKEND=student` after installing `.[student]`. In the gateway
+harness, rules + student at probability 0.5 scored **79.8% macro attack
+detection / 2.9% macro benign FPR** (29.43 ms p50), versus **79.1% / 6.5%**
+for the shipped rules + NumPy classifier (1.80 ms p50). This is a different
+operating point from the student's validation-selected threshold, adds
+latency, and is not evidence of a 512 MB full-container fit; see
+[`docs/guard-student.md`](docs/guard-student.md) for methodology, limits,
+reproduction, and the sampled/capped AgentDojo runner.
+
 ## Quickstart
 
 ```bash
@@ -113,6 +125,8 @@ Settings are environment variables, read per request where that is safe:
 | `PII_BACKEND` | `regex` | `regex` (with Indian identifiers) or `presidio` (needs the `[pii]` extra) |
 | `PII_MODE`, `PII_DETOKENIZE_ROLES` | `redact`, `manager,admin` | `pseudonymize` keeps reversible per-session tokens and restores them for the listed roles |
 | `MODEL_INTEGRITY` | `warn` | `enforce` refuses to load a model artifact whose SHA-256 is not in `models/MANIFEST.sha256` (set in the images and CI) |
+| `CLASSIFIER_BACKEND` | `numpy` | `numpy` (default), opt-in `student` or `both`; `student` needs `pip install -e ".[student]"` |
+| `GATEWAY_REQUIRE_IDENTITY`, `GATEWAY_IDENTITY_TOKEN` | disabled, unset | Require identity headers from a trusted reverse proxy on chat, action, dashboard, connectivity and demo-run endpoints; the gateway ignores caller-supplied user/role fields and isolates session state by authenticated user |
 | `EMBEDDING_BACKEND` | `none` | Opt-in similarity layers (`tfidf`, `sentence_transformer`); retired from the default after an ablation |
 | `OPS_ASSISTANT_URL` | unset | Adds the real Project 2 agent as a backend |
 
@@ -129,10 +143,9 @@ The full record, with the measurements behind each, is [`docs/decisions.md`](doc
 - **Supply chain:** dependencies are hash-locked, CI actions are pinned to commit SHAs, images run unprivileged from a digest-pinned base, and a CycloneDX SBOM is built per release.
 
 ## What it does not do
-
-Authenticate callers (identity is asserted by the caller), keep state across instances (rate limits, sessions and the approval queue are per process), or protect an unauthenticated dashboard. It has been red-teamed by its author with
+Provide native OIDC/SSO identity issuance (the optional trusted-proxy mode delegates authentication and role mapping to a proxy), keep state across instances (rate limits, sessions and the approval queue are per process), or authenticate callers in the public-demo default. It has been red-teamed by its author with
 standard scanners and an LLM attacker, not by an independent party. Semgrep, Trivy and gitleaks run in CI only (they cannot run on the author's machine) and pass, after one Semgrep triage; their reports were not read beyond that, and the full-mode container image has not been built.
-The full list is in [`SECURITY.md`](SECURITY.md) (STRIDE threat model) and [`docs/project-notes.md`](docs/project-notes.md#known-limitations-stated-plainly-not-buried).
+The default public-demo configuration does not authenticate callers. For a trusted-proxy deployment, set `GATEWAY_REQUIRE_IDENTITY=1` and a private `GATEWAY_IDENTITY_TOKEN`; the proxy must strip caller-supplied identity headers and inject authenticated `X-Gateway-User-ID` / `X-Gateway-Role` headers. That mode overrides JSON identity claims and scopes state per user; it does not implement OIDC itself. See [`DEPLOY.md`](DEPLOY.md). The full list is in [`SECURITY.md`](SECURITY.md) (STRIDE threat model) and [`docs/project-notes.md`](docs/project-notes.md#known-limitations-stated-plainly-not-buried).
 
 ## Where things are
 
@@ -142,6 +155,7 @@ The full list is in [`SECURITY.md`](SECURITY.md) (STRIDE threat model) and [`doc
 | [`docs/decisions.md`](docs/decisions.md) | Dated decision log: context, options, measurements, mistakes |
 | [`reports/redteam-2026-09.md`](reports/redteam-2026-09.md) | Red-team report: 12 findings, OWASP LLM 2025 and MITRE ATLAS mapping, retests |
 | [`docs/guard-baselines.md`](docs/guard-baselines.md) | Existing guard models vs the shipped ensemble, matched false-positive rate |
+| [`docs/guard-student.md`](docs/guard-student.md) | Distilled ONNX detector results, limits, and optional AgentDojo integration |
 | [`docs/action-firewall.md`](docs/action-firewall.md) | Policy, taint, approvals, MCP proxy, and what the corpus does and does not show |
 | [`docs/pii-evaluation.md`](docs/pii-evaluation.md) | PII backends compared on a fresh labeled set and an independent one |
 | [`SECURITY.md`](SECURITY.md), [`docs/security-scans.md`](docs/security-scans.md) | Threat model, scanner results and what was fixed |

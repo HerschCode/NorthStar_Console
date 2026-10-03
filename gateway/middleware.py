@@ -21,11 +21,13 @@ import os
 import time
 from dataclasses import dataclass, field
 
-from gateway.adaptive_threshold import AdaptiveThresholdTracker
 from gateway.adapters.base import BackendAdapter
+from gateway.adaptive_threshold import AdaptiveThresholdTracker
 from gateway.detectors import rule_based
 from gateway.logging_schema import GatewayLogger, LogRecord
-from gateway.text_normalizer import find_hidden_tag_text, normalize as _normalize_text, sanitize as _sanitize_text, decoding_candidates
+from gateway.text_normalizer import decoding_candidates, find_hidden_tag_text
+from gateway.text_normalizer import normalize as _normalize_text
+from gateway.text_normalizer import sanitize as _sanitize_text
 
 # CLASSIFIER_THRESHOLD is re-declared here (rather than imported from a
 # detector module) to keep this file import-cheap. Keep in sync with
@@ -54,11 +56,16 @@ LITE_MODE = os.environ.get("GATEWAY_LITE", "").lower() in ("1", "true", "yes")
 # cuts ~4 ms from a ~4 ms ensemble. See also gateway/detectors/embedding_similarity_st.py and
 # docs/sentence_transformer_similarity_result.md.
 EMBEDDING_BACKEND = os.environ.get("EMBEDDING_BACKEND", "none").lower()
+
+# Classifier layer: "numpy" (default: the 2 MB mean-pooled MLP), "student" (the distilled MiniLM served as ONNX int8,
+# gateway/detectors/student_onnx.py; needs onnxruntime and tokenizers) or "both" (block if either fires). Opt-in: which is better,
+# and at what memory, is measured in docs/guard-student.md.
+CLASSIFIER_BACKEND = os.environ.get("CLASSIFIER_BACKEND", "numpy").lower()
 from gateway import pseudonymize
 from gateway.pii import PIIResult, scan_and_redact
 from gateway.response_checks import check_jailbreak_compliance, check_system_prompt_leak
 from gateway.role_exposure import check as check_role_exposure
-from gateway.session_checks import SessionTracker, SessionContentTracker
+from gateway.session_checks import SessionContentTracker, SessionTracker
 
 
 @dataclass
@@ -78,12 +85,18 @@ class GatewayMiddleware:
             pass
         elif self.embedding_backend == "sentence_transformer":
             from gateway.detectors.embedding_similarity_st import (
-                SentenceTransformerSimilarityDetector, SIMILARITY_THRESHOLD as EMB_THRESHOLD,
+                SIMILARITY_THRESHOLD as EMB_THRESHOLD,
+            )
+            from gateway.detectors.embedding_similarity_st import (
+                SentenceTransformerSimilarityDetector,
             )
             self.embedding_detector = SentenceTransformerSimilarityDetector()
         elif self.embedding_backend == "tfidf":
             from gateway.detectors.embedding_similarity import (
-                EmbeddingSimilarityDetector, SIMILARITY_THRESHOLD as EMB_THRESHOLD,
+                SIMILARITY_THRESHOLD as EMB_THRESHOLD,
+            )
+            from gateway.detectors.embedding_similarity import (
+                EmbeddingSimilarityDetector,
             )
             self.embedding_detector = EmbeddingSimilarityDetector()
         else:
@@ -95,11 +108,22 @@ class GatewayMiddleware:
         # GATEWAY_LITE=1: deliberately run a smaller ensemble (see the module
         # docstring above for why this is no longer a torch/RAM necessity).
         self.lite_mode = LITE_MODE
+        self.classifier_backend = CLASSIFIER_BACKEND
+        if self.classifier_backend not in ("numpy", "student", "both"):
+            raise ValueError(f"CLASSIFIER_BACKEND must be numpy, student or both, got {self.classifier_backend!r}")
         self.classifier_detector = None
+        self.student_detector = None
         if not self.lite_mode:
-            from gateway.detectors.classifier_numpy import ScratchClassifierDetectorNumpy
-            self.classifier_detector = ScratchClassifierDetectorNumpy()
-            self.classifier_detector.load()
+            if self.classifier_backend in ("numpy", "both"):
+                from gateway.detectors.classifier_numpy import (
+                    ScratchClassifierDetectorNumpy,
+                )
+                self.classifier_detector = ScratchClassifierDetectorNumpy()
+                self.classifier_detector.load()
+            if self.classifier_backend in ("student", "both"):
+                from gateway.detectors.student_onnx import StudentOnnxDetector
+                self.student_detector = StudentOnnxDetector()
+                self.student_detector.load()
 
         self.session_tracker = SessionTracker()
         self.session_content_tracker = SessionContentTracker()
@@ -161,19 +185,31 @@ class GatewayMiddleware:
                 self.adaptive_tracker.record_block(session_id)
                 return True, "embedding_similarity", emb_result.matched_pattern_id, per_layer
 
-        if self.classifier_detector is None:  # lite mode -- layer 3 disabled
+        if self.classifier_detector is None and self.student_detector is None:  # lite mode -- layer 3 disabled
             per_layer["scratch_classifier"] = {"blocked": False, "skipped": "lite_mode"}
             return False, None, None, per_layer
 
-        clf_threshold = CLASSIFIER_THRESHOLD * multiplier
-        clf_result = self.classifier_detector.detect(text, threshold=clf_threshold)
-        per_layer["scratch_classifier"] = {
-            "blocked": clf_result.blocked, "latency_ms": clf_result.latency_ms,
-            "effective_threshold": clf_threshold, "risk_multiplier": multiplier,
-        }
-        if clf_result.blocked:
-            self.adaptive_tracker.record_block(session_id)
-            return True, "scratch_classifier", clf_result.matched_pattern_id, per_layer
+        if self.classifier_detector is not None:
+            clf_threshold = CLASSIFIER_THRESHOLD * multiplier
+            clf_result = self.classifier_detector.detect(text, threshold=clf_threshold)
+            per_layer["scratch_classifier"] = {
+                "blocked": clf_result.blocked, "latency_ms": clf_result.latency_ms,
+                "effective_threshold": clf_threshold, "risk_multiplier": multiplier,
+            }
+            if clf_result.blocked:
+                self.adaptive_tracker.record_block(session_id)
+                return True, "scratch_classifier", clf_result.matched_pattern_id, per_layer
+
+        if self.student_detector is not None:
+            stu_threshold = self.student_detector.threshold * multiplier
+            stu_result = self.student_detector.detect(text, threshold=stu_threshold)
+            per_layer["student_guard"] = {
+                "blocked": stu_result.blocked, "latency_ms": stu_result.latency_ms,
+                "effective_threshold": round(stu_threshold, 4), "risk_multiplier": multiplier,
+            }
+            if stu_result.blocked:
+                self.adaptive_tracker.record_block(session_id)
+                return True, "student_guard", stu_result.matched_pattern_id, per_layer
 
         return False, None, None, per_layer
 

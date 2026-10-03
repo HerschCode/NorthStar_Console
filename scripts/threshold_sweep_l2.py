@@ -12,7 +12,6 @@ Outputs a per-threshold table for each backend, identifies the best threshold by
 and by "max detection at 0% FP", and prints a per-category breakdown at the optimal
 threshold for each backend.
 """
-import csv
 import sys
 from pathlib import Path
 
@@ -22,7 +21,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from gateway.detectors.embedding_similarity import EmbeddingSimilarityDetector
-from gateway.detectors.embedding_similarity_st import SentenceTransformerSimilarityDetector
+from gateway.detectors.embedding_similarity_st import (
+    SentenceTransformerSimilarityDetector,
+)
 
 EVAL_PATH = REPO_ROOT / "data" / "eval.csv"
 THRESHOLDS = np.round(np.arange(0.05, 0.96, 0.05), 2).tolist()
@@ -30,7 +31,8 @@ THRESHOLDS = np.round(np.arange(0.05, 0.96, 0.05), 2).tolist()
 
 def _load_yaml_rows():
     import yaml
-    cases = yaml.safe_load(open(REPO_ROOT / "corpus" / "injection_cases.yaml", encoding="utf-8"))
+    with open(REPO_ROOT / "corpus" / "injection_cases.yaml", encoding="utf-8") as f:
+        cases = yaml.safe_load(f)
     return [{"case_id": c["id"], "text": c.get("payload", c.get("text", "")), "category": c.get("category", ""),
              "expected_behavior": c.get("expected_behavior", "block")} for c in cases]
 
@@ -72,7 +74,7 @@ def sweep(name, detector, attack, legit):
         tp = sum(atk_blocked)
         fn = len(attack) - tp
         fp = sum(leg_blocked)
-        tn = len(legit) - fp
+        len(legit) - fp
 
         det  = tp / len(attack) if attack else 0
         fpr  = fp / len(legit)  if legit  else 0
@@ -90,7 +92,7 @@ def sweep(name, detector, attack, legit):
     if best_zero_fp[1] is not None:
         print(f"  Best detection at 0% FP = {best_zero_fp[0]:.1%} at threshold {best_zero_fp[1]}")
     else:
-        print(f"  No threshold achieves 0% FP")
+        print("  No threshold achieves 0% FP")
 
     return best_f1[1], rows_out
 

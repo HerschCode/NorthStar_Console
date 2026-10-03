@@ -140,6 +140,5 @@ def test_a_persistent_failure_drops_the_batch_but_the_writer_survives(tmp_path, 
 def test_windows_regression_the_old_pattern_really_blocks_rotation(tmp_path):
     """Documents the platform behaviour the fix works around: a plain open() handle blocks os.replace on Windows."""
     path = tmp_path / "held.jsonl"
-    with open(path, "a", encoding="utf-8"):
-        with pytest.raises(PermissionError):
-            os.replace(path, tmp_path / "held.jsonl.1")
+    with open(path, "a", encoding="utf-8"), pytest.raises(PermissionError):
+        os.replace(path, tmp_path / "held.jsonl.1")

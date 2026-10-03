@@ -5,9 +5,9 @@ import pytest
 pytest.importorskip("presidio_analyzer")
 pytest.importorskip("presidio_anonymizer")
 
-from gateway import pii  # noqa: E402
-from gateway import pii_presidio as pp  # noqa: E402
-from gateway.pii_in import verhoeff_check_digit  # noqa: E402
+from gateway import pii
+from gateway import pii_presidio as pp
+from gateway.pii_in import verhoeff_check_digit
 
 
 def aadhaar(seed_digits="23412341234"):

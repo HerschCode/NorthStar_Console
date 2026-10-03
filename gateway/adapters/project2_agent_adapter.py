@@ -7,7 +7,7 @@ some defense," not just "does the gateway protect a completely undefended
 backend."
 """
 from gateway.adapters.base import BackendAdapter
-from project2_agent.agent import handle, FAKE_SYSTEM_PROMPT
+from project2_agent.agent import handle
 
 
 class Project2AgentAdapter(BackendAdapter):

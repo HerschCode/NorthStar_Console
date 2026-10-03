@@ -6,12 +6,12 @@ HTTP surface of the action firewall.
   POST /gateway/actions/authorize        policy decision point: allow / deny / require_approval for one tool call
   GET  /gateway/actions/approvals        list requests (?status=pending|approved|denied)
   GET  /gateway/actions/approvals/{id}   one request with its evidence
-  POST /gateway/actions/approvals/{id}/approve | /deny     decide (requires X-Approver-Token)
+  POST /gateway/actions/approvals/{id}/approve | /deny     decide (trusted identity, or X-Approver-Token in demo mode)
   GET  /gateway/actions/policy           the tools in the policy and which roles may see them
 
-Deciding an approval fails closed: if GATEWAY_APPROVER_TOKEN is not set the endpoints return 503. The
-caller supplies approver_id / approver_role; the token only proves the caller may act as an approver at
-all. There is no per-user authentication here (see docs/action-firewall.md, "Not implemented").
+In demo mode, deciding an approval fails closed if GATEWAY_APPROVER_TOKEN is not set; the caller supplies
+approver_id / approver_role and the token only proves the caller may act as an approver at all. With
+GATEWAY_REQUIRE_IDENTITY enabled, the trusted proxy supplies the principal instead.
 """
 import hmac
 import os
@@ -19,12 +19,19 @@ import os
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
-from gateway.actions.approvals import ApprovalQueue, ApprovalConflict, ApprovalError, ApprovalForbidden, ApprovalNotFound
+from gateway.auth import TrustedIdentity, require_trusted_identity, scope_session_id
+from gateway.actions.approvals import (
+    ApprovalConflict,
+    ApprovalError,
+    ApprovalForbidden,
+    ApprovalNotFound,
+    ApprovalQueue,
+)
 from gateway.actions.firewall import ActionFirewall
 from gateway.actions.policy import Principal
 from gateway.ip_limits import ip_rate_limit
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_trusted_identity)])
 _firewall: ActionFirewall | None = None
 
 
@@ -69,8 +76,8 @@ class AuthorizeRequest(BaseModel):
 
 
 class DecideRequest(BaseModel):
-    approver_id: str
-    approver_role: str = "manager"
+    approver_id: str | None = None
+    approver_role: str | None = "manager"
     note: str = ""
 
 
@@ -78,46 +85,71 @@ def _require_token(token: str | None):
     expected = os.environ.get("GATEWAY_APPROVER_TOKEN")
     if not expected:
         raise HTTPException(503, "approvals are disabled: GATEWAY_APPROVER_TOKEN is not set")
-    if not token or not hmac.compare_digest(token, expected):
+    if not token or len(token) > 4096 or not hmac.compare_digest(token.encode("utf-8"), expected.encode("utf-8")):
         raise HTTPException(401, "missing or invalid X-Approver-Token")
 
 
+def _require_approval_reader(identity: TrustedIdentity | None):
+    if identity is not None and identity.role not in ("manager", "admin"):
+        raise HTTPException(403, "manager or admin role required to inspect approvals")
+
+
 @router.post("/gateway/actions/sources", dependencies=[Depends(ip_rate_limit)])
-def add_source(req: SourceRequest):
-    get_firewall().register_source(req.session_id, req.kind, req.text, req.trust)
+def add_source(req: SourceRequest, identity: TrustedIdentity | None = Depends(require_trusted_identity)):
+    get_firewall().register_source(scope_session_id(req.session_id, identity), req.kind, req.text, req.trust)
     return {"ok": True}
 
 
 @router.post("/gateway/actions/observe", dependencies=[Depends(ip_rate_limit)])
-def observe(req: ObserveRequest):
-    get_firewall().observe_result(req.session_id, req.tool, req.result)
+def observe(req: ObserveRequest, identity: TrustedIdentity | None = Depends(require_trusted_identity)):
+    get_firewall().observe_result(scope_session_id(req.session_id, identity), req.tool, req.result)
     return {"ok": True}
 
 
 @router.post("/gateway/actions/authorize", dependencies=[Depends(ip_rate_limit)])
-def authorize(req: AuthorizeRequest):
-    return get_firewall().authorize(req.session_id, Principal(req.role, req.user_id), req.tool, req.args).to_dict()
+def authorize(req: AuthorizeRequest, identity: TrustedIdentity | None = Depends(require_trusted_identity)):
+    session_id = scope_session_id(req.session_id, identity)
+    principal = Principal(identity.role, identity.user_id) if identity else Principal(req.role, req.user_id)
+    return get_firewall().authorize(session_id, principal, req.tool, req.args).to_dict()
 
 
 @router.get("/gateway/actions/approvals")
-def list_approvals(status: str | None = None, limit: int = 100):
+def list_approvals(
+    status: str | None = None,
+    limit: int = 100,
+    identity: TrustedIdentity | None = Depends(require_trusted_identity),
+):
+    _require_approval_reader(identity)
     if status not in (None, "pending", "approved", "denied"):
         raise HTTPException(400, "status must be pending, approved or denied")
     return get_firewall().approvals.list_requests(status, min(max(limit, 1), 500))
 
 
 @router.get("/gateway/actions/approvals/{approval_id}")
-def get_approval(approval_id: str):
+def get_approval(approval_id: str, identity: TrustedIdentity | None = Depends(require_trusted_identity)):
+    _require_approval_reader(identity)
     row = get_firewall().approvals.get(approval_id)
     if row is None:
         raise HTTPException(404, "not found")
     return row
 
 
-def _decide(approval_id: str, approve: bool, req: DecideRequest, token: str | None):
-    _require_token(token)
+def _decide(
+    approval_id: str,
+    approve: bool,
+    req: DecideRequest,
+    token: str | None,
+    identity: TrustedIdentity | None,
+):
+    if identity is None:
+        _require_token(token)
+        if not req.approver_id or not req.approver_role:
+            raise HTTPException(422, "approver_id and approver_role are required without trusted identity")
+        approver = Principal(req.approver_role, req.approver_id)
+    else:
+        approver = Principal(identity.role, identity.user_id)
     try:
-        return get_firewall().approvals.decide(approval_id, approve, Principal(req.approver_role, req.approver_id), req.note)
+        return get_firewall().approvals.decide(approval_id, approve, approver, req.note)
     except ApprovalNotFound as e:
         raise HTTPException(404, str(e))
     except ApprovalForbidden as e:
@@ -129,13 +161,25 @@ def _decide(approval_id: str, approve: bool, req: DecideRequest, token: str | No
 
 
 @router.post("/gateway/actions/approvals/{approval_id}/approve")
-def approve(approval_id: str, req: DecideRequest, x_approver_token: str | None = Header(default=None)):
-    return _decide(approval_id, True, req, x_approver_token)
+def approve(
+    approval_id: str,
+    req: DecideRequest,
+    x_approver_token: str | None = Header(default=None),
+    identity: TrustedIdentity | None = Depends(require_trusted_identity),
+):
+    _require_approval_reader(identity)
+    return _decide(approval_id, True, req, x_approver_token, identity)
 
 
 @router.post("/gateway/actions/approvals/{approval_id}/deny")
-def deny(approval_id: str, req: DecideRequest, x_approver_token: str | None = Header(default=None)):
-    return _decide(approval_id, False, req, x_approver_token)
+def deny(
+    approval_id: str,
+    req: DecideRequest,
+    x_approver_token: str | None = Header(default=None),
+    identity: TrustedIdentity | None = Depends(require_trusted_identity),
+):
+    _require_approval_reader(identity)
+    return _decide(approval_id, False, req, x_approver_token, identity)
 
 
 @router.get("/gateway/actions/policy")

@@ -23,7 +23,6 @@ Outputs:
 Run from repo root:
     python scripts/paraphrase_robustness.py
 """
-import csv
 import sys
 from pathlib import Path
 
@@ -35,10 +34,12 @@ from gateway.middleware import EMBEDDING_BACKEND as _SERVED_BACKEND
 # The served default is now "none" (layer 2 disabled); this script still measures the TF-IDF layer as a
 # documented ablation, so map "none" to "tfidf" here.
 EMBEDDING_BACKEND = _SERVED_BACKEND if _SERVED_BACKEND != "none" else "tfidf"
-from gateway.detectors.embedding_similarity import EmbeddingSimilarityDetector
-from gateway.detectors.embedding_similarity_st import SentenceTransformerSimilarityDetector
 import gateway.detectors.rule_based as _rule_based_module
 from gateway.detectors.classifier_numpy import ScratchClassifierDetectorNumpy
+from gateway.detectors.embedding_similarity import EmbeddingSimilarityDetector
+from gateway.detectors.embedding_similarity_st import (
+    SentenceTransformerSimilarityDetector,
+)
 from gateway.text_normalizer import normalize as _normalize
 
 EVAL_PATH = REPO_ROOT / "data" / "eval.csv"
@@ -124,7 +125,8 @@ def evaluate_detector(name: str, detector, attack_cases: list, transform_name: s
 
 def _load_yaml_rows():
     import yaml
-    cases = yaml.safe_load(open(REPO_ROOT / "corpus" / "injection_cases.yaml", encoding="utf-8"))
+    with open(REPO_ROOT / "corpus" / "injection_cases.yaml", encoding="utf-8") as f:
+        cases = yaml.safe_load(f)
     return [{"case_id": c["id"], "text": c.get("payload", c.get("text", "")), "category": c.get("category", ""),
              "expected_behavior": c.get("expected_behavior", "block")} for c in cases]
 
@@ -174,7 +176,7 @@ def main():
         print(f"  {tname:<14}  {row[dnames[0]]:>9.1%}  {row[dnames[1]]:>10.1%}  {row[dnames[2]]:>10.1%}")
 
     # Delta vs original
-    print(f"\n  Delta from original (negative = detection drop):")
+    print("\n  Delta from original (negative = detection drop):")
     orig = transform_results["original"]
     for tname in ["case_swap", "space_insert", "synonym_sub"]:
         row = transform_results[tname]
@@ -184,7 +186,7 @@ def main():
 
     # --- Normalizer fix verification ---
     # Re-run space_insert with text_normalizer applied first (same as middleware).
-    print(f"\n  space_insert WITH text_normalizer (middleware path):")
+    print("\n  space_insert WITH text_normalizer (middleware path):")
     print(f"  {'Detector':<20}  {'No norm':>8}  {'Norm':>8}  {'Delta':>8}")
     print(f"  {'-'*20}  {'-'*8}  {'-'*8}  {'-'*8}")
     dnames = list(detectors.keys())

@@ -16,7 +16,6 @@ would be a lazy benchmark regardless).
 import argparse
 import asyncio
 import json
-import statistics
 import time
 from pathlib import Path
 
@@ -106,8 +105,7 @@ async def main_async(url: str):
               f"p99={r['p99_ms']:>7.2f}ms  max={r['max_ms']:>7.2f}ms")
 
     out_path = REPO_ROOT / "docs" / "throughput_raw_result.json"
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2)
+    await asyncio.to_thread(out_path.write_text, json.dumps(results, indent=2), "utf-8")
     print(f"\nRaw result written to {out_path}")
 
 

@@ -32,7 +32,6 @@ import json
 import math
 import re
 import sys
-import time
 from pathlib import Path
 
 import yaml
@@ -41,9 +40,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 csv.field_size_limit(10**9)
 
-from gateway.detectors import rule_based  # noqa: E402
-from gateway.detectors.classifier import ScratchClassifierDetector  # noqa: E402
-from gateway.detectors.embedding_similarity import EmbeddingSimilarityDetector  # noqa: E402
+from gateway.detectors import rule_based
+from gateway.detectors.classifier import ScratchClassifierDetector
+from gateway.detectors.embedding_similarity import (
+    EmbeddingSimilarityDetector,
+)
 
 EXT = REPO_ROOT / "data" / "external"
 JBLLMS = EXT / "jailbreak_llms/jailbreak_llms-main/data/prompts/jailbreak_prompts_2023_05_07.csv"
@@ -93,15 +94,18 @@ def show(title, rows):
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    train = list(csv.DictReader(open(REPO_ROOT / "data/train.csv", encoding="utf-8")))
+    with open(REPO_ROOT / "data/train.csv", encoding="utf-8") as train_file:
+        train = list(csv.DictReader(train_file))
     train_all = {norm(r["text"]) for r in train}
     train_pos = {norm(r["text"]) for r in train if r["label"] == "1"}
-    corpus_payloads = {norm(c.get("payload", "")) for c in yaml.safe_load(open(REPO_ROOT / "corpus/injection_cases.yaml", encoding="utf-8"))}
+    with open(REPO_ROOT / "corpus/injection_cases.yaml", encoding="utf-8") as f:
+        corpus_payloads = {norm(c.get("payload", "")) for c in yaml.safe_load(f)}
     detectors = load_detectors()
     report = {"detectors": list(detectors), "overlap_method": "exact match after lowercase + whitespace normalisation (near-duplicates not detected)"}
 
     # A + B: jailbreak_llms contamination audit and clean-subset rescoring
-    jb = [r["prompt"] for r in csv.DictReader(open(JBLLMS, encoding="utf-8", errors="replace")) if r.get("prompt", "").strip()]
+    with open(JBLLMS, encoding="utf-8", errors="replace") as f:
+        jb = [r["prompt"] for r in csv.DictReader(f) if r.get("prompt", "").strip()]
     contaminated = [p for p in jb if norm(p) in train_pos]
     clean = [p for p in jb if norm(p) not in train_pos]
     print(f"A. jailbreak_llms (2023-05-07): {len(jb)} prompts; {len(contaminated)} ({len(contaminated)/len(jb):.0%}) are verbatim in data/train.csv positives; {len(clean)} not found")
@@ -128,7 +132,8 @@ def main():
         report["C_deepset"]["injection_detection" if label else "benign_false_positive"] = rows
 
     # D: JBB benign behaviours
-    jbb = [r["Goal"] for r in csv.DictReader(open(JBB_BENIGN, encoding="utf-8"))]
+    with open(JBB_BENIGN, encoding="utf-8") as f:
+        jbb = [r["Goal"] for r in csv.DictReader(f)]
     fl = score(detectors, jbb); rows = rate_row(fl, len(jbb))
     show(f"D. JailbreakBench benign-behaviors: false-positive rate, n={len(jbb)}", rows)
     report["D_jbb_benign_false_positive"] = rows

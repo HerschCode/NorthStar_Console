@@ -15,9 +15,11 @@ Only the `main` branch is supported; there are no release branches.
 ## What this project is, and is not
 
 It is a middleware and a policy engine: pre-flight PII redaction and prompt-injection detection, post-flight response checks, and an
-action firewall that authorizes an agent's tool calls. It is **not** an authenticated multi-tenant service. Identity (`role`, `user_id`,
-`session_id`, the approver's name) is asserted by the caller and is not verified; that is the largest gap below and it shapes the
-deployment advice. Detection is probabilistic: measured detection and false-positive rates are in the README, `docs/` and
+action firewall that authorizes an agent's tool calls. It is **not** a native authenticated multi-tenant service. In the public-demo
+default, identity (`role`, `user_id`, `session_id`, the approver's name) is asserted by the caller and is not verified. An optional
+trusted-proxy mode verifies a shared proxy secret, accepts proxy-authenticated identity headers, overrides body claims, and scopes
+session state per user; it does not implement OIDC or isolate approval storage by tenant. Detection is probabilistic: measured
+detection and false-positive rates are in the README, `docs/` and
 `reports/redteam-2026-09.md`, and none of them is a guarantee.
 
 ## Assets and actors
@@ -67,7 +69,7 @@ transport, where the proxy cannot tell who is speaking.
 
 | # | Threat | Mitigation in place | Status |
 |---|---|---|---|
-| S1 | A caller claims `role: admin` or another `user_id` / `session_id`; an approver claims a name. | Approvals need a shared `X-Approver-Token` and fail closed if it is unset (503); the requester cannot approve their own request. Nothing else. | **Open, by design.** No authentication of principals. Deploy behind an authenticating proxy that sets these fields and strips client-supplied ones. |
+| S1 | A caller claims `role: admin` or another `user_id` / `session_id`; an approver claims a name. | Optional `GATEWAY_REQUIRE_IDENTITY=1` mode requires `GATEWAY_IDENTITY_TOKEN` plus identity headers from a trusted proxy; headers override body claims and sessions are user-scoped. Approval reads/decisions require manager/admin identity in that mode. | **Mitigated only when configured.** The public-demo default still trusts caller-supplied identity. The proxy must authenticate users, map roles, strip incoming identity headers, and keep internal action-ingestion routes off the public interface. |
 | S2 | A forged `X-Forwarded-For` header to dodge the per-IP limit. | The header is ignored unless `TRUSTED_PROXY_HOPS` says how many proxies to trust, and then the Nth entry from the right is used (RT-02; `tests/test_redteam_regressions.py`). | Fixed. The hop count must match the real proxy chain; `render.yaml` deliberately leaves it unset. |
 | S3 | Rotating `session_id` to reset the rate limit. | A per-IP limit on top of the per-session one (RT-01). | Fixed. A distributed client is not stopped. |
 | S4 | A caller steers the backend adapter to an attacker's URL (SSRF). | `backend` is a key into a fixed dictionary; backend URLs come only from operator environment variables; httpx verifies TLS. | No request-controlled URL exists. |
@@ -100,7 +102,7 @@ transport, where the proxy cannot tell who is speaking.
 |---|---|---|---|
 | I1 | PII reaches the backend or the logs. | Redaction by default (email, phone, card with Luhn, SSN with validity rules, Aadhaar with the Verhoeff checksum, PAN); or pseudonymization; the log records PII types, never values (`docs/pii-evaluation.md`). | Mitigated with measured recall limits: bare numbers with no context word are missed by design; names are not detected by default; PII in **responses** is not scanned. |
 | I2 | Script injected through a logged field runs in the operator's browser (stored XSS). | Every interpolated field is escaped (RT-07, High; pinned by a test and verified in a browser). | Fixed. |
-| I3 | Anyone can read the dashboard and stats. | None. `/gateway/dashboard` and `/gateway/stats` are unauthenticated: they show session ids, decisions and matched pattern ids. | **Open**, acceptable only for the public demo. Put them behind authentication. |
+| I3 | Anyone can read the dashboard and stats. | `GATEWAY_REQUIRE_IDENTITY=1` gates `/gateway/dashboard` and `/gateway/stats` behind the trusted-proxy identity dependency. | **Open in demo mode; mitigated when configured.** The dashboard shows operational events and should not be public for a production deployment. |
 | I4 | The response carries detector internals that help an attacker tune inputs. | None: `/gateway/chat` returns a `trace` with per-layer results. | **Open**, intentional for the demo; remove or gate it for real use. |
 | I5 | A secret in the repository or its history. | gitleaks on the full history in CI; `detect-secrets` locally; a manual scan of all 72 commits for 11 token formats found nothing; images exclude `.env`-style files and `logs/`. | Mitigated. gitleaks passes in CI (full history); it has not been run locally (see `docs/security-scans.md`). |
 | I6 | The pseudonymization vault leaks originals. | In memory only, never logged or written; per-session, capped, expiring; not printed by `repr`. | Mitigated. A process memory dump would show it; it does not survive a restart. |
@@ -120,27 +122,29 @@ transport, where the proxy cannot tell who is speaking.
 
 | # | Threat | Mitigation in place | Status |
 |---|---|---|---|
-| E1 | A caller asserts a higher role to see restricted output or act as a manager. | Response filtering and the tool policy both use the asserted role. | **Open**; the same gap as S1. |
+| E1 | A caller asserts a higher role to see restricted output or act as a manager. | Response filtering and the tool policy use proxy identity in enforced mode, otherwise the body claim. | **Open in demo mode; mitigated only if the proxy's role mapping is trusted.** |
 | E2 | A hijacked agent calls a tool, or a write, it should not. | Default-deny policy by role and argument; write tools always need human approval; taint tracking on write arguments (`docs/action-firewall.md`; 0 bypasses in 39 policy-enforced mutations). | Mitigated. Measured misses: paraphrase, translation, acronyms, trusted-tool data (all held for approval, none executed). |
 | E3 | Code execution through the container. | Non-root user, no shell in the command path beyond `sh -c uvicorn`, digest-pinned base, hash-locked packages, `MODEL_INTEGRITY=enforce`. | Mitigated. CI builds the Render image and scans it (no fixed HIGH or CRITICAL finding; a blocking gate since 2026-09-26). The full-mode image with torch is not built anywhere yet, and nothing was run inside a container here. |
-| E4 | Approving your own request or forging the approver. | Separation of duties in the queue; shared token; fails closed. | Mitigated only as far as the token is secret and the ids are honest (S1). |
+| E4 | Approving your own request or forging the approver. | Separation of duties in the queue; trusted manager/admin identity when enforced, or shared token plus caller claims in demo mode. | Mitigated only when the proxy or token issuer is trusted (S1). |
 
 ## Attack surface
 
 | Route | Auth | Notes |
 |---|---|---|
-| `POST /gateway/chat`, `/gateway/chat/stream` | none | per-IP limit, size limits, asserted identity |
-| `GET /gateway/backends`, `/gateway/connectivity`, `/health` | none | reveal which backends are configured |
-| `GET /gateway/demo`, `POST /gateway/demo/run`, `GET /gateway/demo/cases` | none | separate, tighter rate limit; runs the corpus |
-| `GET /gateway/dashboard`, `/gateway/stats` | none | see I3 |
-| `POST /gateway/actions/sources`, `/observe`, `/authorize` | none | meant for a trusted agent runtime; per-IP limit; exposed to anyone who can reach the port |
-| `GET /gateway/actions/approvals[/{id}]`, `/policy` | none | read only |
-| `POST /gateway/actions/approvals/{id}/approve`, `/deny` | `X-Approver-Token` | 503 if `GATEWAY_APPROVER_TOKEN` is unset |
+| `POST /gateway/chat`, `/gateway/chat/stream` | optional trusted-proxy identity | per-IP/body limits; body identity is used only in demo mode |
+| `GET /gateway/backends`, `/gateway/connectivity` | optional trusted-proxy identity | reveals configured backends |
+| `GET /health` | none | liveness only |
+| `GET /gateway/demo`, `/cases` | none | static demo content |
+| `POST /gateway/demo/run` | optional trusted-proxy identity, plus optional `DEMO_API_KEY` | separate, tighter rate limit; runs the corpus |
+| `GET /gateway/dashboard`, `/gateway/stats` | optional trusted-proxy identity | public in demo mode; see I3 |
+| `POST /gateway/actions/sources`, `/observe`, `/authorize` | optional trusted-proxy identity | meant for a trusted agent runtime; per-IP limit |
+| `GET /gateway/actions/approvals[/{id}]`, `/policy` | optional trusted-proxy identity | manager/admin required for approval reads when enabled |
+| `POST /gateway/actions/approvals/{id}/approve`, `/deny` | trusted manager/admin identity, or `X-Approver-Token` in demo mode | fails closed when neither mode is configured |
 | MCP proxy | none (stdio) | launched by the operator |
 
 ## Hardening checklist for a real deployment
 
-1. Put an authenticating reverse proxy in front; have it set `role` / `user_id` and drop what clients send (S1, E1). Keep the dashboard, stats, demo and actions endpoints off the public side (I3, I4).
+1. Set `GATEWAY_REQUIRE_IDENTITY=1` and a high-entropy `GATEWAY_IDENTITY_TOKEN`; put an authenticating reverse proxy in front, have it strip and inject identity headers, and keep source/result registration internal to the trusted agent host (S1, E1). Keep demo trace access off the public side (I4).
 2. Set `TRUSTED_PROXY_HOPS` to the verified length of your proxy chain (S2), and `GATEWAY_APPROVER_TOKEN` to a long random value.
 3. Keep `MODEL_INTEGRITY=enforce`; regenerate the manifest only in the commit that changes an artifact (T1).
 4. Choose `PII_MODE` (`redact` is the default; `pseudonymize` keeps a vault in memory) and read `docs/pii-evaluation.md` for what is and is not detected (I1).
@@ -161,4 +165,4 @@ dependency audit (`docs/security-scans.md`); unit tests for every mitigation abo
 
 Not done, and worth saying: no third-party penetration test; no fuzzing of the MCP proxy's transport (duplicate keys, encodings, oversize
 frames); no load test of the limits under real traffic; Semgrep, Trivy and gitleaks ran only in CI, never locally, and their reports were not read beyond
-pass or fail and Semgrep's annotated findings; the full-mode container image has not been built anywhere; the approver flow and the dashboard have no authentication to test.
+pass or fail and Semgrep's annotated findings; the full-mode container image has not been built anywhere; the proxy's authentication and role mapping are not tested here, and the MCP stdio transport still has no authenticated identity.

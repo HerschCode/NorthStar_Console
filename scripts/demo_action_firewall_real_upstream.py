@@ -30,10 +30,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from gateway.actions.approvals import ApprovalQueue  # noqa: E402
-from gateway.actions.firewall import ActionFirewall  # noqa: E402
-from gateway.actions.mcp_proxy import MCPFirewallProxy  # noqa: E402
-from gateway.actions.policy import Principal  # noqa: E402
+from gateway.actions.approvals import ApprovalQueue
+from gateway.actions.firewall import ActionFirewall
+from gateway.actions.mcp_proxy import MCPFirewallProxy
+from gateway.actions.policy import Principal
 
 DEFAULT_P2 = REPO_ROOT.parents[1] / "0_Project" / "operations-assistant"
 POISONED_UPLOAD = (

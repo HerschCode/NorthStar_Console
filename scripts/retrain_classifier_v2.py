@@ -47,20 +47,30 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn as nn
 import yaml
 from sklearn.metrics import roc_auc_score
+from torch import nn
 from torch.utils.data import DataLoader
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 csv.field_size_limit(10**9)
 
-from gateway.detectors.scratch_classifier_model import ScratchClassifier, build_vocab, encode  # noqa: E402
-from scripts.train_scratch_classifier import BATCH_SIZE, EPOCHS, LR, PATIENCE, TextDataset  # noqa: E402
+from gateway.detectors.scratch_classifier_model import (
+    ScratchClassifier,
+    build_vocab,
+    encode,
+)
+from scripts.train_scratch_classifier import (
+    BATCH_SIZE,
+    EPOCHS,
+    LR,
+    PATIENCE,
+    TextDataset,
+)
 
 EXT = REPO_ROOT / "data/external"
-norm = lambda t: re.sub(r"\s+", " ", str(t).strip().lower())  # noqa: E731
+norm = lambda t: re.sub(r"\s+", " ", str(t).strip().lower())
 
 
 def _pq(pattern: str) -> pd.DataFrame:
@@ -69,7 +79,8 @@ def _pq(pattern: str) -> pd.DataFrame:
 
 def load_sources():
     """Returns (train_sources, heldout_sets). All items are (text, label)."""
-    v1 = [(r["text"], int(r["label"])) for r in csv.DictReader(open(REPO_ROOT / "data/train.csv", encoding="utf-8"))]
+    with open(REPO_ROOT / "data/train.csv", encoding="utf-8") as f:
+        v1 = [(r["text"], int(r["label"])) for r in csv.DictReader(f)]
     ds_tr, ds_te = _pq("prompt-injections/data/train-*.parquet"), _pq("prompt-injections/data/test-*.parquet")
     gd_tr, gd_te = _pq("gandalf_ignore_instructions/data/train-*.parquet"), _pq("gandalf_ignore_instructions/data/test-*.parquet")
     sg_tr, sg_te = _pq("safe-guard-prompt-injection/data/train-*.parquet"), _pq("safe-guard-prompt-injection/data/test-*.parquet")
@@ -78,13 +89,17 @@ def load_sources():
     rng = random.Random(0)
 
     sg_s = pd.concat([sg_tr[sg_tr.label == 1].sample(1500, random_state=0), sg_tr[sg_tr.label == 0].sample(1500, random_state=0)])
-    alpaca = json.load(open(EXT / "alpaca-cleaned/alpaca_data_cleaned.json", encoding="utf-8"))
-    dolly = [json.loads(line) for line in open(EXT / "databricks-dolly-15k/databricks-dolly-15k.jsonl", encoding="utf-8")]
+    with open(EXT / "alpaca-cleaned/alpaca_data_cleaned.json", encoding="utf-8") as f:
+        alpaca = json.load(f)
+    with open(EXT / "databricks-dolly-15k/databricks-dolly-15k.jsonl", encoding="utf-8") as f:
+        dolly = [json.loads(line) for line in f]
     alp = [(a["instruction"] + (" " + a["input"] if a["input"] else ""), 0) for a in rng.sample(alpaca, 1500)]
     dol = [(d["instruction"], 0) for d in rng.sample(dolly, 1000)]
 
-    in_domain_train = json.load(open(EXT / "in_domain_benign.json", encoding="utf-8"))
-    in_domain_heldout = json.load(open(EXT / "in_domain_benign_heldout.json", encoding="utf-8"))
+    with open(EXT / "in_domain_benign.json", encoding="utf-8") as f:
+        in_domain_train = json.load(f)
+    with open(EXT / "in_domain_benign_heldout.json", encoding="utf-8") as f:
+        in_domain_heldout = json.load(f)
     train = {
         "v1": v1,
         "deepset_train": [(t, int(label)) for t, label in zip(ds_tr.text, ds_tr.label)],
@@ -95,9 +110,12 @@ def load_sources():
         "short_benign": [(t, 0) for t in SHORT_BENIGN_TRAIN],
         "in_domain_benign": [(t, 0) for t in in_domain_train],
     }
-    corpus = yaml.safe_load(open(REPO_ROOT / "corpus/injection_cases.yaml", encoding="utf-8"))
-    jbb = [r["Goal"] for r in csv.DictReader(open(EXT / "JBB-Behaviors/data/benign-behaviors.csv", encoding="utf-8"))]
-    jb = [r["prompt"] for r in csv.DictReader(open(EXT / "jailbreak_llms/jailbreak_llms-main/data/prompts/jailbreak_prompts_2023_05_07.csv", encoding="utf-8", errors="replace")) if r.get("prompt", "").strip()]
+    with open(REPO_ROOT / "corpus/injection_cases.yaml", encoding="utf-8") as f:
+        corpus = yaml.safe_load(f)
+    with open(EXT / "JBB-Behaviors/data/benign-behaviors.csv", encoding="utf-8") as f:
+        jbb = [r["Goal"] for r in csv.DictReader(f)]
+    with open(EXT / "jailbreak_llms/jailbreak_llms-main/data/prompts/jailbreak_prompts_2023_05_07.csv", encoding="utf-8", errors="replace") as f:
+        jb = [r["prompt"] for r in csv.DictReader(f) if r.get("prompt", "").strip()]
     v1_pos = {norm(t) for t, label in v1 if label == 1}
     held = {
         "deepset_test": [(t, int(label)) for t, label in zip(ds_te.text, ds_te.label)],
@@ -259,6 +277,7 @@ def main():
             per_seed.append(m)
             if args.save_best == config and seed == 0:
                 import shutil
+
                 from gateway.detectors.scratch_classifier_model import save_artifacts
                 out = REPO_ROOT / "models" / "scratch_classifier_v2"
                 save_artifacts(model, vocab, out)

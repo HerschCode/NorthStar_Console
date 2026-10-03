@@ -116,7 +116,9 @@ def detect_spans(text: str) -> list[PIISpan]:
     elif backend == "regex_us":
         spans = detect_spans_regex(text, extended=False)
     elif backend in ("presidio", "presidio_ner"):
-        from gateway.pii_presidio import detect_spans_presidio          # optional extra: imported only when selected
+        from gateway.pii_presidio import (
+            detect_spans_presidio,  # optional extra: imported only when selected
+        )
         spans = detect_spans_presidio(text, ner=backend == "presidio_ner")
     else:
         raise ValueError(f"PII_BACKEND must be regex, regex_us, presidio or presidio_ner, got {backend!r}")

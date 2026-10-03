@@ -14,7 +14,6 @@ Cases with expected_behavior == "flag" (ambiguous/contested) are reported
 separately — neither block nor allow is strictly correct for those.
 """
 import sys
-import time
 from pathlib import Path
 
 import yaml
@@ -23,8 +22,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from gateway.detectors import rule_based
-from gateway.detectors.embedding_similarity import EmbeddingSimilarityDetector
 from gateway.detectors.classifier import ScratchClassifierDetector
+from gateway.detectors.embedding_similarity import EmbeddingSimilarityDetector
 
 CORPUS_PATH = REPO_ROOT / "corpus" / "injection_cases.yaml"
 COMPARISON_TABLE_PATH = REPO_ROOT / "docs" / "comparison_table.md"
@@ -109,7 +108,7 @@ def score_by_category(all_results: dict) -> dict:
     """
     layers = list(all_results.keys())
     # Collect categories from any layer (all layers see the same cases)
-    categories = sorted(set(r["category"] for r in next(iter(all_results.values()))))
+    categories = sorted({r["category"] for r in next(iter(all_results.values()))})
 
     per_cat = {}
     for cat in categories:

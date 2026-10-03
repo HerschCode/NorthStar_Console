@@ -10,7 +10,6 @@ Usage:
   python scripts/report_cli.py
 """
 import re
-import sys
 from collections import defaultdict
 from pathlib import Path
 

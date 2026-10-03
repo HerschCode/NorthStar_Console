@@ -1,8 +1,10 @@
 """Input size limits (gateway/limits.py): an oversized request is refused before any detector runs."""
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from gateway import ip_limits
+from gateway import auth
 from gateway.app import app
 
 client = TestClient(app)
@@ -80,6 +82,66 @@ def test_the_body_limit_applies_to_every_route(monkeypatch):
 def test_zero_disables_the_body_limit(monkeypatch):
     monkeypatch.setenv("GATEWAY_MAX_BODY_BYTES", "0")
     assert chat("z" * 10_000).status_code == 200
+
+
+def test_identity_authentication_fails_closed_when_the_shared_secret_is_missing(monkeypatch):
+    monkeypatch.setenv("GATEWAY_REQUIRE_IDENTITY", "1")
+    monkeypatch.delenv("GATEWAY_IDENTITY_TOKEN", raising=False)
+    assert chat("hi", user_id="u-0001", role="manager").status_code == 503
+
+
+def test_identity_is_taken_from_the_authenticated_proxy_not_the_request_body(monkeypatch):
+    monkeypatch.setenv("GATEWAY_REQUIRE_IDENTITY", "1")
+    monkeypatch.setenv("GATEWAY_IDENTITY_TOKEN", "proxy-secret")
+    assert chat("hi", user_id="manager-from-body", role="admin").status_code == 401
+    with pytest.raises(HTTPException) as error:
+        auth.require_trusted_identity("\u00e9", "employee-1", "employee")
+    assert error.value.status_code == 401
+
+    r = client.post(
+        "/gateway/chat",
+        json={"prompt": "hi", "session_id": "lim", "backend": "trivial_echo",
+              "user_id": "manager-from-body", "role": "admin"},
+        headers={"X-Gateway-Identity-Token": "proxy-secret",
+                 "X-Gateway-User-ID": "employee-1", "X-Gateway-Role": "employee"},
+    )
+    assert r.status_code == 200
+
+
+def test_authenticated_sessions_are_scoped_to_the_trusted_user():
+    from gateway.auth import TrustedIdentity, scope_session_id
+
+    alice = scope_session_id("shared-session", TrustedIdentity("alice", "employee"))
+    bob = scope_session_id("shared-session", TrustedIdentity("bob", "employee"))
+    assert alice != bob and len(alice) == 32
+
+
+def test_auth_dependency_preserves_demo_mode_when_identity_is_not_required(monkeypatch):
+    monkeypatch.delenv("GATEWAY_REQUIRE_IDENTITY", raising=False)
+    monkeypatch.delenv("GATEWAY_IDENTITY_TOKEN", raising=False)
+    assert auth.require_trusted_identity() is None
+
+
+def test_identity_auth_covers_control_and_demo_surfaces(monkeypatch):
+    monkeypatch.setenv("GATEWAY_REQUIRE_IDENTITY", "1")
+    monkeypatch.delenv("GATEWAY_IDENTITY_TOKEN", raising=False)
+    assert client.get("/gateway/dashboard").status_code == 503
+    assert client.get("/gateway/stats").status_code == 503
+    assert client.get("/gateway/connectivity").status_code == 503
+    assert client.get("/gateway/actions/policy").status_code == 503
+    assert client.post("/gateway/demo/run", json={"prompt": "hi"}).status_code == 503
+
+
+def test_authenticated_dashboard_uses_proxy_approval_identity(monkeypatch):
+    monkeypatch.setenv("GATEWAY_REQUIRE_IDENTITY", "1")
+    monkeypatch.setenv("GATEWAY_IDENTITY_TOKEN", "proxy-secret")
+    headers = {
+        "X-Gateway-Identity-Token": "proxy-secret",
+        "X-Gateway-User-ID": "approver-1",
+        "X-Gateway-Role": "manager",
+    }
+    r = client.get("/gateway/dashboard", headers=headers)
+    assert r.status_code == 200 and "const identityAuthEnabled = true;" in r.text
 
 
 def test_get_requests_and_health_are_untouched():

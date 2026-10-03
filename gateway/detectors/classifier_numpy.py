@@ -28,7 +28,7 @@ from pathlib import Path
 
 import numpy as np
 
-from gateway.detectors.text_encoding import encode, PAD_IDX
+from gateway.detectors.text_encoding import PAD_IDX, encode
 
 MODEL_DIR = Path(__file__).resolve().parents[2] / "models" / "scratch_classifier"
 CLASSIFIER_THRESHOLD = 0.5

@@ -30,13 +30,17 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from sklearn.metrics import roc_auc_score
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.baselines.run_guard_baselines import MODELS, SETS, load_guard, set_metrics  # noqa: E402
-from scripts.retrain_classifier_v2 import load_sources  # noqa: E402
+from scripts.baselines.run_guard_baselines import (
+    MODELS,
+    SETS,
+    load_guard,
+    set_metrics,
+)
+from scripts.retrain_classifier_v2 import load_sources
 
 MODEL_KEYS = {"protectai": 0, "pg2-86m": 1, "pg2-22m": 2}          # indices into run_guard_baselines.MODELS
 MODEL_SPEC = MODELS[0]
@@ -140,10 +144,10 @@ def main():
         export_fp32(model, tok, fp32_path)
     variants = {"fp32-ort": fp32_path}
     specs = (
-        ("int8-matmul", dict(op_types=["MatMul"])),
-        ("int8-matmul+gather", dict(op_types=["MatMul", "Gather"])),
-        ("int8-perchannel", dict(op_types=["MatMul"], per_channel=True)),
-        ("int8-ffn-only-perchannel", dict(op_types=["MatMul"], per_channel=True, exclude="attention")),
+        ("int8-matmul", {"op_types": ["MatMul"]}),
+        ("int8-matmul+gather", {"op_types": ["MatMul", "Gather"]}),
+        ("int8-perchannel", {"op_types": ["MatMul"], "per_channel": True}),
+        ("int8-ffn-only-perchannel", {"op_types": ["MatMul"], "per_channel": True, "exclude": "attention"}),
     )
     for name, kw in specs:
         if args.variants and name not in args.variants:

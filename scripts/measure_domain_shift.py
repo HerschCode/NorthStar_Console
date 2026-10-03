@@ -16,7 +16,6 @@ apples-to-apples. (An earlier version of this script assumed "before" meant
 a permanent, unconditional part of the standard pipeline -- see the
 --exclude-indomain-benign flag's docstring in prepare_training_data.py.)
 """
-import csv
 import shutil
 import subprocess
 import sys
@@ -131,8 +130,8 @@ def main():
         "from scratch. The held-out eval examples were used to measure",
         "generalization, not just memorization, of the fix.\n",
         "## Result",
-        f"False positive rate on held-out in-domain benign queries: **{fp_before}/{n} ({fp_before/n:.0%}) "
-        f"before -> {fp_after}/{n2} ({fp_after/n2:.0%}) after**.\n",
+        (f"False positive rate on held-out in-domain benign queries: **{fp_before}/{n} ({fp_before/n:.0%}) "
+        f"before -> {fp_after}/{n2} ({fp_after/n2:.0%}) after**.\n"),
         "## Per-query results (before)\n",
         "| Query | Blocked? | Confidence |",
         "|---|---|---|",

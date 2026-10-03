@@ -1,0 +1,1213 @@
+{
+  "student_dir": "D:\\0_Project3\\llm-security-gateway\\data\\external\\guard_student\\onnx\\hard_tkd-seed0\\shippable",
+  "held_out_sets": {
+    "deepset_test": {
+      "n": 116,
+      "attacks": 60
+    },
+    "jbb_benign": {
+      "n": 100,
+      "attacks": 0
+    },
+    "jbllms_clean": {
+      "n": 244,
+      "attacks": 244
+    },
+    "safeguard_test": {
+      "n": 2060,
+      "attacks": 650
+    },
+    "jackhhao_test": {
+      "n": 262,
+      "attacks": 139
+    },
+    "gandalf_test": {
+      "n": 112,
+      "attacks": 112
+    },
+    "short_benign_heldout": {
+      "n": 40,
+      "attacks": 0
+    },
+    "in_domain_heldout": {
+      "n": 30,
+      "attacks": 0
+    },
+    "own_corpus": {
+      "n": 95,
+      "attacks": 78
+    },
+    "oasst_benign_heldout": {
+      "n": 500,
+      "attacks": 0
+    },
+    "persona_benign_heldout": {
+      "n": 650,
+      "attacks": 0
+    }
+  },
+  "systems": {
+    "rules only": {
+      "p50_ensemble_latency_ms": 1.533,
+      "sets": {
+        "deepset_test": {
+          "detection": {
+            "k": 0,
+            "n": 60,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.06
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 56,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.064
+            ]
+          }
+        },
+        "jbb_benign": {
+          "fpr": {
+            "k": 0,
+            "n": 100,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.037
+            ]
+          }
+        },
+        "jbllms_clean": {
+          "detection": {
+            "k": 38,
+            "n": 244,
+            "rate": 0.156,
+            "ci95": [
+              0.116,
+              0.207
+            ]
+          }
+        },
+        "safeguard_test": {
+          "detection": {
+            "k": 68,
+            "n": 650,
+            "rate": 0.105,
+            "ci95": [
+              0.083,
+              0.131
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 1410,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.003
+            ]
+          }
+        },
+        "jackhhao_test": {
+          "detection": {
+            "k": 22,
+            "n": 139,
+            "rate": 0.158,
+            "ci95": [
+              0.107,
+              0.228
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 123,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.03
+            ]
+          }
+        },
+        "gandalf_test": {
+          "detection": {
+            "k": 22,
+            "n": 112,
+            "rate": 0.196,
+            "ci95": [
+              0.133,
+              0.28
+            ]
+          }
+        },
+        "short_benign_heldout": {
+          "fpr": {
+            "k": 0,
+            "n": 40,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.088
+            ]
+          }
+        },
+        "in_domain_heldout": {
+          "fpr": {
+            "k": 0,
+            "n": 30,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.114
+            ]
+          }
+        },
+        "own_corpus": {
+          "detection": {
+            "k": 28,
+            "n": 78,
+            "rate": 0.359,
+            "ci95": [
+              0.261,
+              0.47
+            ]
+          },
+          "fpr": {
+            "k": 1,
+            "n": 17,
+            "rate": 0.059,
+            "ci95": [
+              0.01,
+              0.27
+            ]
+          }
+        },
+        "oasst_benign_heldout": {
+          "fpr": {
+            "k": 1,
+            "n": 500,
+            "rate": 0.002,
+            "ci95": [
+              0.0,
+              0.011
+            ]
+          }
+        },
+        "persona_benign_heldout": {
+          "fpr": {
+            "k": 0,
+            "n": 650,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.006
+            ]
+          }
+        }
+      },
+      "macro": {
+        "mean_detection_over_sets": 0.162,
+        "mean_fpr_over_sets": 0.007
+      }
+    },
+    "shipped (rules + numpy classifier)": {
+      "p50_ensemble_latency_ms": 1.801,
+      "sets": {
+        "deepset_test": {
+          "detection": {
+            "k": 29,
+            "n": 60,
+            "rate": 0.483,
+            "ci95": [
+              0.362,
+              0.607
+            ]
+          },
+          "fpr": {
+            "k": 5,
+            "n": 56,
+            "rate": 0.089,
+            "ci95": [
+              0.039,
+              0.193
+            ]
+          }
+        },
+        "jbb_benign": {
+          "fpr": {
+            "k": 9,
+            "n": 100,
+            "rate": 0.09,
+            "ci95": [
+              0.048,
+              0.162
+            ]
+          }
+        },
+        "jbllms_clean": {
+          "detection": {
+            "k": 214,
+            "n": 244,
+            "rate": 0.877,
+            "ci95": [
+              0.83,
+              0.913
+            ]
+          }
+        },
+        "safeguard_test": {
+          "detection": {
+            "k": 623,
+            "n": 650,
+            "rate": 0.958,
+            "ci95": [
+              0.94,
+              0.971
+            ]
+          },
+          "fpr": {
+            "k": 16,
+            "n": 1410,
+            "rate": 0.011,
+            "ci95": [
+              0.007,
+              0.018
+            ]
+          }
+        },
+        "jackhhao_test": {
+          "detection": {
+            "k": 116,
+            "n": 139,
+            "rate": 0.835,
+            "ci95": [
+              0.764,
+              0.887
+            ]
+          },
+          "fpr": {
+            "k": 2,
+            "n": 123,
+            "rate": 0.016,
+            "ci95": [
+              0.004,
+              0.057
+            ]
+          }
+        },
+        "gandalf_test": {
+          "detection": {
+            "k": 107,
+            "n": 112,
+            "rate": 0.955,
+            "ci95": [
+              0.9,
+              0.981
+            ]
+          }
+        },
+        "short_benign_heldout": {
+          "fpr": {
+            "k": 1,
+            "n": 40,
+            "rate": 0.025,
+            "ci95": [
+              0.004,
+              0.129
+            ]
+          }
+        },
+        "in_domain_heldout": {
+          "fpr": {
+            "k": 3,
+            "n": 30,
+            "rate": 0.1,
+            "ci95": [
+              0.035,
+              0.256
+            ]
+          }
+        },
+        "own_corpus": {
+          "detection": {
+            "k": 50,
+            "n": 78,
+            "rate": 0.641,
+            "ci95": [
+              0.53,
+              0.739
+            ]
+          },
+          "fpr": {
+            "k": 3,
+            "n": 17,
+            "rate": 0.176,
+            "ci95": [
+              0.062,
+              0.41
+            ]
+          }
+        },
+        "oasst_benign_heldout": {
+          "fpr": {
+            "k": 20,
+            "n": 500,
+            "rate": 0.04,
+            "ci95": [
+              0.026,
+              0.061
+            ]
+          }
+        },
+        "persona_benign_heldout": {
+          "fpr": {
+            "k": 22,
+            "n": 650,
+            "rate": 0.034,
+            "ci95": [
+              0.022,
+              0.051
+            ]
+          }
+        }
+      },
+      "macro": {
+        "mean_detection_over_sets": 0.791,
+        "mean_fpr_over_sets": 0.065
+      }
+    },
+    "rules + student (selected)": {
+      "p50_ensemble_latency_ms": 29.813,
+      "sets": {
+        "deepset_test": {
+          "detection": {
+            "k": 16,
+            "n": 60,
+            "rate": 0.267,
+            "ci95": [
+              0.171,
+              0.39
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 56,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.064
+            ]
+          }
+        },
+        "jbb_benign": {
+          "fpr": {
+            "k": 2,
+            "n": 100,
+            "rate": 0.02,
+            "ci95": [
+              0.006,
+              0.07
+            ]
+          }
+        },
+        "jbllms_clean": {
+          "detection": {
+            "k": 185,
+            "n": 244,
+            "rate": 0.758,
+            "ci95": [
+              0.701,
+              0.808
+            ]
+          }
+        },
+        "safeguard_test": {
+          "detection": {
+            "k": 611,
+            "n": 650,
+            "rate": 0.94,
+            "ci95": [
+              0.919,
+              0.956
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 1410,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.003
+            ]
+          }
+        },
+        "jackhhao_test": {
+          "detection": {
+            "k": 108,
+            "n": 139,
+            "rate": 0.777,
+            "ci95": [
+              0.701,
+              0.838
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 123,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.03
+            ]
+          }
+        },
+        "gandalf_test": {
+          "detection": {
+            "k": 107,
+            "n": 112,
+            "rate": 0.955,
+            "ci95": [
+              0.9,
+              0.981
+            ]
+          }
+        },
+        "short_benign_heldout": {
+          "fpr": {
+            "k": 0,
+            "n": 40,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.088
+            ]
+          }
+        },
+        "in_domain_heldout": {
+          "fpr": {
+            "k": 0,
+            "n": 30,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.114
+            ]
+          }
+        },
+        "own_corpus": {
+          "detection": {
+            "k": 46,
+            "n": 78,
+            "rate": 0.59,
+            "ci95": [
+              0.479,
+              0.692
+            ]
+          },
+          "fpr": {
+            "k": 3,
+            "n": 17,
+            "rate": 0.176,
+            "ci95": [
+              0.062,
+              0.41
+            ]
+          }
+        },
+        "oasst_benign_heldout": {
+          "fpr": {
+            "k": 1,
+            "n": 500,
+            "rate": 0.002,
+            "ci95": [
+              0.0,
+              0.011
+            ]
+          }
+        },
+        "persona_benign_heldout": {
+          "fpr": {
+            "k": 2,
+            "n": 650,
+            "rate": 0.003,
+            "ci95": [
+              0.001,
+              0.011
+            ]
+          }
+        }
+      },
+      "macro": {
+        "mean_detection_over_sets": 0.715,
+        "mean_fpr_over_sets": 0.022
+      }
+    },
+    "rules + student (0.5)": {
+      "p50_ensemble_latency_ms": 29.433,
+      "sets": {
+        "deepset_test": {
+          "detection": {
+            "k": 29,
+            "n": 60,
+            "rate": 0.483,
+            "ci95": [
+              0.362,
+              0.607
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 56,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.064
+            ]
+          }
+        },
+        "jbb_benign": {
+          "fpr": {
+            "k": 2,
+            "n": 100,
+            "rate": 0.02,
+            "ci95": [
+              0.006,
+              0.07
+            ]
+          }
+        },
+        "jbllms_clean": {
+          "detection": {
+            "k": 207,
+            "n": 244,
+            "rate": 0.848,
+            "ci95": [
+              0.798,
+              0.888
+            ]
+          }
+        },
+        "safeguard_test": {
+          "detection": {
+            "k": 624,
+            "n": 650,
+            "rate": 0.96,
+            "ci95": [
+              0.942,
+              0.973
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 1410,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.003
+            ]
+          }
+        },
+        "jackhhao_test": {
+          "detection": {
+            "k": 122,
+            "n": 139,
+            "rate": 0.878,
+            "ci95": [
+              0.813,
+              0.922
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 123,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.03
+            ]
+          }
+        },
+        "gandalf_test": {
+          "detection": {
+            "k": 108,
+            "n": 112,
+            "rate": 0.964,
+            "ci95": [
+              0.912,
+              0.986
+            ]
+          }
+        },
+        "short_benign_heldout": {
+          "fpr": {
+            "k": 0,
+            "n": 40,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.088
+            ]
+          }
+        },
+        "in_domain_heldout": {
+          "fpr": {
+            "k": 0,
+            "n": 30,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.114
+            ]
+          }
+        },
+        "own_corpus": {
+          "detection": {
+            "k": 51,
+            "n": 78,
+            "rate": 0.654,
+            "ci95": [
+              0.543,
+              0.75
+            ]
+          },
+          "fpr": {
+            "k": 4,
+            "n": 17,
+            "rate": 0.235,
+            "ci95": [
+              0.096,
+              0.473
+            ]
+          }
+        },
+        "oasst_benign_heldout": {
+          "fpr": {
+            "k": 1,
+            "n": 500,
+            "rate": 0.002,
+            "ci95": [
+              0.0,
+              0.011
+            ]
+          }
+        },
+        "persona_benign_heldout": {
+          "fpr": {
+            "k": 5,
+            "n": 650,
+            "rate": 0.008,
+            "ci95": [
+              0.003,
+              0.018
+            ]
+          }
+        }
+      },
+      "macro": {
+        "mean_detection_over_sets": 0.798,
+        "mean_fpr_over_sets": 0.029
+      }
+    },
+    "rules + student (validation)": {
+      "p50_ensemble_latency_ms": 28.388,
+      "sets": {
+        "deepset_test": {
+          "detection": {
+            "k": 16,
+            "n": 60,
+            "rate": 0.267,
+            "ci95": [
+              0.171,
+              0.39
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 56,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.064
+            ]
+          }
+        },
+        "jbb_benign": {
+          "fpr": {
+            "k": 2,
+            "n": 100,
+            "rate": 0.02,
+            "ci95": [
+              0.006,
+              0.07
+            ]
+          }
+        },
+        "jbllms_clean": {
+          "detection": {
+            "k": 185,
+            "n": 244,
+            "rate": 0.758,
+            "ci95": [
+              0.701,
+              0.808
+            ]
+          }
+        },
+        "safeguard_test": {
+          "detection": {
+            "k": 611,
+            "n": 650,
+            "rate": 0.94,
+            "ci95": [
+              0.919,
+              0.956
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 1410,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.003
+            ]
+          }
+        },
+        "jackhhao_test": {
+          "detection": {
+            "k": 108,
+            "n": 139,
+            "rate": 0.777,
+            "ci95": [
+              0.701,
+              0.838
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 123,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.03
+            ]
+          }
+        },
+        "gandalf_test": {
+          "detection": {
+            "k": 107,
+            "n": 112,
+            "rate": 0.955,
+            "ci95": [
+              0.9,
+              0.981
+            ]
+          }
+        },
+        "short_benign_heldout": {
+          "fpr": {
+            "k": 0,
+            "n": 40,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.088
+            ]
+          }
+        },
+        "in_domain_heldout": {
+          "fpr": {
+            "k": 0,
+            "n": 30,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.114
+            ]
+          }
+        },
+        "own_corpus": {
+          "detection": {
+            "k": 46,
+            "n": 78,
+            "rate": 0.59,
+            "ci95": [
+              0.479,
+              0.692
+            ]
+          },
+          "fpr": {
+            "k": 3,
+            "n": 17,
+            "rate": 0.176,
+            "ci95": [
+              0.062,
+              0.41
+            ]
+          }
+        },
+        "oasst_benign_heldout": {
+          "fpr": {
+            "k": 1,
+            "n": 500,
+            "rate": 0.002,
+            "ci95": [
+              0.0,
+              0.011
+            ]
+          }
+        },
+        "persona_benign_heldout": {
+          "fpr": {
+            "k": 2,
+            "n": 650,
+            "rate": 0.003,
+            "ci95": [
+              0.001,
+              0.011
+            ]
+          }
+        }
+      },
+      "macro": {
+        "mean_detection_over_sets": 0.715,
+        "mean_fpr_over_sets": 0.022
+      }
+    },
+    "rules + numpy + student": {
+      "p50_ensemble_latency_ms": 14.766,
+      "sets": {
+        "deepset_test": {
+          "detection": {
+            "k": 29,
+            "n": 60,
+            "rate": 0.483,
+            "ci95": [
+              0.362,
+              0.607
+            ]
+          },
+          "fpr": {
+            "k": 5,
+            "n": 56,
+            "rate": 0.089,
+            "ci95": [
+              0.039,
+              0.193
+            ]
+          }
+        },
+        "jbb_benign": {
+          "fpr": {
+            "k": 10,
+            "n": 100,
+            "rate": 0.1,
+            "ci95": [
+              0.055,
+              0.174
+            ]
+          }
+        },
+        "jbllms_clean": {
+          "detection": {
+            "k": 215,
+            "n": 244,
+            "rate": 0.881,
+            "ci95": [
+              0.835,
+              0.916
+            ]
+          }
+        },
+        "safeguard_test": {
+          "detection": {
+            "k": 632,
+            "n": 650,
+            "rate": 0.972,
+            "ci95": [
+              0.957,
+              0.982
+            ]
+          },
+          "fpr": {
+            "k": 16,
+            "n": 1410,
+            "rate": 0.011,
+            "ci95": [
+              0.007,
+              0.018
+            ]
+          }
+        },
+        "jackhhao_test": {
+          "detection": {
+            "k": 119,
+            "n": 139,
+            "rate": 0.856,
+            "ci95": [
+              0.788,
+              0.905
+            ]
+          },
+          "fpr": {
+            "k": 2,
+            "n": 123,
+            "rate": 0.016,
+            "ci95": [
+              0.004,
+              0.057
+            ]
+          }
+        },
+        "gandalf_test": {
+          "detection": {
+            "k": 109,
+            "n": 112,
+            "rate": 0.973,
+            "ci95": [
+              0.924,
+              0.991
+            ]
+          }
+        },
+        "short_benign_heldout": {
+          "fpr": {
+            "k": 1,
+            "n": 40,
+            "rate": 0.025,
+            "ci95": [
+              0.004,
+              0.129
+            ]
+          }
+        },
+        "in_domain_heldout": {
+          "fpr": {
+            "k": 3,
+            "n": 30,
+            "rate": 0.1,
+            "ci95": [
+              0.035,
+              0.256
+            ]
+          }
+        },
+        "own_corpus": {
+          "detection": {
+            "k": 57,
+            "n": 78,
+            "rate": 0.731,
+            "ci95": [
+              0.623,
+              0.817
+            ]
+          },
+          "fpr": {
+            "k": 3,
+            "n": 17,
+            "rate": 0.176,
+            "ci95": [
+              0.062,
+              0.41
+            ]
+          }
+        },
+        "oasst_benign_heldout": {
+          "fpr": {
+            "k": 20,
+            "n": 500,
+            "rate": 0.04,
+            "ci95": [
+              0.026,
+              0.061
+            ]
+          }
+        },
+        "persona_benign_heldout": {
+          "fpr": {
+            "k": 23,
+            "n": 650,
+            "rate": 0.035,
+            "ci95": [
+              0.024,
+              0.053
+            ]
+          }
+        }
+      },
+      "macro": {
+        "mean_detection_over_sets": 0.816,
+        "mean_fpr_over_sets": 0.066
+      }
+    },
+    "rules OR teacher (ProtectAI deberta-v3-base)": {
+      "p50_ensemble_latency_ms": null,
+      "sets": {
+        "deepset_test": {
+          "detection": {
+            "k": 22,
+            "n": 60,
+            "rate": 0.367,
+            "ci95": [
+              0.256,
+              0.493
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 56,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.064
+            ]
+          }
+        },
+        "jbb_benign": {
+          "fpr": {
+            "k": 1,
+            "n": 100,
+            "rate": 0.01,
+            "ci95": [
+              0.002,
+              0.054
+            ]
+          }
+        },
+        "jbllms_clean": {
+          "detection": {
+            "k": 207,
+            "n": 244,
+            "rate": 0.848,
+            "ci95": [
+              0.798,
+              0.888
+            ]
+          }
+        },
+        "safeguard_test": {
+          "detection": {
+            "k": 547,
+            "n": 650,
+            "rate": 0.842,
+            "ci95": [
+              0.811,
+              0.868
+            ]
+          },
+          "fpr": {
+            "k": 2,
+            "n": 1410,
+            "rate": 0.001,
+            "ci95": [
+              0.0,
+              0.005
+            ]
+          }
+        },
+        "jackhhao_test": {
+          "detection": {
+            "k": 117,
+            "n": 139,
+            "rate": 0.842,
+            "ci95": [
+              0.772,
+              0.893
+            ]
+          },
+          "fpr": {
+            "k": 2,
+            "n": 123,
+            "rate": 0.016,
+            "ci95": [
+              0.004,
+              0.057
+            ]
+          }
+        },
+        "gandalf_test": {
+          "detection": {
+            "k": 112,
+            "n": 112,
+            "rate": 1.0,
+            "ci95": [
+              0.967,
+              1
+            ]
+          }
+        },
+        "short_benign_heldout": {
+          "fpr": {
+            "k": 1,
+            "n": 40,
+            "rate": 0.025,
+            "ci95": [
+              0.004,
+              0.129
+            ]
+          }
+        },
+        "in_domain_heldout": {
+          "fpr": {
+            "k": 3,
+            "n": 30,
+            "rate": 0.1,
+            "ci95": [
+              0.035,
+              0.256
+            ]
+          }
+        },
+        "own_corpus": {
+          "detection": {
+            "k": 67,
+            "n": 78,
+            "rate": 0.859,
+            "ci95": [
+              0.765,
+              0.919
+            ]
+          },
+          "fpr": {
+            "k": 4,
+            "n": 17,
+            "rate": 0.235,
+            "ci95": [
+              0.096,
+              0.473
+            ]
+          }
+        },
+        "oasst_benign_heldout": {
+          "fpr": {
+            "k": 1,
+            "n": 500,
+            "rate": 0.002,
+            "ci95": [
+              0.0,
+              0.011
+            ]
+          }
+        },
+        "persona_benign_heldout": {
+          "fpr": {
+            "k": 4,
+            "n": 650,
+            "rate": 0.006,
+            "ci95": [
+              0.002,
+              0.016
+            ]
+          }
+        }
+      },
+      "macro": {
+        "mean_detection_over_sets": 0.793,
+        "mean_fpr_over_sets": 0.044
+      }
+    }
+  }
+}

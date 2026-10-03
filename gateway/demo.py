@@ -29,11 +29,12 @@ from collections import deque
 from pathlib import Path
 
 import yaml
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
 from gateway.adapters.operations_assistant_adapter import BACKEND_ERROR_PREFIX
+from gateway.auth import TrustedIdentity, require_trusted_identity, scope_session_id
 from gateway.ip_limits import client_ip as _shared_client_ip
 from gateway.webui import SHARED_CSS, nav_html
 
@@ -166,7 +167,11 @@ def _is_upstream_error(text) -> bool:
 
 
 @router.post("/gateway/demo/run")
-def demo_run(req: DemoRunRequest, request: Request):
+def demo_run(
+    req: DemoRunRequest,
+    request: Request,
+    identity: TrustedIdentity | None = Depends(require_trusted_identity),
+):
     if _DEMO_API_KEY and request.headers.get("x-demo-key") != _DEMO_API_KEY:
         return JSONResponse({"error": "missing_or_invalid_x_demo_key"}, status_code=401)
     if _rate_limited(_client_ip(request)):
@@ -175,22 +180,26 @@ def demo_run(req: DemoRunRequest, request: Request):
             status_code=429,
         )
 
-    from gateway.app import BACKENDS, middleware as mw
+    from gateway.app import BACKENDS
+    from gateway.app import middleware as mw
 
     if req.backend not in BACKENDS:
         return {"error": f"unknown_backend:{req.backend}", "available": list(BACKENDS.keys())}
 
     adapter, system_prompt = BACKENDS[req.backend]
+    session_id = scope_session_id(req.session_id, identity)
+    role = identity.role if identity else req.role
+    user_id = identity.user_id if identity else req.user_id
 
     # --- 1. Gateway bypassed: prompt goes straight at the backend ---
     t0 = time.perf_counter()
     try:
         bypass_text = adapter.send(
-            req.prompt, session_id=f"{req.session_id}-bypass",
-            role=req.role, user_id=req.user_id,
+            req.prompt, session_id=f"{session_id}-bypass",
+            role=role, user_id=user_id,
         )
         bypass_err = None
-    except Exception as exc:  # a demo should never 500 on a backend quirk
+    except Exception as exc:  # noqa: BLE001 - demo should never 500 on a backend quirk
         bypass_text = None
         bypass_err = f"{type(exc).__name__}: {exc}"
     if _is_upstream_error(bypass_text):
@@ -215,9 +224,9 @@ def demo_run(req: DemoRunRequest, request: Request):
     # not an artificially fresh state every call.
     t0 = time.perf_counter()
     gw = mw.process(
-        prompt=req.prompt, session_id=f"{req.session_id}-gw",
-        backend=adapter, role=req.role, system_prompt=system_prompt,
-        user_id=req.user_id,
+        prompt=req.prompt, session_id=f"{session_id}-gw",
+        backend=adapter, role=role, system_prompt=system_prompt,
+        user_id=user_id,
     )
     gw_ms = (time.perf_counter() - t0) * 1000
     gw_upstream_error = _is_upstream_error(gw.response_text)

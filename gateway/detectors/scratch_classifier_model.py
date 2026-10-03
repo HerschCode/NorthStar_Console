@@ -17,15 +17,22 @@ import json
 from pathlib import Path
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 # Tokenizer/vocab/encode + the size constants live in text_encoding.py, which
 # has no torch import -- re-exported here for backward compatibility (training
 # scripts import them from this module) without dragging torch into anything
 # that only needs encode()/PAD_IDX (see gateway/detectors/classifier_numpy.py).
 from gateway.detectors.text_encoding import (  # noqa: F401
-    tokenize, build_vocab, encode,
-    MAX_VOCAB_SIZE, MAX_SEQ_LEN, EMBED_DIM, HIDDEN_DIM, PAD_IDX, UNK_IDX,
+    EMBED_DIM,
+    HIDDEN_DIM,
+    MAX_SEQ_LEN,
+    MAX_VOCAB_SIZE,
+    PAD_IDX,
+    UNK_IDX,
+    build_vocab,
+    encode,
+    tokenize,
 )
 
 MODEL_DIR = Path(__file__).resolve().parents[2] / "models" / "scratch_classifier"

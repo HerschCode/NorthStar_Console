@@ -35,12 +35,18 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 csv.field_size_limit(10**9)
 
-from gateway.detectors import rule_based  # noqa: E402
-from gateway.detectors.classifier import CLASSIFIER_THRESHOLD, ScratchClassifierDetector  # noqa: E402
-from gateway.detectors.embedding_similarity import SIMILARITY_THRESHOLD, EmbeddingSimilarityDetector  # noqa: E402
+from gateway.detectors import rule_based
+from gateway.detectors.classifier import (
+    CLASSIFIER_THRESHOLD,
+    ScratchClassifierDetector,
+)
+from gateway.detectors.embedding_similarity import (
+    SIMILARITY_THRESHOLD,
+    EmbeddingSimilarityDetector,
+)
 
 EXT = REPO_ROOT / "data/external"
-norm = lambda t: re.sub(r"\s+", " ", t.strip().lower())  # noqa: E731
+norm = lambda t: re.sub(r"\s+", " ", t.strip().lower())
 
 
 def wilson(k, n, z=1.96):
@@ -82,15 +88,20 @@ def main():
     scorer = Scorer()
 
     # ---- data ----
-    train_all = {norm(r["text"]) for r in csv.DictReader(open(REPO_ROOT / "data/train.csv", encoding="utf-8"))}
-    train_pos = {norm(r["text"]) for r in csv.DictReader(open(REPO_ROOT / "data/train.csv", encoding="utf-8")) if r["label"] == "1"}
+    with open(REPO_ROOT / "data/train.csv", encoding="utf-8") as train_file:
+        train_rows = list(csv.DictReader(train_file))
+    {norm(r["text"]) for r in train_rows}
+    train_pos = {norm(r["text"]) for r in train_rows if r["label"] == "1"}
     dd = EXT / "prompt-injections/data"
     ds_train = pd.read_parquet(next(dd.glob("train-*.parquet")))
     ds_test = pd.read_parquet(next(dd.glob("test-*.parquet")))
-    jbb = [r["Goal"] for r in csv.DictReader(open(EXT / "JBB-Behaviors/data/benign-behaviors.csv", encoding="utf-8"))]
-    jb = [r["prompt"] for r in csv.DictReader(open(EXT / "jailbreak_llms/jailbreak_llms-main/data/prompts/jailbreak_prompts_2023_05_07.csv", encoding="utf-8", errors="replace")) if r.get("prompt", "").strip()]
+    with open(EXT / "JBB-Behaviors/data/benign-behaviors.csv", encoding="utf-8") as f:
+        jbb = [r["Goal"] for r in csv.DictReader(f)]
+    with open(EXT / "jailbreak_llms/jailbreak_llms-main/data/prompts/jailbreak_prompts_2023_05_07.csv", encoding="utf-8", errors="replace") as f:
+        jb = [r["prompt"] for r in csv.DictReader(f) if r.get("prompt", "").strip()]
     jb_clean = [p for p in jb if norm(p) not in train_pos]
-    corpus = yaml.safe_load(open(REPO_ROOT / "corpus/injection_cases.yaml", encoding="utf-8"))
+    with open(REPO_ROOT / "corpus/injection_cases.yaml", encoding="utf-8") as f:
+        corpus = yaml.safe_load(f)
     c_atk = [c["payload"] for c in corpus if c["expected_behavior"] == "block"]
     c_ben = [c["payload"] for c in corpus if c["expected_behavior"] == "allow"]
     # the calibration/test split must not share text
@@ -137,7 +148,7 @@ def main():
 
     frontier = []
     for mf in (0.02, 0.05, 0.10, 0.20, 0.30, 0.50):
-        _, tc, te, cd, cf = choose(mf)
+        _, tc, te, _cd, _cf = choose(mf)
         row = {"max_fpr_on_cal": mf, "clf": tc, "emb": te,
                "deepset_test_detection": rate(blocked(S["deepset_test_attack"], tc, te))["rate"],
                "deepset_test_fpr": rate(blocked(S["deepset_test_benign"], tc, te))["rate"],

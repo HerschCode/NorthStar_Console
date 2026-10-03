@@ -8,14 +8,17 @@ import sys
 from pathlib import Path
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from gateway.detectors.scratch_classifier_model import (
-    ScratchClassifier, build_vocab, encode, save_artifacts, MAX_SEQ_LEN,
+    ScratchClassifier,
+    build_vocab,
+    encode,
+    save_artifacts,
 )
 
 RANDOM_SEED = 42

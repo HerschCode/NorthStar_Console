@@ -32,10 +32,16 @@ from sklearn.metrics import roc_auc_score
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
-from gateway.detectors import rule_based  # noqa: E402
-from gateway.detectors.classifier_numpy import ScratchClassifierDetectorNumpy  # noqa: E402
-from scripts.baselines.run_guard_baselines import LABEL_CHECK_EXAMPLES, SETS, set_metrics  # noqa: E402
-from scripts.retrain_classifier_v2 import load_sources  # noqa: E402
+from gateway.detectors import rule_based
+from gateway.detectors.classifier_numpy import (
+    ScratchClassifierDetectorNumpy,
+)
+from scripts.baselines.run_guard_baselines import (
+    LABEL_CHECK_EXAMPLES,
+    SETS,
+    set_metrics,
+)
+from scripts.retrain_classifier_v2 import load_sources
 
 URL = "https://api.groq.com/openai/v1/chat/completions"
 MODELS = {"Llama-Prompt-Guard-2-22M": "meta-llama/llama-prompt-guard-2-22m", "Llama-Prompt-Guard-2-86M": "meta-llama/llama-prompt-guard-2-86m"}
@@ -163,14 +169,22 @@ def main():
         pooled_benign = sum(int(benign_idx[n].sum()) for n in sets)
         cands = sorted({float(s) for n in sets for s in scores[n]} | {0.5})
 
-        def lowest_threshold(fp_at):
+        def lowest_threshold(cands, target_fp, fp_at):
             for t in cands:
                 if fp_at(t) <= target_fp:
                     return t
             return 1.0 + 1e-9
 
-        t_alone = lowest_threshold(lambda t: sum(int((scores[n][benign_idx[n]] >= t).sum()) for n in sets))
-        t_rules = lowest_threshold(lambda t: sum(int((rules[n] | (scores[n] >= t))[benign_idx[n]].sum()) for n in sets))
+        t_alone = lowest_threshold(
+            cands,
+            target_fp,
+            lambda t, scores=scores, benign_idx=benign_idx: sum(int((scores[n][benign_idx[n]] >= t).sum()) for n in sets),
+        )
+        t_rules = lowest_threshold(
+            cands,
+            target_fp,
+            lambda t, rules=rules, scores=scores, benign_idx=benign_idx: sum(int((rules[n] | (scores[n] >= t))[benign_idx[n]].sum()) for n in sets),
+        )
         entry["fpr_matched"] = {
             "pooled_benign": pooled_benign, "shipped_default_false_positives": target_fp,
             "guard_alone": {"threshold": round(t_alone, 6),

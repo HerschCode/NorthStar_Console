@@ -83,12 +83,13 @@ def test_nothing_harmful_is_executed_without_a_human_or_a_denial(tmp_path):
 
 def test_corpus_is_disjoint_from_the_classifier_training_data():
     """Held-out discipline: nothing in this corpus may appear in data/train.csv."""
-    norm = lambda t: re.sub(r"\s+", " ", str(t).strip().lower())  # noqa: E731
+    norm = lambda t: re.sub(r"\s+", " ", str(t).strip().lower())
     train_path = REPO_ROOT / "data" / "train.csv"
     if not train_path.exists():
         pytest.skip("data/train.csv not present")
     csv.field_size_limit(10**9)
-    train = {norm(r["text"]) for r in csv.DictReader(open(train_path, encoding="utf-8"))}
+    with open(train_path, encoding="utf-8") as train_file:
+        train = {norm(r["text"]) for r in csv.DictReader(train_file)}
     texts = []
     for s in SCENARIOS:
         texts.append(s["user_message"])

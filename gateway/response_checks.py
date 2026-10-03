@@ -54,7 +54,7 @@ def check_system_prompt_leak(response_text: str, system_prompt: str) -> SystemLe
     if not system_prompt:
         return SystemLeakResult(leaked=False)
 
-    for start in range(0, max(len(system_prompt) - MIN_LEAK_SUBSTRING_LEN, 0) + 1):
+    for start in range(max(len(system_prompt) - MIN_LEAK_SUBSTRING_LEN, 0) + 1):
         window = system_prompt[start:start + MIN_LEAK_SUBSTRING_LEN]
         if window and window in response_text:
             return SystemLeakResult(leaked=True, leaked_snippet=window)

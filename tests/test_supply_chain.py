@@ -37,7 +37,7 @@ def test_there_are_workflows():
 @pytest.mark.parametrize("path", WORKFLOWS, ids=lambda p: p.name)
 def test_every_action_is_pinned_to_a_full_commit_sha(path):
     for uses in all_uses(load(path)):
-        if uses.startswith("./") or uses.startswith("docker://"):
+        if uses.startswith(("./", "docker://")):
             continue
         assert re.search(r"@[0-9a-f]{40}$", uses), f"{path.name}: {uses} is not pinned to a commit SHA"
 
@@ -92,7 +92,7 @@ DOCKERFILES = ["Dockerfile", "Dockerfile.render"]
 @pytest.mark.parametrize("name", DOCKERFILES)
 def test_dockerfile_base_is_pinned_by_digest(name):
     text = (REPO / name).read_text(encoding="utf-8")
-    assert re.search(r"^FROM python:3\.12-slim@sha256:[0-9a-f]{64}\s*$", text, re.M), name
+    assert re.search(r"^FROM python:3\.12-slim@sha256:[0-9a-f]{64}\s*$", text, re.MULTILINE), name
 
 
 def test_both_dockerfiles_use_the_same_base_digest():
@@ -110,7 +110,7 @@ def test_dockerfile_installs_only_from_its_hash_locked_file(name, lock):
 @pytest.mark.parametrize("name", DOCKERFILES)
 def test_dockerfile_runs_unprivileged_with_integrity_enforced(name):
     text = (REPO / name).read_text(encoding="utf-8")
-    users = re.findall(r"^USER\s+(\S+)", text, re.M)
+    users = re.findall(r"^USER\s+(\S+)", text, re.MULTILINE)
     assert users and users[-1] not in ("root", "0"), users
     assert "MODEL_INTEGRITY=enforce" in text and "HEALTHCHECK" in text
 
@@ -118,7 +118,7 @@ def test_dockerfile_runs_unprivileged_with_integrity_enforced(name):
 @pytest.mark.parametrize("name", DOCKERFILES)
 def test_dockerfile_has_no_remote_shell_pipes_or_remote_add(name):
     text = (REPO / name).read_text(encoding="utf-8")
-    assert not re.search(r"curl[^\n]*\|\s*(ba)?sh|wget[^\n]*\|\s*(ba)?sh|^ADD\s+https?://", text, re.M)
+    assert not re.search(r"curl[^\n]*\|\s*(ba)?sh|wget[^\n]*\|\s*(ba)?sh|^ADD\s+https?://", text, re.MULTILINE)
 
 
 def test_the_render_image_is_torch_free_and_the_context_excludes_generated_and_secret_paths():

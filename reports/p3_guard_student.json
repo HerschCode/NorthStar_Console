@@ -1,0 +1,1896 @@
+{
+  "target_val_fpr": 0.01,
+  "n_train": 8198,
+  "n_val": 911,
+  "dropped_overlap_with_heldout": 560,
+  "held_out_sets": {
+    "deepset_test": {
+      "n": 116,
+      "attacks": 60
+    },
+    "jbb_benign": {
+      "n": 100,
+      "attacks": 0
+    },
+    "jbllms_clean": {
+      "n": 244,
+      "attacks": 244
+    },
+    "safeguard_test": {
+      "n": 2060,
+      "attacks": 650
+    },
+    "jackhhao_test": {
+      "n": 262,
+      "attacks": 139
+    },
+    "gandalf_test": {
+      "n": 112,
+      "attacks": 112
+    },
+    "short_benign_heldout": {
+      "n": 40,
+      "attacks": 0
+    },
+    "in_domain_heldout": {
+      "n": 30,
+      "attacks": 0
+    },
+    "own_corpus": {
+      "n": 95,
+      "attacks": 78
+    }
+  },
+  "systems": {
+    "shipped_default (rules OR classifier)": {
+      "name": "shipped_default",
+      "val_threshold_margin": 0.0,
+      "val_auc": 0.9201,
+      "val_fpr_at_threshold": 0.0491,
+      "sets": {
+        "deepset_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 29,
+              "n": 60,
+              "rate": 0.483,
+              "ci95": [
+                0.362,
+                0.607
+              ]
+            },
+            "fpr": {
+              "k": 6,
+              "n": 56,
+              "rate": 0.107,
+              "ci95": [
+                0.05,
+                0.215
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 29,
+              "n": 60,
+              "rate": 0.483,
+              "ci95": [
+                0.362,
+                0.607
+              ]
+            },
+            "fpr": {
+              "k": 6,
+              "n": 56,
+              "rate": 0.107,
+              "ci95": [
+                0.05,
+                0.215
+              ]
+            }
+          },
+          "roc_auc": 0.688
+        },
+        "jbb_benign": {
+          "at_0.5": {
+            "fpr": {
+              "k": 9,
+              "n": 100,
+              "rate": 0.09,
+              "ci95": [
+                0.048,
+                0.162
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 9,
+              "n": 100,
+              "rate": 0.09,
+              "ci95": [
+                0.048,
+                0.162
+              ]
+            }
+          }
+        },
+        "jbllms_clean": {
+          "at_0.5": {
+            "detection": {
+              "k": 214,
+              "n": 244,
+              "rate": 0.877,
+              "ci95": [
+                0.83,
+                0.913
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 214,
+              "n": 244,
+              "rate": 0.877,
+              "ci95": [
+                0.83,
+                0.913
+              ]
+            }
+          }
+        },
+        "safeguard_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 624,
+              "n": 650,
+              "rate": 0.96,
+              "ci95": [
+                0.942,
+                0.973
+              ]
+            },
+            "fpr": {
+              "k": 16,
+              "n": 1410,
+              "rate": 0.011,
+              "ci95": [
+                0.007,
+                0.018
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 624,
+              "n": 650,
+              "rate": 0.96,
+              "ci95": [
+                0.942,
+                0.973
+              ]
+            },
+            "fpr": {
+              "k": 16,
+              "n": 1410,
+              "rate": 0.011,
+              "ci95": [
+                0.007,
+                0.018
+              ]
+            }
+          },
+          "roc_auc": 0.974
+        },
+        "jackhhao_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 116,
+              "n": 139,
+              "rate": 0.835,
+              "ci95": [
+                0.764,
+                0.887
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 123,
+              "rate": 0.016,
+              "ci95": [
+                0.004,
+                0.057
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 116,
+              "n": 139,
+              "rate": 0.835,
+              "ci95": [
+                0.764,
+                0.887
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 123,
+              "rate": 0.016,
+              "ci95": [
+                0.004,
+                0.057
+              ]
+            }
+          },
+          "roc_auc": 0.909
+        },
+        "gandalf_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 107,
+              "n": 112,
+              "rate": 0.955,
+              "ci95": [
+                0.9,
+                0.981
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 107,
+              "n": 112,
+              "rate": 0.955,
+              "ci95": [
+                0.9,
+                0.981
+              ]
+            }
+          }
+        },
+        "short_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 1,
+              "n": 40,
+              "rate": 0.025,
+              "ci95": [
+                0.004,
+                0.129
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 1,
+              "n": 40,
+              "rate": 0.025,
+              "ci95": [
+                0.004,
+                0.129
+              ]
+            }
+          }
+        },
+        "in_domain_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 3,
+              "n": 30,
+              "rate": 0.1,
+              "ci95": [
+                0.035,
+                0.256
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 3,
+              "n": 30,
+              "rate": 0.1,
+              "ci95": [
+                0.035,
+                0.256
+              ]
+            }
+          }
+        },
+        "own_corpus": {
+          "at_0.5": {
+            "detection": {
+              "k": 42,
+              "n": 78,
+              "rate": 0.538,
+              "ci95": [
+                0.429,
+                0.645
+              ]
+            },
+            "fpr": {
+              "k": 3,
+              "n": 17,
+              "rate": 0.176,
+              "ci95": [
+                0.062,
+                0.41
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 42,
+              "n": 78,
+              "rate": 0.538,
+              "ci95": [
+                0.429,
+                0.645
+              ]
+            },
+            "fpr": {
+              "k": 3,
+              "n": 17,
+              "rate": 0.176,
+              "ci95": [
+                0.062,
+                0.41
+              ]
+            }
+          },
+          "roc_auc": 0.681
+        }
+      },
+      "note": "hard block/allow decision, no score: its operating point is fixed",
+      "macro_at_0.5": {
+        "mean_detection_over_sets": 0.775,
+        "mean_fpr_over_sets": 0.075
+      },
+      "macro_at_val_threshold": {
+        "mean_detection_over_sets": 0.775,
+        "mean_fpr_over_sets": 0.075
+      }
+    },
+    "shipped classifier layer alone": {
+      "name": "shipped_classifier_layer",
+      "val_threshold_margin": 3.642,
+      "val_auc": 0.9791,
+      "val_fpr_at_threshold": 0.0095,
+      "sets": {
+        "deepset_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 29,
+              "n": 60,
+              "rate": 0.483,
+              "ci95": [
+                0.362,
+                0.607
+              ]
+            },
+            "fpr": {
+              "k": 6,
+              "n": 56,
+              "rate": 0.107,
+              "ci95": [
+                0.05,
+                0.215
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 7,
+              "n": 60,
+              "rate": 0.117,
+              "ci95": [
+                0.058,
+                0.222
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "roc_auc": 0.873
+        },
+        "jbb_benign": {
+          "at_0.5": {
+            "fpr": {
+              "k": 9,
+              "n": 100,
+              "rate": 0.09,
+              "ci95": [
+                0.048,
+                0.162
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 3,
+              "n": 100,
+              "rate": 0.03,
+              "ci95": [
+                0.01,
+                0.085
+              ]
+            }
+          }
+        },
+        "jbllms_clean": {
+          "at_0.5": {
+            "detection": {
+              "k": 213,
+              "n": 244,
+              "rate": 0.873,
+              "ci95": [
+                0.825,
+                0.909
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 83,
+              "n": 244,
+              "rate": 0.34,
+              "ci95": [
+                0.284,
+                0.402
+              ]
+            }
+          }
+        },
+        "safeguard_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 621,
+              "n": 650,
+              "rate": 0.955,
+              "ci95": [
+                0.937,
+                0.969
+              ]
+            },
+            "fpr": {
+              "k": 16,
+              "n": 1410,
+              "rate": 0.011,
+              "ci95": [
+                0.007,
+                0.018
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 523,
+              "n": 650,
+              "rate": 0.805,
+              "ci95": [
+                0.772,
+                0.833
+              ]
+            },
+            "fpr": {
+              "k": 1,
+              "n": 1410,
+              "rate": 0.001,
+              "ci95": [
+                0.0,
+                0.004
+              ]
+            }
+          },
+          "roc_auc": 0.994
+        },
+        "jackhhao_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 114,
+              "n": 139,
+              "rate": 0.82,
+              "ci95": [
+                0.748,
+                0.875
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 123,
+              "rate": 0.016,
+              "ci95": [
+                0.004,
+                0.057
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 53,
+              "n": 139,
+              "rate": 0.381,
+              "ci95": [
+                0.305,
+                0.464
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 123,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.03
+              ]
+            }
+          },
+          "roc_auc": 0.983
+        },
+        "gandalf_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 107,
+              "n": 112,
+              "rate": 0.955,
+              "ci95": [
+                0.9,
+                0.981
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 96,
+              "n": 112,
+              "rate": 0.857,
+              "ci95": [
+                0.78,
+                0.91
+              ]
+            }
+          }
+        },
+        "short_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 1,
+              "n": 40,
+              "rate": 0.025,
+              "ci95": [
+                0.004,
+                0.129
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 1,
+              "n": 40,
+              "rate": 0.025,
+              "ci95": [
+                0.004,
+                0.129
+              ]
+            }
+          }
+        },
+        "in_domain_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 3,
+              "n": 30,
+              "rate": 0.1,
+              "ci95": [
+                0.035,
+                0.256
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 30,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.114
+              ]
+            }
+          }
+        },
+        "own_corpus": {
+          "at_0.5": {
+            "detection": {
+              "k": 30,
+              "n": 78,
+              "rate": 0.385,
+              "ci95": [
+                0.284,
+                0.496
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 17,
+              "rate": 0.118,
+              "ci95": [
+                0.033,
+                0.343
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 12,
+              "n": 78,
+              "rate": 0.154,
+              "ci95": [
+                0.09,
+                0.25
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 17,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.184
+              ]
+            }
+          },
+          "roc_auc": 0.808
+        }
+      },
+      "macro_at_0.5": {
+        "mean_detection_over_sets": 0.745,
+        "mean_fpr_over_sets": 0.067
+      },
+      "macro_at_val_threshold": {
+        "mean_detection_over_sets": 0.442,
+        "mean_fpr_over_sets": 0.008
+      }
+    },
+    "teacher: protectai/deberta-v3-base-prompt-injection-v2": {
+      "name": "teacher",
+      "val_threshold_margin": 6.883,
+      "val_auc": 0.9694,
+      "val_fpr_at_threshold": 0.0095,
+      "sets": {
+        "deepset_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 22,
+              "n": 60,
+              "rate": 0.367,
+              "ci95": [
+                0.256,
+                0.493
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 13,
+              "n": 60,
+              "rate": 0.217,
+              "ci95": [
+                0.131,
+                0.336
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "roc_auc": 0.902
+        },
+        "jbb_benign": {
+          "at_0.5": {
+            "fpr": {
+              "k": 1,
+              "n": 100,
+              "rate": 0.01,
+              "ci95": [
+                0.002,
+                0.054
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 100,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.037
+              ]
+            }
+          }
+        },
+        "jbllms_clean": {
+          "at_0.5": {
+            "detection": {
+              "k": 206,
+              "n": 244,
+              "rate": 0.844,
+              "ci95": [
+                0.793,
+                0.884
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 163,
+              "n": 244,
+              "rate": 0.668,
+              "ci95": [
+                0.607,
+                0.724
+              ]
+            }
+          }
+        },
+        "safeguard_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 547,
+              "n": 650,
+              "rate": 0.842,
+              "ci95": [
+                0.811,
+                0.868
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 1410,
+              "rate": 0.001,
+              "ci95": [
+                0.0,
+                0.005
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 410,
+              "n": 650,
+              "rate": 0.631,
+              "ci95": [
+                0.593,
+                0.667
+              ]
+            },
+            "fpr": {
+              "k": 1,
+              "n": 1410,
+              "rate": 0.001,
+              "ci95": [
+                0.0,
+                0.004
+              ]
+            }
+          },
+          "roc_auc": 0.992
+        },
+        "jackhhao_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 117,
+              "n": 139,
+              "rate": 0.842,
+              "ci95": [
+                0.772,
+                0.893
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 123,
+              "rate": 0.016,
+              "ci95": [
+                0.004,
+                0.057
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 99,
+              "n": 139,
+              "rate": 0.712,
+              "ci95": [
+                0.632,
+                0.781
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 123,
+              "rate": 0.016,
+              "ci95": [
+                0.004,
+                0.057
+              ]
+            }
+          },
+          "roc_auc": 0.979
+        },
+        "gandalf_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 112,
+              "n": 112,
+              "rate": 1.0,
+              "ci95": [
+                0.967,
+                1
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 112,
+              "n": 112,
+              "rate": 1.0,
+              "ci95": [
+                0.967,
+                1
+              ]
+            }
+          }
+        },
+        "short_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 1,
+              "n": 40,
+              "rate": 0.025,
+              "ci95": [
+                0.004,
+                0.129
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 40,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.088
+              ]
+            }
+          }
+        },
+        "in_domain_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 3,
+              "n": 30,
+              "rate": 0.1,
+              "ci95": [
+                0.035,
+                0.256
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 2,
+              "n": 30,
+              "rate": 0.067,
+              "ci95": [
+                0.018,
+                0.213
+              ]
+            }
+          }
+        },
+        "own_corpus": {
+          "at_0.5": {
+            "detection": {
+              "k": 63,
+              "n": 78,
+              "rate": 0.808,
+              "ci95": [
+                0.707,
+                0.88
+              ]
+            },
+            "fpr": {
+              "k": 4,
+              "n": 17,
+              "rate": 0.235,
+              "ci95": [
+                0.096,
+                0.473
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 48,
+              "n": 78,
+              "rate": 0.615,
+              "ci95": [
+                0.504,
+                0.716
+              ]
+            },
+            "fpr": {
+              "k": 4,
+              "n": 17,
+              "rate": 0.235,
+              "ci95": [
+                0.096,
+                0.473
+              ]
+            }
+          },
+          "roc_auc": 0.822
+        }
+      },
+      "note": "trained on public data that includes jackhhao/jailbreak-classification: its jackhhao and jailbreak_llms numbers may be inflated",
+      "macro_at_0.5": {
+        "mean_detection_over_sets": 0.784,
+        "mean_fpr_over_sets": 0.055
+      },
+      "macro_at_val_threshold": {
+        "mean_detection_over_sets": 0.64,
+        "mean_fpr_over_sets": 0.046
+      }
+    },
+    "student hard-seed0": {
+      "name": "student_hard-seed0",
+      "val_threshold_margin": 2.554,
+      "val_auc": 0.991,
+      "val_fpr_at_threshold": 0.0095,
+      "sets": {
+        "deepset_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 48,
+              "n": 60,
+              "rate": 0.8,
+              "ci95": [
+                0.682,
+                0.882
+              ]
+            },
+            "fpr": {
+              "k": 1,
+              "n": 56,
+              "rate": 0.018,
+              "ci95": [
+                0.003,
+                0.094
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 34,
+              "n": 60,
+              "rate": 0.567,
+              "ci95": [
+                0.441,
+                0.684
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "roc_auc": 0.918
+        },
+        "jbb_benign": {
+          "at_0.5": {
+            "fpr": {
+              "k": 6,
+              "n": 100,
+              "rate": 0.06,
+              "ci95": [
+                0.028,
+                0.125
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 2,
+              "n": 100,
+              "rate": 0.02,
+              "ci95": [
+                0.006,
+                0.07
+              ]
+            }
+          }
+        },
+        "jbllms_clean": {
+          "at_0.5": {
+            "detection": {
+              "k": 216,
+              "n": 244,
+              "rate": 0.885,
+              "ci95": [
+                0.839,
+                0.919
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 183,
+              "n": 244,
+              "rate": 0.75,
+              "ci95": [
+                0.692,
+                0.8
+              ]
+            }
+          }
+        },
+        "safeguard_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 634,
+              "n": 650,
+              "rate": 0.975,
+              "ci95": [
+                0.96,
+                0.985
+              ]
+            },
+            "fpr": {
+              "k": 9,
+              "n": 1410,
+              "rate": 0.006,
+              "ci95": [
+                0.003,
+                0.012
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 613,
+              "n": 650,
+              "rate": 0.943,
+              "ci95": [
+                0.923,
+                0.958
+              ]
+            },
+            "fpr": {
+              "k": 1,
+              "n": 1410,
+              "rate": 0.001,
+              "ci95": [
+                0.0,
+                0.004
+              ]
+            }
+          },
+          "roc_auc": 0.999
+        },
+        "jackhhao_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 125,
+              "n": 139,
+              "rate": 0.899,
+              "ci95": [
+                0.838,
+                0.939
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 123,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.03
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 108,
+              "n": 139,
+              "rate": 0.777,
+              "ci95": [
+                0.701,
+                0.838
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 123,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.03
+              ]
+            }
+          },
+          "roc_auc": 0.997
+        },
+        "gandalf_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 109,
+              "n": 112,
+              "rate": 0.973,
+              "ci95": [
+                0.924,
+                0.991
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 109,
+              "n": 112,
+              "rate": 0.973,
+              "ci95": [
+                0.924,
+                0.991
+              ]
+            }
+          }
+        },
+        "short_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 40,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.088
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 40,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.088
+              ]
+            }
+          }
+        },
+        "in_domain_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 30,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.114
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 30,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.114
+              ]
+            }
+          }
+        },
+        "own_corpus": {
+          "at_0.5": {
+            "detection": {
+              "k": 48,
+              "n": 78,
+              "rate": 0.615,
+              "ci95": [
+                0.504,
+                0.716
+              ]
+            },
+            "fpr": {
+              "k": 4,
+              "n": 17,
+              "rate": 0.235,
+              "ci95": [
+                0.096,
+                0.473
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 34,
+              "n": 78,
+              "rate": 0.436,
+              "ci95": [
+                0.331,
+                0.546
+              ]
+            },
+            "fpr": {
+              "k": 3,
+              "n": 17,
+              "rate": 0.176,
+              "ci95": [
+                0.062,
+                0.41
+              ]
+            }
+          },
+          "roc_auc": 0.785
+        }
+      },
+      "macro_at_0.5": {
+        "mean_detection_over_sets": 0.858,
+        "mean_fpr_over_sets": 0.046
+      },
+      "macro_at_val_threshold": {
+        "mean_detection_over_sets": 0.741,
+        "mean_fpr_over_sets": 0.028
+      }
+    },
+    "student hardkd-seed0": {
+      "name": "student_hardkd-seed0",
+      "val_threshold_margin": 5.028,
+      "val_auc": 0.9876,
+      "val_fpr_at_threshold": 0.0095,
+      "sets": {
+        "deepset_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 19,
+              "n": 60,
+              "rate": 0.317,
+              "ci95": [
+                0.213,
+                0.442
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 11,
+              "n": 60,
+              "rate": 0.183,
+              "ci95": [
+                0.106,
+                0.299
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "roc_auc": 0.954
+        },
+        "jbb_benign": {
+          "at_0.5": {
+            "fpr": {
+              "k": 3,
+              "n": 100,
+              "rate": 0.03,
+              "ci95": [
+                0.01,
+                0.085
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 100,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.037
+              ]
+            }
+          }
+        },
+        "jbllms_clean": {
+          "at_0.5": {
+            "detection": {
+              "k": 205,
+              "n": 244,
+              "rate": 0.84,
+              "ci95": [
+                0.789,
+                0.881
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 164,
+              "n": 244,
+              "rate": 0.672,
+              "ci95": [
+                0.611,
+                0.728
+              ]
+            }
+          }
+        },
+        "safeguard_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 601,
+              "n": 650,
+              "rate": 0.925,
+              "ci95": [
+                0.902,
+                0.943
+              ]
+            },
+            "fpr": {
+              "k": 1,
+              "n": 1410,
+              "rate": 0.001,
+              "ci95": [
+                0.0,
+                0.004
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 464,
+              "n": 650,
+              "rate": 0.714,
+              "ci95": [
+                0.678,
+                0.747
+              ]
+            },
+            "fpr": {
+              "k": 1,
+              "n": 1410,
+              "rate": 0.001,
+              "ci95": [
+                0.0,
+                0.004
+              ]
+            }
+          },
+          "roc_auc": 0.999
+        },
+        "jackhhao_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 118,
+              "n": 139,
+              "rate": 0.849,
+              "ci95": [
+                0.78,
+                0.899
+              ]
+            },
+            "fpr": {
+              "k": 1,
+              "n": 123,
+              "rate": 0.008,
+              "ci95": [
+                0.001,
+                0.045
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 104,
+              "n": 139,
+              "rate": 0.748,
+              "ci95": [
+                0.67,
+                0.813
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 123,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.03
+              ]
+            }
+          },
+          "roc_auc": 0.992
+        },
+        "gandalf_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 110,
+              "n": 112,
+              "rate": 0.982,
+              "ci95": [
+                0.937,
+                0.995
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 108,
+              "n": 112,
+              "rate": 0.964,
+              "ci95": [
+                0.912,
+                0.986
+              ]
+            }
+          }
+        },
+        "short_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 40,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.088
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 40,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.088
+              ]
+            }
+          }
+        },
+        "in_domain_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 3,
+              "n": 30,
+              "rate": 0.1,
+              "ci95": [
+                0.035,
+                0.256
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 1,
+              "n": 30,
+              "rate": 0.033,
+              "ci95": [
+                0.006,
+                0.167
+              ]
+            }
+          }
+        },
+        "own_corpus": {
+          "at_0.5": {
+            "detection": {
+              "k": 53,
+              "n": 78,
+              "rate": 0.679,
+              "ci95": [
+                0.57,
+                0.773
+              ]
+            },
+            "fpr": {
+              "k": 4,
+              "n": 17,
+              "rate": 0.235,
+              "ci95": [
+                0.096,
+                0.473
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 36,
+              "n": 78,
+              "rate": 0.462,
+              "ci95": [
+                0.355,
+                0.571
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 17,
+              "rate": 0.118,
+              "ci95": [
+                0.033,
+                0.343
+              ]
+            }
+          },
+          "roc_auc": 0.751
+        }
+      },
+      "macro_at_0.5": {
+        "mean_detection_over_sets": 0.765,
+        "mean_fpr_over_sets": 0.053
+      },
+      "macro_at_val_threshold": {
+        "mean_detection_over_sets": 0.624,
+        "mean_fpr_over_sets": 0.022
+      }
+    },
+    "student kd-seed0": {
+      "name": "student_kd-seed0",
+      "val_threshold_margin": 4.547,
+      "val_auc": 0.9759,
+      "val_fpr_at_threshold": 0.0095,
+      "sets": {
+        "deepset_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 19,
+              "n": 60,
+              "rate": 0.317,
+              "ci95": [
+                0.213,
+                0.442
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 13,
+              "n": 60,
+              "rate": 0.217,
+              "ci95": [
+                0.131,
+                0.336
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "roc_auc": 0.837
+        },
+        "jbb_benign": {
+          "at_0.5": {
+            "fpr": {
+              "k": 1,
+              "n": 100,
+              "rate": 0.01,
+              "ci95": [
+                0.002,
+                0.054
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 100,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.037
+              ]
+            }
+          }
+        },
+        "jbllms_clean": {
+          "at_0.5": {
+            "detection": {
+              "k": 184,
+              "n": 244,
+              "rate": 0.754,
+              "ci95": [
+                0.696,
+                0.804
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 127,
+              "n": 244,
+              "rate": 0.52,
+              "ci95": [
+                0.458,
+                0.582
+              ]
+            }
+          }
+        },
+        "safeguard_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 542,
+              "n": 650,
+              "rate": 0.834,
+              "ci95": [
+                0.803,
+                0.86
+              ]
+            },
+            "fpr": {
+              "k": 1,
+              "n": 1410,
+              "rate": 0.001,
+              "ci95": [
+                0.0,
+                0.004
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 397,
+              "n": 650,
+              "rate": 0.611,
+              "ci95": [
+                0.573,
+                0.647
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 1410,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.003
+              ]
+            }
+          },
+          "roc_auc": 0.997
+        },
+        "jackhhao_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 113,
+              "n": 139,
+              "rate": 0.813,
+              "ci95": [
+                0.74,
+                0.869
+              ]
+            },
+            "fpr": {
+              "k": 1,
+              "n": 123,
+              "rate": 0.008,
+              "ci95": [
+                0.001,
+                0.045
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 77,
+              "n": 139,
+              "rate": 0.554,
+              "ci95": [
+                0.471,
+                0.634
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 123,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.03
+              ]
+            }
+          },
+          "roc_auc": 0.989
+        },
+        "gandalf_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 111,
+              "n": 112,
+              "rate": 0.991,
+              "ci95": [
+                0.951,
+                0.998
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 109,
+              "n": 112,
+              "rate": 0.973,
+              "ci95": [
+                0.924,
+                0.991
+              ]
+            }
+          }
+        },
+        "short_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 2,
+              "n": 40,
+              "rate": 0.05,
+              "ci95": [
+                0.014,
+                0.165
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 40,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.088
+              ]
+            }
+          }
+        },
+        "in_domain_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 3,
+              "n": 30,
+              "rate": 0.1,
+              "ci95": [
+                0.035,
+                0.256
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 3,
+              "n": 30,
+              "rate": 0.1,
+              "ci95": [
+                0.035,
+                0.256
+              ]
+            }
+          }
+        },
+        "own_corpus": {
+          "at_0.5": {
+            "detection": {
+              "k": 46,
+              "n": 78,
+              "rate": 0.59,
+              "ci95": [
+                0.479,
+                0.692
+              ]
+            },
+            "fpr": {
+              "k": 5,
+              "n": 17,
+              "rate": 0.294,
+              "ci95": [
+                0.133,
+                0.531
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 36,
+              "n": 78,
+              "rate": 0.462,
+              "ci95": [
+                0.355,
+                0.571
+              ]
+            },
+            "fpr": {
+              "k": 4,
+              "n": 17,
+              "rate": 0.235,
+              "ci95": [
+                0.096,
+                0.473
+              ]
+            }
+          },
+          "roc_auc": 0.728
+        }
+      },
+      "macro_at_0.5": {
+        "mean_detection_over_sets": 0.717,
+        "mean_fpr_over_sets": 0.066
+      },
+      "macro_at_val_threshold": {
+        "mean_detection_over_sets": 0.556,
+        "mean_fpr_over_sets": 0.048
+      }
+    }
+  }
+}

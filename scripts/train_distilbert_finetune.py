@@ -72,8 +72,10 @@ def main():
         import torch
         from torch.utils.data import Dataset
         from transformers import (
-            AutoTokenizer, AutoModelForSequenceClassification,
-            Trainer, TrainingArguments,
+            AutoModelForSequenceClassification,
+            AutoTokenizer,
+            Trainer,
+            TrainingArguments,
         )
     except ImportError as e:
         raise SystemExit(
@@ -157,10 +159,8 @@ def main():
     # expected_behavior=="allow", GW-018/GW-036 (flag) reported separately. ---
     import time
     model.eval()
-    eval_case_rows = []
     with open(REPO_ROOT / "data" / "eval.csv", encoding="utf-8", newline="") as f:
-        for row in csv.DictReader(f):
-            eval_case_rows.append(row)
+        eval_case_rows = list(csv.DictReader(f))
 
     results = []
     for row in eval_case_rows:
@@ -187,7 +187,7 @@ def main():
     false_positives = [r["case_id"] for r in should_allow if r["blocked"]]
     ambiguous_decisions = [(r["case_id"], r["blocked"]) for r in ambiguous]
 
-    print(f"\n=== scripts/evaluate.py-equivalent scoring on data/eval.csv ===")
+    print("\n=== scripts/evaluate.py-equivalent scoring on data/eval.csv ===")
     print(f"detection_rate={detection_rate:.2%} ({len(should_block) - len(missed)}/{len(should_block)})")
     print(f"false_positive_rate={fp_rate:.2%} ({len(false_positives)}/{len(should_allow)})")
     print(f"avg_latency_ms={avg_latency_ms:.3f}")

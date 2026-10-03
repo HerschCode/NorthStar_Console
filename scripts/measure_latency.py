@@ -8,9 +8,9 @@ Required proof item: "how much slower is a request through the gateway vs
 direct to the LLM? Report this honestly even if the number isn't flattering."
 """
 import statistics
+import sys
 import time
 from pathlib import Path
-import sys
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
@@ -67,7 +67,7 @@ def summarize(name, latencies):
 def main():
     try:
         direct_latencies = measure_direct()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - report the measured failure, not a hard crash
         print(f"Direct measurement failed: {e}")
         return
 
@@ -126,7 +126,7 @@ def main():
         f"Reported as measured, not adjusted to look better.\n"
     )
     (REPO_ROOT / "docs" / "latency_report.md").write_text(report, encoding="utf-8")
-    print(f"\nWritten to docs/latency_report.md")
+    print("\nWritten to docs/latency_report.md")
 
 
 if __name__ == "__main__":

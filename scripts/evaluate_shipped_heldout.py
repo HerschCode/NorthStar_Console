@@ -19,10 +19,15 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from gateway.detectors import rule_based  # noqa: E402
-from gateway.detectors.classifier_numpy import ScratchClassifierDetectorNumpy, load_numpy_artifacts  # noqa: E402
-from gateway.detectors.embedding_similarity import EmbeddingSimilarityDetector  # noqa: E402
-from scripts.retrain_classifier_v2 import load_sources  # noqa: E402
+from gateway.detectors import rule_based
+from gateway.detectors.classifier_numpy import (
+    ScratchClassifierDetectorNumpy,
+    load_numpy_artifacts,
+)
+from gateway.detectors.embedding_similarity import (
+    EmbeddingSimilarityDetector,
+)
+from scripts.retrain_classifier_v2 import load_sources
 
 
 def wilson(k, n, z=1.96):

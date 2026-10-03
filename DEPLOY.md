@@ -138,12 +138,22 @@ docker compose -f docker-compose.trilogy.yml up --build
 | Var | Where | Required? | What |
 |---|---|---|---|
 | `GATEWAY_LITE` | gateway | no (default `0`) | `1` opts into a smaller ensemble (rule-based + embedding only). No longer needed for RAM — layer 3 is served torch-free either way, see `docs/decisions.md` |
+| `GATEWAY_REQUIRE_IDENTITY` | gateway | no (default `0`) | Set `1` to require authenticated identity headers from a trusted reverse proxy on chat, action-control, dashboard, connectivity and demo-run endpoints |
+| `GATEWAY_IDENTITY_TOKEN` | gateway | required when identity is enabled | Secret shared only with the trusted reverse proxy; it must strip client-supplied identity headers and inject `X-Gateway-Identity-Token`, `X-Gateway-User-ID` and `X-Gateway-Role` after authenticating the caller |
 | `EMBEDDING_BACKEND` | gateway | no (default `none`) | Layer 2 is **disabled by default** (the TF-IDF layer added nothing on our corpus, see `docs/ensemble-ablation.md`). `tfidf` re-enables it as an ablation; `sentence_transformer` swaps in a real MiniLM embedding (needs `pip install sentence-transformers`, pulls in torch, ~9 ms). Any other value is rejected at startup |
 | `PORT` | gateway | no (default `8000`) | Render sets this automatically |
 | `OPS_ASSISTANT_URL` | gateway | only for the real-P2 backend | e.g. `http://operations-assistant:8001`; if unset the backend is not registered |
 | `OPS_ASSISTANT_CHAT_PATH` | gateway | no (default `/chat`) | set to `/demo/chat` to use P2's keyless public endpoint instead of the API-key one. A 401 on `/chat` auto-falls-back to `/demo/chat` regardless |
 | `OPS_ASSISTANT_API_KEY` | gateway | only if using `/chat` | `X-API-Key` value; must equal operations-assistant's `API_KEY` |
 | `OPS_ASSISTANT_TIMEOUT` | gateway | no (default `60`) | seconds to wait on a P2 response |
+
+When identity enforcement is enabled, body-supplied `user_id` and `role` values are ignored. The authenticated user ID and role
+from the trusted headers are authoritative, and session IDs are hashed together with the user ID to prevent cross-user session
+state reuse. The identity secret authenticates the proxy, not the end user: the proxy must perform authentication and role
+mapping, remove incoming copies of these headers, and keep the gateway unreachable except through that proxy. The default
+configuration remains suitable for the public demo, not for an internet-facing production deployment. Do not expose
+`/gateway/actions/sources` or `/gateway/actions/observe` to end users: only the trusted agent host should register context and
+tool results, including their trust labels.
 | `OPS_ASSISTANT_PATH` | compose | no | filesystem path to the operations-assistant repo |
 | `OPS_PERFORMANCE_PATH` | compose | no | filesystem path to the operations-performance repo |
 | `GROQ_API_KEY` / `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` | operations-assistant `.env` | one of them, for the trilogy | LLM provider key (all have free tiers) |

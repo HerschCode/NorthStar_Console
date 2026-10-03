@@ -53,10 +53,10 @@ def detection_block() -> str:
     return "\n".join([
         "### Prompt-injection detection", "",
         *t, "",
-        f"† Groq-hosted inference, first 1,500 characters, threshold 0.5: accuracy only. On this project's own corpus the existing guard model is the better detector ({pct(pa['results']['own_corpus'], 'detection')} vs "
+        (f"† Groq-hosted inference, first 1,500 characters, threshold 0.5: accuracy only. On this project's own corpus the existing guard model is the better detector ({pct(pa['results']['own_corpus'], 'detection')} vs "
         f"{pct(ours['own_corpus'], 'detection')}), and **what ships is still the from-scratch ensemble because ProtectAI does not fit the free 512 MB tier** (inferred from memory measurements, never container-tested). "
         f"Prompt Guard 2 was evaluated and rejected: at a matched false-positive budget, rules + Prompt Guard 22M finds {pct(m['deepset_test'], 'detection')} on deepset against the shipped default's {pct(sh['deepset_test'], 'detection')}. "
-        "Sources: [`docs/guard-baselines.md`](docs/guard-baselines.md), [`reports/p3_guard_baselines.json`](reports/p3_guard_baselines.json), [`reports/p3_guard_hosted.json`](reports/p3_guard_hosted.json).",
+        "Sources: [`docs/guard-baselines.md`](docs/guard-baselines.md), [`reports/p3_guard_baselines.json`](reports/p3_guard_baselines.json), [`reports/p3_guard_hosted.json`](reports/p3_guard_hosted.json)."),
     ])
 
 
@@ -90,19 +90,19 @@ def firewall_block() -> str:
     policy_cases = sum(mut["summary"][g]["cases"] for g in policy_goals)
     policy_bypass = sum(mut["summary"][g]["bypass"] for g in policy_goals)
     ho, hob = ti["holdout"]["caught_by_family"], tb["holdout"]["caught_by_family"]
-    denied = lambda h: sum(int(v.split("/")[0]) for v in h.values())  # noqa: E731
+    denied = lambda h: sum(int(v.split("/")[0]) for v in h.values())
     total = sum(int(v.split("/")[1]) for v in ho.values())
     t = ["| Test | Result |", "|---|---|",
-         f"| {fw['scenarios']}-scenario agentic corpus ({fw['harmful_scenarios']} harmful, {fw['benign_scenarios']} benign; {fw['finance']['scenarios']} of them are the finance scenarios below) | **{stopped} of {n_in}** in-scope harmful scenarios stopped outright ({inscope.get('stopped_policy', 0)} by policy, {inscope.get('stopped_taint', 0)} by taint), {inscope.get('stopped_approval_gate', 0)} stopped at the approval gate, {inscope.get('held_for_approval', 0)} held for approval; "
-         f"{fw['known_evasion_scenarios'].get('held_for_approval', 0)} known evasions held for approval; **{len(fw['benign_false_blocks'])} benign false blocks** |",
+         (f"| {fw['scenarios']}-scenario agentic corpus ({fw['harmful_scenarios']} harmful, {fw['benign_scenarios']} benign; {fw['finance']['scenarios']} of them are the finance scenarios below) | **{stopped} of {n_in}** in-scope harmful scenarios stopped outright ({inscope.get('stopped_policy', 0)} by policy, {inscope.get('stopped_taint', 0)} by taint), {inscope.get('stopped_approval_gate', 0)} stopped at the approval gate, {inscope.get('held_for_approval', 0)} held for approval; "
+         f"{fw['known_evasion_scenarios'].get('held_for_approval', 0)} known evasions held for approval; **{len(fw['benign_false_blocks'])} benign false blocks** |"),
          f"| {len(effects)} mutated calls (deterministic attacker) | {sum(e == 'deny' for e in effects)} denied, {sum(e == 'require_approval' for e in effects)} held for approval, **{sum(e in ('allow', 'executed') for e in effects)} executed**; policy-enforced goals: {policy_bypass} of {policy_cases} bypassed |",
          f"| Fresh hold-out ({total} new cases, written after the fix was frozen) | {denied(ho)} denied (was {denied(hob)} before the taint fix) |",
          *adaptive_rows()]
     return "\n".join([
         "### Action firewall (authorizing what an agent does)", "", *t, "",
-        "Held for approval is not blocked: a human decides. \"Executed: 0\" is true by construction for writes (every write needs approval) and says nothing about how often real agents are hijacked. The taint check is a string-overlap heuristic: "
+        ("Held for approval is not blocked: a human decides. \"Executed: 0\" is true by construction for writes (every write needs approval) and says nothing about how often real agents are hijacked. The taint check is a string-overlap heuristic: "
         "paraphrase, translation, acronyms and confidential data from a trusted tool still reach the approval queue. Not CaMeL. Same-author test design. "
-        "[`docs/action-firewall.md`](docs/action-firewall.md), [`reports/p3_taint_upgrade.json`](reports/p3_taint_upgrade.json).",
+        "[`docs/action-firewall.md`](docs/action-firewall.md), [`reports/p3_taint_upgrade.json`](reports/p3_taint_upgrade.json)."),
     ])
 
 
@@ -113,7 +113,7 @@ def redteam_status_counts() -> dict:
         if not m or m.group(1) == "RT-13":                       # RT-13 is a measurement artefact in the harness, not a weakness
             continue
         status = line.rstrip().rstrip("|").rsplit("|", 1)[-1].strip().lower()
-        if status.startswith("**largely") or status.startswith("**partly"):
+        if status.startswith(("**largely", "**partly")):
             counts["partial"] += 1
         elif "fixed" in status:
             counts["fixed"] += 1
@@ -132,16 +132,16 @@ def finance_block() -> str:
     outright = inscope.get("stopped_policy", 0) + inscope.get("stopped_taint", 0)
     att = f["approval_attempts"]
     t = ["| Test | Result |", "|---|---|",
-         f"| {f['scenarios']} accounts-payable scenarios ({f['harmful_scenarios']} harmful, {f['benign_scenarios']} benign): poisoned \"CFO approved\" notes, a fake AP policy upload, hold-then-release confusion, releases split under the session cap, "
+         (f"| {f['scenarios']} accounts-payable scenarios ({f['harmful_scenarios']} harmful, {f['benign_scenarios']} benign): poisoned \"CFO approved\" notes, a fake AP policy upload, hold-then-release confusion, releases split under the session cap, "
          f"bank details in `reason`, self- and same-role approval | **{outright} of {n_in}** in-scope harmful scenarios stopped outright ({inscope.get('stopped_policy', 0)} by policy, {inscope.get('stopped_taint', 0)} by taint), "
          f"{inscope.get('stopped_approval_gate', 0)} stopped at the approval gate, {inscope.get('held_for_approval', 0)} held for approval; {sum(evasive.values())} known misses held, not stopped; "
-         f"**{len(f['benign_false_blocks'])} benign false blocks** |",
+         f"**{len(f['benign_false_blocks'])} benign false blocks** |"),
          f"| Approval attempts on held payment requests (requester, same-role peer, employee) | {att['match']} of {att['attempts']} behaved as specified: a release needs an approver with a different role, a hold only a different person |"]
     return "\n".join([
         "### Accounts-payable controls (the finance module)", "", *t, "",
-        "The known misses are a release of the invoice the same agent was asked to hold (the firewall keeps no cross-call state), five releases that fit under the session write cap, and a bare account number in `reason` (nothing tells it from a PO number); "
+        ("The known misses are a release of the invoice the same agent was asked to hold (the firewall keeps no cross-call state), five releases that fit under the session write cap, and a bare account number in `reason` (nothing tells it from a PO number); "
         "each is pinned as a strict `xfail`. Scenarios are same-author, the agent is assumed hijacked, and there is no amount or threshold check because the payment tools carry no amount. "
-        "A mapping of each control to an internal-control objective, which makes no compliance claim: [`docs/finance-controls-mapping.md`](docs/finance-controls-mapping.md).",
+        "A mapping of each control to an internal-control objective, which makes no compliance claim: [`docs/finance-controls-mapping.md`](docs/finance-controls-mapping.md)."),
     ])
 
 
@@ -159,8 +159,8 @@ def redteam_block() -> str:
          f"| Findings ({total_findings}) | **{c['fixed']} fixed and retested**, {c['partial']} largely or partly fixed, {c['open']} open; {open_note} |"]
     return "\n".join([
         "### Red-team (standard scanners plus an adaptive attacker)", "", *t, "",
-        "One of the fixed findings is a stored XSS in the gateway's own dashboard, and another is a rate limiter a client could reset by changing a self-chosen session id. Pentest-style report with OWASP LLM 2025 and "
-        "MITRE ATLAS mapping (IDs verified against MITRE's data), retests and limitations: [`reports/redteam-2026-09.md`](reports/redteam-2026-09.md). Threat model: [`SECURITY.md`](SECURITY.md).",
+        ("One of the fixed findings is a stored XSS in the gateway's own dashboard, and another is a rate limiter a client could reset by changing a self-chosen session id. Pentest-style report with OWASP LLM 2025 and "
+        "MITRE ATLAS mapping (IDs verified against MITRE's data), retests and limitations: [`reports/redteam-2026-09.md`](reports/redteam-2026-09.md). Threat model: [`SECURITY.md`](SECURITY.md)."),
     ])
 
 
@@ -174,13 +174,13 @@ def pii_block() -> str:
         t.append(f"| {label} | {fr[k]['micro_structured']['f1']:.2f} | {ben[k]['texts_with_any_span']} of {n:,} | {r['rss_mb'][k]:.0f} MB |")
     return "\n".join([
         "### PII (redaction, Indian identifiers, pseudonymization)", "", *t, "",
-        "Aadhaar (Verhoeff checksum), PAN and Indian phone numbers are gated so order numbers are not redacted. Presidio is optional, not the default: it is not more accurate on the structured types here and its NER flags "
-        "ordinary prompts. Synthetic data with the recognizers' own author, so read it with the independent Gretel check in [`docs/pii-evaluation.md`](docs/pii-evaluation.md).",
+        ("Aadhaar (Verhoeff checksum), PAN and Indian phone numbers are gated so order numbers are not redacted. Presidio is optional, not the default: it is not more accurate on the structured types here and its NER flags "
+        "ordinary prompts. Synthetic data with the recognizers' own author, so read it with the independent Gretel check in [`docs/pii-evaluation.md`](docs/pii-evaluation.md)."),
     ])
 
 
 def render() -> str:
-    return "\n\n".join([START, detection_block(), firewall_block(), finance_block(), redteam_block(), pii_block(), END])
+    return f"{START}\n\n{detection_block()}\n\n{firewall_block()}\n\n{finance_block()}\n\n{redteam_block()}\n\n{pii_block()}\n\n{END}"
 
 
 def current_block(text: str) -> str | None:

@@ -8,9 +8,9 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from gateway.middleware import GatewayMiddleware
-from gateway.adapters.stub_ops_agent import StubOpsAgentAdapter, FAKE_SYSTEM_PROMPT
+from gateway.adapters.stub_ops_agent import FAKE_SYSTEM_PROMPT, StubOpsAgentAdapter
 from gateway.adapters.trivial_echo import TrivialEchoAdapter
+from gateway.middleware import GatewayMiddleware
 
 
 @pytest.fixture(scope="module")
@@ -91,8 +91,8 @@ def test_adaptive_thresholding_tightens_for_risky_sessions(middleware):
     is skipped with a clear reason rather than failing confusingly.
     """
     # torch-free module: CI installs requirements-render.txt (no torch), and the serving path is numpy
-    from gateway.detectors.classifier_numpy import CLASSIFIER_THRESHOLD
     from gateway.adaptive_threshold import AdaptiveThresholdTracker
+    from gateway.detectors.classifier_numpy import CLASSIFIER_THRESHOLD
 
     # The test gives the risky session exactly 2 prior blocks (see below). Compute
     # the multiplier that 2 blocks produces so the search targets the right band:
@@ -216,6 +216,7 @@ def test_lite_mode_disables_classifier_but_still_blocks_and_allows(monkeypatch):
     checks still work -- literal attacks blocked, benign traffic allowed."""
     monkeypatch.setenv("GATEWAY_LITE", "1")
     import importlib
+
     import gateway.middleware as mw_mod
     importlib.reload(mw_mod)
     try:

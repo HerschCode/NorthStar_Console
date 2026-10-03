@@ -9,15 +9,15 @@ replacement.
 import json
 import time
 from collections import Counter, deque
-from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import HTMLResponse
 
+from gateway.auth import identity_is_required, require_trusted_identity
 from gateway.logging_schema import LOG_PATH
 from gateway.webui import SHARED_CSS, nav_html
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_trusted_identity)])
 
 STATS_WINDOW_SECONDS = 300  # only consider log lines from the last 5 minutes "recent"
 MAX_RECENT_LINES_SCANNED = 5000  # cap file reading cost for a long-running log
@@ -188,8 +188,8 @@ DASHBOARD_HTML = f"""<!DOCTYPE html>
 
   <h2>Pending actions (action firewall)</h2>
   <p style="font-size:11px;color:var(--muted);margin:0 0 6px">
-    Write actions the firewall will not run on its own. Deciding needs the approver token
-    (<code>GATEWAY_APPROVER_TOKEN</code>); the requester cannot approve their own request.
+    Write actions the firewall will not run on its own. Decisions use the trusted proxy identity when
+    enabled, otherwise <code>GATEWAY_APPROVER_TOKEN</code>; the requester cannot approve their own request.
     <b>risk high</b> = an argument was copied from untrusted content.
   </p>
   <table id="actions">
@@ -203,6 +203,7 @@ DASHBOARD_HTML = f"""<!DOCTYPE html>
 </div>
 
 <script>
+const identityAuthEnabled = __IDENTITY_AUTH_ENABLED__;
 const ESC = {{'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}};
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);
 async function refresh() {{
@@ -226,6 +227,7 @@ async function refresh() {{
 }}
 let approver = null;
 function credentials() {{
+  if (identityAuthEnabled) return {{identity: true}};
   if (approver) return approver;
   const id = prompt('Approver user id (must differ from the requester):');
   const role = prompt('Approver role (manager or admin):', 'manager');
@@ -255,10 +257,20 @@ document.addEventListener('click', async ev => {{
   if (!b) return;
   const cred = credentials();
   if (!cred) return;
+  const headers = {{'Content-Type': 'application/json'}};
+  const body = {{note: ''}};
+  if (cred.identity) {{
+    body.approver_id = null;
+    body.approver_role = null;
+  }} else {{
+    headers['X-Approver-Token'] = cred.token;
+    body.approver_id = cred.id;
+    body.approver_role = cred.role;
+  }}
   const res = await fetch(`/gateway/actions/approvals/${{encodeURIComponent(b.dataset.id)}}/${{b.dataset.verb}}`, {{
     method: 'POST',
-    headers: {{'Content-Type': 'application/json', 'X-Approver-Token': cred.token}},
-    body: JSON.stringify({{approver_id: cred.id, approver_role: cred.role}}),
+    headers,
+    body: JSON.stringify(body),
   }});
   if (!res.ok) {{
     if (res.status === 401) approver = null;
@@ -287,4 +299,5 @@ setInterval(loadConn, 15000);
 
 @router.get("/gateway/dashboard", response_class=HTMLResponse)
 def dashboard():
-    return DASHBOARD_HTML
+    identity_mode = str(identity_is_required()).lower()
+    return DASHBOARD_HTML.replace("__IDENTITY_AUTH_ENABLED__", identity_mode)

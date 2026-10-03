@@ -22,8 +22,8 @@ Output:
   data/eval.csv    -> text,label,case_id,category,expected_behavior  (our corpus, fully held out)
 """
 import csv
+import os
 import random
-import sys
 import tarfile
 import urllib.request
 from pathlib import Path
@@ -32,7 +32,8 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 JBLLMS_CACHE_DIR = REPO_ROOT / "data" / "external" / "jailbreak_llms"
-JBLLMS_TARBALL_URL = "https://codeload.github.com/verazuo/jailbreak_llms/tar.gz/refs/heads/main"
+JBLLMS_COMMIT_SHA = os.environ.get("JAILBREAK_LLMS_COMMIT_SHA", "4f4031bf8be187f4478c7f94f42b08714722c12e")
+JBLLMS_TARBALL_URL = f"https://codeload.github.com/verazuo/jailbreak_llms/tar.gz/{JBLLMS_COMMIT_SHA}"
 CORPUS_PATH = REPO_ROOT / "corpus" / "injection_cases.yaml"
 BENIGN_QUERIES_PATH = REPO_ROOT / "corpus" / "benign_indomain_queries.yaml"
 OUT_DIR = REPO_ROOT / "data"
@@ -79,7 +80,7 @@ def download_jailbreak_llms() -> Path:
         raise SystemExit(f"refusing to download over a non-https URL: {JBLLMS_TARBALL_URL}")
     try:
         urllib.request.urlretrieve(JBLLMS_TARBALL_URL, tarball_path)  # nosec B310 - https only, checked above  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected - constant https URL
-    except Exception as e:
+    except OSError as e:
         raise SystemExit(
             f"Failed to download jailbreak_llms dataset from {JBLLMS_TARBALL_URL}: {e}\n"
             f"This script needs network access to github.com/codeload.github.com. "
@@ -203,7 +204,7 @@ def main():
 
     print(f"Train set: {len(all_train_rows)} rows -> {train_path}")
     print(f"  public dataset: {len(public_rows)}  |  in-domain benign (mixed in): {len(indomain_benign_rows)}")
-    print(f"  (our corpus: 0 rows in training -- held out entirely, see load_our_corpus() docstring)")
+    print("  (our corpus: 0 rows in training -- held out entirely, see load_our_corpus() docstring)")
     print(f"Eval set: {len(eval_rows)} rows -> {eval_path}  (our corpus, held out for scoring)")
 
 

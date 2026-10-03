@@ -10,7 +10,9 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from gateway.adapters.operations_assistant_adapter import (
-    OpsAssistantAdapter, BACKEND_ERROR_PREFIX, _norm_path,
+    BACKEND_ERROR_PREFIX,
+    OpsAssistantAdapter,
+    _norm_path,
 )
 
 
@@ -87,7 +89,7 @@ def test_ping_reports_reachability(monkeypatch):
         return _client_with(lambda r: httpx.Response(200, json={"status": "ok"})).get(url, **kw)
 
     monkeypatch.setattr(httpx, "get", ok)
-    reachable, detail = OpsAssistantAdapter(base_url="http://p2.test").ping()
+    reachable, _detail = OpsAssistantAdapter(base_url="http://p2.test").ping()
     assert reachable is True
 
     assert OpsAssistantAdapter(base_url="").ping()[0] is False

@@ -100,7 +100,10 @@ def test_classifier_result_shape(classifier_detector):
 
 
 def test_classifier_skips_very_short_inputs_but_still_scores_real_prompts():
-    from gateway.detectors.classifier_numpy import CLASSIFIER_MIN_TOKENS, ScratchClassifierDetectorNumpy
+    from gateway.detectors.classifier_numpy import (
+        CLASSIFIER_MIN_TOKENS,
+        ScratchClassifierDetectorNumpy,
+    )
     det = ScratchClassifierDetectorNumpy()
     det.load()
     for short in ("ok", "hello", "thanks", "hi there"[:2]):

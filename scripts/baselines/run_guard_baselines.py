@@ -40,9 +40,11 @@ from sklearn.metrics import roc_auc_score
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
-from gateway.detectors import rule_based  # noqa: E402
-from gateway.detectors.classifier_numpy import ScratchClassifierDetectorNumpy  # noqa: E402
-from scripts.retrain_classifier_v2 import load_sources  # noqa: E402
+from gateway.detectors import rule_based
+from gateway.detectors.classifier_numpy import (
+    ScratchClassifierDetectorNumpy,
+)
+from scripts.retrain_classifier_v2 import load_sources
 
 SETS = ("own_corpus", "deepset_test", "jbb_benign", "short_benign_heldout", "in_domain_heldout", "jbllms_clean")
 LATENCY_SAMPLE = 120
@@ -206,7 +208,7 @@ def main():
         wdir = spec["local_dir"]
         size = sum(f.stat().st_size for f in wdir.glob("*.safetensors")) if wdir.exists() else None
         entry.update(status="evaluated", label_check=LABEL_CHECKS.get(spec["name"]), rss_delta_mb=rss_mb, weights_on_disk_mb=round(size / 2**20, 1) if size else None,
-                     p50_latency_ms=p50_latency_ms(lambda t: guard_scores(tok, model, idx, [t], 1), sample), results={}, combined_with_ours={})
+                     p50_latency_ms=p50_latency_ms((lambda t, tok=tok, model=model, idx=idx: guard_scores(tok, model, idx, [t], 1)), sample), results={}, combined_with_ours={})
         for name, items in sets.items():
             texts, y = [t for t, _ in items], np.array([label for _, label in items])
             score = guard_scores(tok, model, idx, texts)

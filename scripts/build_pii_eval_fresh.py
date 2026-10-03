@@ -15,7 +15,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from scripts import build_pii_eval as base  # noqa: E402  (importing it builds the main records in memory; they are not written)
+from scripts import (
+    build_pii_eval as base,
+)
 
 OUT = REPO_ROOT / "corpus" / "pii_labeled_fresh.jsonl"
 rng = base.rng
@@ -113,8 +115,7 @@ for i in range(30):
 
 def main():
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
-        for r in records:
-            f.write(json.dumps(r, ensure_ascii=True) + "\n")
+        f.writelines(json.dumps(r, ensure_ascii=True) + "\n" for r in records)
     print(f"wrote {len(records)} records ({sum(len(r['spans']) for r in records)} gold spans, {sum(not r['spans'] for r in records)} negatives) to {OUT.relative_to(REPO_ROOT)}")
 
 

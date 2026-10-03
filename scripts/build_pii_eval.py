@@ -21,15 +21,15 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from gateway.pii_in import verhoeff_check_digit  # noqa: E402
+from gateway.pii_in import verhoeff_check_digit
 
 rng = random.Random(20260925)
 OUT = REPO_ROOT / "corpus" / "pii_labeled.jsonl"
 
-EN_FIRST = "James Mary Robert Patricia John Jennifer Michael Linda William Elizabeth David Susan Richard Jessica Joseph Karen Thomas Sarah Daniel Emily Matthew Olivia Andrew Grace Ryan Hannah".split()
-EN_LAST = "Smith Johnson Williams Brown Jones Miller Davis Wilson Anderson Taylor Thomas Moore Martin Jackson Thompson White Harris Clark Lewis Walker Young Allen King Wright Scott Green Baker Adams".split()
-IN_FIRST = "Aarav Priya Rohan Ananya Vikram Sneha Arjun Kavya Rahul Divya Karthik Meera Siddharth Pooja Amit Neha Suresh Lakshmi Manoj Deepa Nikhil Shreya Varun Ishita Harish Anjali Ramesh Sunita Gaurav Rekha".split()
-IN_LAST = "Sharma Patel Iyer Reddy Gupta Nair Singh Kumar Desai Mehta Joshi Rao Verma Pillai Menon Banerjee Chatterjee Kulkarni Bhat Shetty Agarwal Kapoor Malhotra Chopra Naidu Das Bose Mishra Yadav Thakur".split()
+EN_FIRST = ["James", "Mary", "Robert", "Patricia", "John", "Jennifer", "Michael", "Linda", "William", "Elizabeth", "David", "Susan", "Richard", "Jessica", "Joseph", "Karen", "Thomas", "Sarah", "Daniel", "Emily", "Matthew", "Olivia", "Andrew", "Grace", "Ryan", "Hannah"]
+EN_LAST = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Miller", "Davis", "Wilson", "Anderson", "Taylor", "Thomas", "Moore", "Martin", "Jackson", "Thompson", "White", "Harris", "Clark", "Lewis", "Walker", "Young", "Allen", "King", "Wright", "Scott", "Green", "Baker", "Adams"]
+IN_FIRST = ["Aarav", "Priya", "Rohan", "Ananya", "Vikram", "Sneha", "Arjun", "Kavya", "Rahul", "Divya", "Karthik", "Meera", "Siddharth", "Pooja", "Amit", "Neha", "Suresh", "Lakshmi", "Manoj", "Deepa", "Nikhil", "Shreya", "Varun", "Ishita", "Harish", "Anjali", "Ramesh", "Sunita", "Gaurav", "Rekha"]
+IN_LAST = ["Sharma", "Patel", "Iyer", "Reddy", "Gupta", "Nair", "Singh", "Kumar", "Desai", "Mehta", "Joshi", "Rao", "Verma", "Pillai", "Menon", "Banerjee", "Chatterjee", "Kulkarni", "Bhat", "Shetty", "Agarwal", "Kapoor", "Malhotra", "Chopra", "Naidu", "Das", "Bose", "Mishra", "Yadav", "Thakur"]
 COMPANIES = ["Northwind Traders", "Blue Harbor Ltd", "Apex Freight Ltd", "Tata Steel", "Infosys", "Larsen and Toubro", "Bharat Electricals", "Acme Corp", "Globex Industries", "Initech", "Zenith Logistics", "Reliance Retail"]
 PLACES = ["Mumbai", "Bengaluru", "Chennai", "Delhi", "Pune", "Hyderabad", "London", "Rotterdam", "Singapore", "Chicago", "Kolkata", "Ahmedabad"]
 DOMAINS = ["example.com", "company.co.in", "mail.example.org", "corp.example.net", "northstar-mfg.com", "vendor.in", "gmail.com", "outlook.com"]
@@ -254,8 +254,7 @@ for i in range(40):
 def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
-        for r in records:
-            f.write(json.dumps(r, ensure_ascii=True) + "\n")
+        f.writelines(json.dumps(r, ensure_ascii=True) + "\n" for r in records)
     groups = {}
     for r in records:
         groups.setdefault(r["group"], [0, 0])[0 if r["split"] == "dev" else 1] += 1

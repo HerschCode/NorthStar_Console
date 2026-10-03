@@ -7,7 +7,7 @@ the gateway in front of a different LLM app" means writing one small subclass,
 not reconfiguring the gateway itself.
 """
 from abc import ABC, abstractmethod
-from typing import Iterator
+from collections.abc import Iterator
 
 
 class BackendAdapter(ABC):

@@ -8,7 +8,10 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from project2_agent import auth
 from project2_agent.agent import handle
-from project2_agent.tools import lookup_ticket, lookup_employee_directory, query_audit_log
+from project2_agent.tools import (
+    lookup_employee_directory,
+    lookup_ticket,
+)
 
 
 def test_auth_blocks_insufficient_clearance():

@@ -9,8 +9,13 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from gateway.session_checks import SessionTracker, RATE_LIMIT_WINDOW_SECONDS, ANOMALY_MIN_HISTORY, ANOMALY_WINDOW_SECONDS
 from gateway.adaptive_threshold import AdaptiveThresholdTracker
+from gateway.session_checks import (
+    ANOMALY_MIN_HISTORY,
+    ANOMALY_WINDOW_SECONDS,
+    RATE_LIMIT_WINDOW_SECONDS,
+    SessionTracker,
+)
 
 
 def test_normal_paced_requests_are_allowed():

@@ -19,8 +19,8 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
+from gateway.adapters.stub_ops_agent import FAKE_SYSTEM_PROMPT, StubOpsAgentAdapter
 from gateway.middleware import GatewayMiddleware
-from gateway.adapters.stub_ops_agent import StubOpsAgentAdapter, FAKE_SYSTEM_PROMPT
 
 
 @pytest.fixture(scope="module")

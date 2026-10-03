@@ -11,18 +11,17 @@ Usage:
 Reports req/sec and p50/p95/p99 latency at concurrency 1, 10, 50.
 Runs N=100 requests per concurrency level against each setting.
 """
+import concurrent.futures
 import sys
 import time
-import statistics
-import concurrent.futures
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from gateway.detectors import rule_based
-from gateway.detectors.embedding_similarity import EmbeddingSimilarityDetector
 from gateway.detectors.classifier_numpy import ScratchClassifierDetectorNumpy
+from gateway.detectors.embedding_similarity import EmbeddingSimilarityDetector
 
 # ---------------------------------------------------------------------------
 # Mixed payload set — representative of real traffic (attack + benign)

@@ -31,7 +31,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from gateway import pii as pii_mod  # noqa: E402
+from gateway import pii as pii_mod
 
 TYPES = ["email", "phone", "credit_card", "ssn", "aadhaar", "pan", "person"]
 STRUCTURED = [t for t in TYPES if t != "person"]
@@ -44,10 +44,10 @@ def predict(system: str, text: str, threshold: float | None = None) -> list[tupl
         spans = pii_mod.detect_spans_regex(text, extended=system == "regex")
     else:
         from gateway import pii_presidio as pp
-        cfg = {"presidio_default": dict(ner=False, custom_indian=False, builtin_indian=False),
-               "presidio_builtin_in": dict(ner=False, custom_indian=False, builtin_indian=True),
-               "presidio": dict(ner=False, custom_indian=True, builtin_indian=False),
-               "presidio_ner": dict(ner=True, custom_indian=True, builtin_indian=False)}[system]
+        cfg = {"presidio_default": {"ner": False, "custom_indian": False, "builtin_indian": False},
+               "presidio_builtin_in": {"ner": False, "custom_indian": False, "builtin_indian": True},
+               "presidio": {"ner": False, "custom_indian": True, "builtin_indian": False},
+               "presidio_ner": {"ner": True, "custom_indian": True, "builtin_indian": False}}[system]
         spans = pp.detect_spans_presidio(text, threshold=threshold, **cfg)
     return [(s.type, s.start, s.end) for s in pii_mod.resolve_overlaps(spans)]
 
@@ -153,8 +153,10 @@ def external_gretel(systems, threshold_by_system, limit=None):
 
 def benign_false_positives(systems, threshold_by_system):
     rng = random.Random(7)
-    alpaca = json.load(open(REPO_ROOT / "data/external/alpaca-cleaned/alpaca_data_cleaned.json", encoding="utf-8"))
-    dolly = [json.loads(line) for line in open(REPO_ROOT / "data/external/databricks-dolly-15k/databricks-dolly-15k.jsonl", encoding="utf-8")]
+    with open(REPO_ROOT / "data/external/alpaca-cleaned/alpaca_data_cleaned.json", encoding="utf-8") as f:
+        alpaca = json.load(f)
+    with open(REPO_ROOT / "data/external/databricks-dolly-15k/databricks-dolly-15k.jsonl", encoding="utf-8") as f:
+        dolly = [json.loads(line) for line in f]
     texts = [a["instruction"] + (" " + a["input"] if a["input"] else "") for a in rng.sample(alpaca, 1500)] + [d["instruction"] for d in rng.sample(dolly, 1500)]
     out = {"texts": len(texts), "systems": {}}
     for system in systems:
@@ -221,7 +223,8 @@ def main():
             preds = [predict(system, r["text"], thresholds.get(system)) for r in subset]
             result["labeled"].setdefault(system, {})[name] = summarize(subset, preds)
     if args.fresh:
-        fresh = [json.loads(line) for line in open(REPO_ROOT / "corpus" / "pii_labeled_fresh.jsonl", encoding="utf-8")]
+        with open(REPO_ROOT / "corpus" / "pii_labeled_fresh.jsonl", encoding="utf-8") as f:
+            fresh = [json.loads(line) for line in f]
         result["fresh"] = {"records": len(fresh)}
         for system in systems:
             result["fresh"][system] = summarize(fresh, [predict(system, r["text"], thresholds.get(system)) for r in fresh])

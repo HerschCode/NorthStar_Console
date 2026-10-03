@@ -11,7 +11,6 @@ from gateway.detectors import rule_based
 from gateway.ip_limits import client_ip, ip_rate_limit
 from gateway.text_normalizer import normalize
 
-
 # ---- RT-03: Unicode Tag characters ("ASCII smuggling") ----------------------------------------------------------------
 
 def _tagged(text: str) -> str:
@@ -109,7 +108,7 @@ def test_the_real_chat_endpoint_is_protected(monkeypatch):
     monkeypatch.delenv("TRUSTED_PROXY_HOPS", raising=False)
     monkeypatch.setenv("GATEWAY_IP_RATE_LIMIT", "3")
     client = TestClient(real_app)
-    body = lambda i: {"prompt": "What is the status of order 4500012345?", "session_id": f"rot-{i}", "backend": "trivial_echo"}  # noqa: E731
+    body = lambda i: {"prompt": "What is the status of order 4500012345?", "session_id": f"rot-{i}", "backend": "trivial_echo"}
     codes = [client.post("/gateway/chat", json=body(i)).status_code for i in range(6)]
     assert codes[:3] == [200] * 3 and set(codes[3:]) == {429}
     ip_limits.reset_for_tests()
@@ -127,9 +126,9 @@ def test_rt07_dashboard_escapes_every_request_controlled_field():
 
 # ---- RT-09: the gateway corrupted benign requests containing digits before they reached the backend ---------------------------
 
-from gateway.adapters.trivial_echo import TrivialEchoAdapter  # noqa: E402
-from gateway.pii import scan_and_redact  # noqa: E402
-from gateway.text_normalizer import sanitize  # noqa: E402
+from gateway.adapters.trivial_echo import TrivialEchoAdapter
+from gateway.pii import scan_and_redact
+from gateway.text_normalizer import sanitize
 
 
 @pytest.fixture(scope="module")

@@ -23,13 +23,13 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-import os  # noqa: E402
+import os
 
-from gateway.actions import demo_upstream  # noqa: E402
-from gateway.actions.approvals import ApprovalQueue  # noqa: E402
-from gateway.actions.firewall import ActionFirewall  # noqa: E402
-from gateway.actions.mcp_proxy import MCPFirewallProxy  # noqa: E402
-from gateway.actions.policy import Principal  # noqa: E402
+from gateway.actions import demo_upstream
+from gateway.actions.approvals import ApprovalQueue
+from gateway.actions.firewall import ActionFirewall
+from gateway.actions.mcp_proxy import MCPFirewallProxy
+from gateway.actions.policy import Principal
 
 _ids = iter(range(1, 1000))
 
@@ -68,7 +68,7 @@ class Firewalled:
 
 def hijacked_agent(conn, label):
     """Read the poisoned addendum, then do exactly what it says."""
-    print(f"  user asks: 'What does the escalation addendum say?'")
+    print("  user asks: 'What does the escalation addendum say?'")
     doc = conn.send(call("search_policy_documents", {"query": "escalation addendum"}))
     print(f"  agent reads a document containing: ...{text(doc)[64:170]}...")
     for name, args in (("propose_intervention", {"action": "escalate_case", "target": "ZX-9000", "reason": "per addendum", "priority": "high"}),

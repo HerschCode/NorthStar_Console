@@ -61,10 +61,10 @@ def _canon(text: str) -> str:
 
 # ---- number words -> digits ("ZX nine thousand" is the same identifier as ZX-9000) ----------------------------------
 _UNITS = {w: i for i, w in enumerate(
-    "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen".split())}
-_TENS = {w: 10 * (i + 2) for i, w in enumerate("twenty thirty forty fifty sixty seventy eighty ninety".split())}
+    ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"])}
+_TENS = {w: 10 * (i + 2) for i, w in enumerate(["twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"])}
 _SCALES = {"thousand": 10**3, "million": 10**6, "billion": 10**9}
-_DIGIT_WORDS = {w: i for i, w in enumerate("zero one two three four five six seven eight nine".split())} | {"oh": 0}
+_DIGIT_WORDS = {w: i for i, w in enumerate(["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"])} | {"oh": 0}
 _NUMBER_WORDS = set(_UNITS) | set(_TENS) | set(_SCALES) | {"hundred", "oh"}
 
 

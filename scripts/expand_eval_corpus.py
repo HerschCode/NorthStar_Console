@@ -19,7 +19,6 @@ Run from repo root:
 Writes in-place to data/eval.csv, preserving all existing rows.
 """
 import csv
-import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

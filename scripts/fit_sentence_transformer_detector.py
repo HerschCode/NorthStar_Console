@@ -13,7 +13,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from gateway.detectors.embedding_similarity_st import SentenceTransformerSimilarityDetector
+from gateway.detectors.embedding_similarity_st import (
+    SentenceTransformerSimilarityDetector,
+)
 
 
 def main():

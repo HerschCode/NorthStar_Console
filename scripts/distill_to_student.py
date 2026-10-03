@@ -30,10 +30,8 @@ from pathlib import Path
 
 import numpy as np
 import yaml
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import LabelEncoder
 from sentence_transformers import SentenceTransformer
-
+from sklearn.linear_model import LogisticRegression
 
 # ── Teacher: the production ensemble ─────────────────────────────────────────
 
@@ -49,8 +47,8 @@ def _load_teacher():
     import sys
     sys.path.insert(0, str(Path(__file__).parent.parent))
     from gateway.detectors import rule_based
-    from gateway.detectors.embedding_similarity import EmbeddingSimilarityDetector
     from gateway.detectors.classifier import ScratchClassifierDetector
+    from gateway.detectors.embedding_similarity import EmbeddingSimilarityDetector
 
     embed_det = EmbeddingSimilarityDetector()
     embed_det.load()

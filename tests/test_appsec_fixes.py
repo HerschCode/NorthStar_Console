@@ -10,7 +10,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.prepare_training_data import safe_extract  # noqa: E402
+from scripts.prepare_training_data import safe_extract
 
 
 def make_tar(tmp_path, members):

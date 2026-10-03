@@ -7,27 +7,30 @@ Backend selection via `backend` field proves pluggability at the API level,
 not just in code -- swapping /gateway/chat's target is a request parameter,
 not a redeploy.
 """
+import os
+
 from fastapi import Depends, FastAPI
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
-import os
-
-from gateway.adapters.stub_ops_agent import StubOpsAgentAdapter, FAKE_SYSTEM_PROMPT
-from gateway.adapters.trivial_echo import TrivialEchoAdapter
-from gateway.adapters.project2_agent_adapter import Project2AgentAdapter
+from gateway.actions.api import router as actions_router
+from gateway.auth import TrustedIdentity, require_trusted_identity, scope_session_id
 from gateway.adapters.operations_assistant_adapter import (
-    OpsAssistantAdapter,
     FAKE_SYSTEM_PROMPT as OPS_ASSISTANT_FAKE_SYSTEM_PROMPT,
 )
-from project2_agent.agent import FAKE_SYSTEM_PROMPT as PROJECT2_FAKE_SYSTEM_PROMPT
-from gateway.actions.api import router as actions_router
+from gateway.adapters.operations_assistant_adapter import (
+    OpsAssistantAdapter,
+)
+from gateway.adapters.project2_agent_adapter import Project2AgentAdapter
+from gateway.adapters.stub_ops_agent import FAKE_SYSTEM_PROMPT, StubOpsAgentAdapter
+from gateway.adapters.trivial_echo import TrivialEchoAdapter
 from gateway.dashboard import router as dashboard_router
+from gateway.demo import router as demo_router
 from gateway.ip_limits import ip_rate_limit
 from gateway.limits import BodyLimitMiddleware, max_prompt_chars
-from gateway.demo import router as demo_router
-from gateway.webui import router as webui_router
 from gateway.middleware import GatewayMiddleware
+from gateway.webui import router as webui_router
+from project2_agent.agent import FAKE_SYSTEM_PROMPT as PROJECT2_FAKE_SYSTEM_PROMPT
 
 app = FastAPI(title="LLM Security Gateway", version="0.1.0")
 app.add_middleware(BodyLimitMiddleware)          # 413 for oversized bodies on every route (gateway/limits.py)
@@ -76,7 +79,8 @@ class ChatResponse(BaseModel):
 
 
 @app.post("/gateway/chat", response_model=ChatResponse, dependencies=[Depends(ip_rate_limit)])
-def chat(req: ChatRequest):
+def chat(req: ChatRequest, identity: TrustedIdentity | None = Depends(require_trusted_identity)):
+
     if req.backend not in BACKENDS:
         return ChatResponse(
             allowed=False, response=None,
@@ -87,11 +91,11 @@ def chat(req: ChatRequest):
     adapter, system_prompt = BACKENDS[req.backend]
     result = middleware.process(
         prompt=req.prompt,
-        session_id=req.session_id,
+        session_id=scope_session_id(req.session_id, identity),
         backend=adapter,
-        role=req.role,
+        role=identity.role if identity else req.role,
         system_prompt=system_prompt,
-        user_id=req.user_id,
+        user_id=identity.user_id if identity else req.user_id,
     )
     return ChatResponse(
         allowed=result.allowed,
@@ -102,7 +106,7 @@ def chat(req: ChatRequest):
 
 
 @app.post("/gateway/chat/stream", dependencies=[Depends(ip_rate_limit)])
-def chat_stream(req: ChatRequest):
+def chat_stream(req: ChatRequest, identity: TrustedIdentity | None = Depends(require_trusted_identity)):
     """Tier 3: streaming endpoint. Checks the response incrementally as it
     streams from the backend, cutting off mid-stream on a post-flight
     violation rather than waiting for the full response like /gateway/chat."""
@@ -112,11 +116,14 @@ def chat_stream(req: ChatRequest):
         return StreamingResponse(error_gen(), media_type="text/plain")
 
     adapter, system_prompt = BACKENDS[req.backend]
+    session_id = scope_session_id(req.session_id, identity)
+    role = identity.role if identity else req.role
+    user_id = identity.user_id if identity else req.user_id
 
     def event_gen():
         for event in middleware.process_streaming(
-            prompt=req.prompt, session_id=req.session_id, backend=adapter,
-            role=req.role, system_prompt=system_prompt, user_id=req.user_id,
+            prompt=req.prompt, session_id=session_id, backend=adapter,
+            role=role, system_prompt=system_prompt, user_id=user_id,
         ):
             yield event["chunk"]
             if event["cut_off"]:
@@ -125,12 +132,12 @@ def chat_stream(req: ChatRequest):
     return StreamingResponse(event_gen(), media_type="text/plain")
 
 
-@app.get("/gateway/backends")
+@app.get("/gateway/backends", dependencies=[Depends(require_trusted_identity)])
 def list_backends():
     return {"backends": [{"key": k, "name": adapter.name} for k, (adapter, _) in BACKENDS.items()]}
 
 
-@app.get("/gateway/connectivity")
+@app.get("/gateway/connectivity", dependencies=[Depends(require_trusted_identity)])
 def connectivity():
     """Makes cross-service wiring observable, the way operations-assistant's
     /health reports whether it can reach operations-performance. In-process

@@ -1,0 +1,24 @@
+{
+  "run": "hard_tkd-seed0",
+  "variant": "int8-matmul-gather-perchannel",
+  "max_length": 256,
+  "threshold_margin": 2.103,
+  "threshold_selection": "smallest margin with <= 1% false positives on the validation rows (fixed before any held-out set was looked at)",
+  "base_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "teacher": "protectai/deberta-v3-base-prompt-injection-v2",
+  "train": {
+    "cmd": "train",
+    "variant": "hard_tkd",
+    "seed": 0,
+    "epochs": 4,
+    "batch": 32,
+    "lr": 5e-05,
+    "temperature": 2.0,
+    "alpha": 0.5,
+    "beta": 1.0
+  },
+  "n_labelled": 8178,
+  "n_transfer": 3467,
+  "fp32_val_auc": 0.9898,
+  "int8_val_auc": 0.9901
+}

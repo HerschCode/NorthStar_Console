@@ -30,12 +30,12 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from gateway.actions.approvals import ApprovalError, ApprovalQueue  # noqa: E402
-from gateway.actions.firewall import ActionFirewall  # noqa: E402
-from gateway.actions.policy import Principal  # noqa: E402
-from gateway.middleware import GatewayMiddleware  # noqa: E402
-from gateway.pii import scan_and_redact  # noqa: E402
-from gateway.text_normalizer import normalize  # noqa: E402
+from gateway.actions.approvals import ApprovalError, ApprovalQueue
+from gateway.actions.firewall import ActionFirewall
+from gateway.actions.policy import Principal
+from gateway.middleware import GatewayMiddleware
+from gateway.pii import scan_and_redact
+from gateway.text_normalizer import normalize
 
 CORPUS = REPO_ROOT / "corpus" / "agentic_attacks.yaml"
 
@@ -134,7 +134,7 @@ def finance_summary(results: list[dict]) -> dict:
 def summarise(results: list[dict]) -> dict:
     harmful = [r for r in results if r["outcome"]]
     benign = [r for r in results if not r["outcome"]]
-    stopped = lambda rs: Counter(r["outcome"] for r in rs)  # noqa: E731
+    stopped = lambda rs: Counter(r["outcome"] for r in rs)
     by_cat = defaultdict(list)
     for r in results:
         by_cat[r["category"]].append(r)

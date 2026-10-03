@@ -31,8 +31,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from gateway.detectors import rule_based
-from gateway.detectors.embedding_similarity import EmbeddingSimilarityDetector
 from gateway.detectors.classifier import ScratchClassifierDetector
+from gateway.detectors.embedding_similarity import EmbeddingSimilarityDetector
 
 EXTERNAL_CSV = (
     REPO_ROOT

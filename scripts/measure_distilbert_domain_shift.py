@@ -29,7 +29,7 @@ def load_benign_eval_texts():
 
 def main():
     import torch
-    from transformers import AutoTokenizer, AutoModelForSequenceClassification
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
     if not MODEL_PATH.exists():
         raise SystemExit(f"{MODEL_PATH} doesn't exist -- run "

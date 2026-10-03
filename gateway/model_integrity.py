@@ -34,6 +34,9 @@ SERVED_ARTIFACTS = [
     "models/scratch_classifier/weights.npz",
     "models/scratch_classifier/vocab.json",
     "models/scratch_classifier/model.pt",
+    "models/guard_student/student.int8.onnx",
+    "models/guard_student/tokenizer.json",
+    "models/guard_student/meta.json",
 ]
 
 

@@ -52,9 +52,9 @@ def verhoeff_check_digit(payload: str) -> int:
 
 # ---- context ---------------------------------------------------------------------------------------------------------------------
 CONTEXT_WINDOW = 40                                            # characters either side of the match
-AADHAAR_CONTEXT = re.compile(r"aadhaar|aadhar|adhar|\buidai?\b|\buid\b|unique\s+identification|enrol+ment\s+(?:no|number|id)|\u0906\u0927\u093e\u0930", re.I)
-PAN_CONTEXT = re.compile(r"\bpan\b|permanent\s+account|income[\s-]*tax|\bitr\b", re.I)
-PHONE_CONTEXT = re.compile(r"\b(?:mobile|mob|phone|ph|tel|telephone|contact|whatsapp|call|cell|landline|reach\s+me)\b", re.I)
+AADHAAR_CONTEXT = re.compile(r"aadhaar|aadhar|adhar|\buidai?\b|\buid\b|unique\s+identification|enrol+ment\s+(?:no|number|id)|\u0906\u0927\u093e\u0930", re.IGNORECASE)
+PAN_CONTEXT = re.compile(r"\bpan\b|permanent\s+account|income[\s-]*tax|\bitr\b", re.IGNORECASE)
+PHONE_CONTEXT = re.compile(r"\b(?:mobile|mob|phone|ph|tel|telephone|contact|whatsapp|call|cell|landline|reach\s+me)\b", re.IGNORECASE)
 
 
 def _near(text: str, start: int, end: int, ctx: re.Pattern) -> bool:

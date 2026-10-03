@@ -126,7 +126,7 @@ def main():
         "matters.\n",
         f"**LOO detection rate: {detection_rate:.0%} ({n_block - len(missed)}/{n_block})**",
         f"**LOO false-positive rate: {fp_rate:.0%} ({len(false_positives)}/{n_allow})**\n",
-        f"Compare to the comparison table's honest public-dataset-only number: **0%**.\n",
+        "Compare to the comparison table's honest public-dataset-only number: **0%**.\n",
         "## Missed even with LOO (novel enough that no other corpus example resembles them)\n",
     ]
     for case_id in missed:

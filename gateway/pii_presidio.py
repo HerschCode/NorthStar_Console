@@ -20,7 +20,13 @@ from gateway import pii_in
 from gateway.pii import PIISpan
 
 try:
-    from presidio_analyzer import AnalysisExplanation, AnalyzerEngine, EntityRecognizer, RecognizerRegistry, RecognizerResult
+    from presidio_analyzer import (
+        AnalysisExplanation,
+        AnalyzerEngine,
+        EntityRecognizer,
+        RecognizerRegistry,
+        RecognizerResult,
+    )
     from presidio_analyzer.nlp_engine import NlpEngineProvider
 except ImportError as exc:                                                       # pragma: no cover - exercised only without the extra
     raise ImportError("PII_BACKEND=presidio needs the optional extra: pip install -e .[pii]") from exc
@@ -87,7 +93,10 @@ def make_analyzer(ner: bool = False, custom_indian: bool = True, builtin_indian:
             if type(r).__name__ == "SpacyRecognizer":
                 registry.remove_recognizer(r.name)
     if builtin_indian:
-        from presidio_analyzer.predefined_recognizers import InAadhaarRecognizer, InPanRecognizer
+        from presidio_analyzer.predefined_recognizers import (
+            InAadhaarRecognizer,
+            InPanRecognizer,
+        )
         registry.add_recognizer(InAadhaarRecognizer())
         registry.add_recognizer(InPanRecognizer())
     if custom_indian:

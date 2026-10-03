@@ -216,8 +216,13 @@ here does that: taint is a heuristic on observable strings, and it is evaded by 
 capability-based approach is the stronger design; it needs control of the agent's architecture, which a proxy does not have.
 
 Not implemented:
-- authentication of principals or approvers: the MCP stdio transport has none, so `--role/--user-id` are asserted by whoever launches the proxy,
-  and approvers are checked by a shared token plus a caller-supplied id (put SSO in front for real use);
+- native user authentication, OIDC/SSO, or identity issuance: the optional HTTP trusted-proxy mode (`GATEWAY_REQUIRE_IDENTITY=1`,
+  `GATEWAY_IDENTITY_TOKEN`) accepts identity headers only from a proxy that authenticates users, strips incoming copies of those
+  headers, and injects the authenticated user ID and role. In this mode those headers override body claims, session state is
+  user-scoped, and manager/admin identities can inspect/decide approvals through the dashboard. The proxy must keep source/result
+  registration endpoints internal to the agent host; trust labels are assertions by that host. Without identity mode, the demo-compatible HTTP API trusts body
+  identities and approval decisions use `GATEWAY_APPROVER_TOKEN` plus caller-supplied IDs. The MCP stdio transport has no
+  identity handshake, so `--role/--user-id` remain assertions by whoever launches the proxy;
 - HTTP transports (SSE, streamable HTTP) for the MCP proxy;
 - the user's chat message in MCP mode: the proxy cannot see it, so it cannot tell "the user typed this" from "a document said this". It errs
   toward suspicion; hosts that can should register it via `POST /gateway/actions/sources`;

@@ -1,0 +1,2254 @@
+{
+  "run": "hard_tkd-seed0",
+  "fp32_threshold_margin": 2.103,
+  "fp32_val_auc": 0.9898,
+  "reference_torch_fp32": {
+    "sets": {
+      "deepset_test": {
+        "at_0.5": {
+          "detection": {
+            "k": 29,
+            "n": 60,
+            "rate": 0.483,
+            "ci95": [
+              0.362,
+              0.607
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 56,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.064
+            ]
+          }
+        },
+        "at_val_threshold": {
+          "detection": {
+            "k": 16,
+            "n": 60,
+            "rate": 0.267,
+            "ci95": [
+              0.171,
+              0.39
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 56,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.064
+            ]
+          }
+        }
+      },
+      "jbb_benign": {
+        "at_0.5": {
+          "fpr": {
+            "k": 2,
+            "n": 100,
+            "rate": 0.02,
+            "ci95": [
+              0.006,
+              0.07
+            ]
+          }
+        },
+        "at_val_threshold": {
+          "fpr": {
+            "k": 2,
+            "n": 100,
+            "rate": 0.02,
+            "ci95": [
+              0.006,
+              0.07
+            ]
+          }
+        }
+      },
+      "jbllms_clean": {
+        "at_0.5": {
+          "detection": {
+            "k": 205,
+            "n": 244,
+            "rate": 0.84,
+            "ci95": [
+              0.789,
+              0.881
+            ]
+          }
+        },
+        "at_val_threshold": {
+          "detection": {
+            "k": 181,
+            "n": 244,
+            "rate": 0.742,
+            "ci95": [
+              0.683,
+              0.793
+            ]
+          }
+        }
+      },
+      "safeguard_test": {
+        "at_0.5": {
+          "detection": {
+            "k": 622,
+            "n": 650,
+            "rate": 0.957,
+            "ci95": [
+              0.938,
+              0.97
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 1410,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.003
+            ]
+          }
+        },
+        "at_val_threshold": {
+          "detection": {
+            "k": 606,
+            "n": 650,
+            "rate": 0.932,
+            "ci95": [
+              0.91,
+              0.949
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 1410,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.003
+            ]
+          }
+        }
+      },
+      "jackhhao_test": {
+        "at_0.5": {
+          "detection": {
+            "k": 118,
+            "n": 139,
+            "rate": 0.849,
+            "ci95": [
+              0.78,
+              0.899
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 123,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.03
+            ]
+          }
+        },
+        "at_val_threshold": {
+          "detection": {
+            "k": 107,
+            "n": 139,
+            "rate": 0.77,
+            "ci95": [
+              0.693,
+              0.832
+            ]
+          },
+          "fpr": {
+            "k": 0,
+            "n": 123,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.03
+            ]
+          }
+        }
+      },
+      "gandalf_test": {
+        "at_0.5": {
+          "detection": {
+            "k": 108,
+            "n": 112,
+            "rate": 0.964,
+            "ci95": [
+              0.912,
+              0.986
+            ]
+          }
+        },
+        "at_val_threshold": {
+          "detection": {
+            "k": 107,
+            "n": 112,
+            "rate": 0.955,
+            "ci95": [
+              0.9,
+              0.981
+            ]
+          }
+        }
+      },
+      "short_benign_heldout": {
+        "at_0.5": {
+          "fpr": {
+            "k": 0,
+            "n": 40,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.088
+            ]
+          }
+        },
+        "at_val_threshold": {
+          "fpr": {
+            "k": 0,
+            "n": 40,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.088
+            ]
+          }
+        }
+      },
+      "in_domain_heldout": {
+        "at_0.5": {
+          "fpr": {
+            "k": 0,
+            "n": 30,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.114
+            ]
+          }
+        },
+        "at_val_threshold": {
+          "fpr": {
+            "k": 0,
+            "n": 30,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.114
+            ]
+          }
+        }
+      },
+      "own_corpus": {
+        "at_0.5": {
+          "detection": {
+            "k": 41,
+            "n": 78,
+            "rate": 0.526,
+            "ci95": [
+              0.416,
+              0.633
+            ]
+          },
+          "fpr": {
+            "k": 2,
+            "n": 17,
+            "rate": 0.118,
+            "ci95": [
+              0.033,
+              0.343
+            ]
+          }
+        },
+        "at_val_threshold": {
+          "detection": {
+            "k": 28,
+            "n": 78,
+            "rate": 0.359,
+            "ci95": [
+              0.261,
+              0.47
+            ]
+          },
+          "fpr": {
+            "k": 2,
+            "n": 17,
+            "rate": 0.118,
+            "ci95": [
+              0.033,
+              0.343
+            ]
+          }
+        }
+      },
+      "oasst_benign_heldout": {
+        "at_0.5": {
+          "fpr": {
+            "k": 0,
+            "n": 500,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.008
+            ]
+          }
+        },
+        "at_val_threshold": {
+          "fpr": {
+            "k": 0,
+            "n": 500,
+            "rate": 0.0,
+            "ci95": [
+              0,
+              0.008
+            ]
+          }
+        }
+      },
+      "persona_benign_heldout": {
+        "at_0.5": {
+          "fpr": {
+            "k": 5,
+            "n": 650,
+            "rate": 0.008,
+            "ci95": [
+              0.003,
+              0.018
+            ]
+          }
+        },
+        "at_val_threshold": {
+          "fpr": {
+            "k": 3,
+            "n": 650,
+            "rate": 0.005,
+            "ci95": [
+              0.002,
+              0.013
+            ]
+          }
+        }
+      }
+    }
+  },
+  "selection_rule": "smallest file with validation ROC-AUC within 0.003 of fp32 and >= 99% validation decision agreement at the fp32 threshold",
+  "variants": {
+    "fp32-ort": {
+      "status": "ok",
+      "size_mb": 86.8,
+      "val_auc": 0.9898,
+      "val_decision_agreement_at_threshold": 1.0,
+      "val_max_abs_margin_diff": 0.0,
+      "sets": {
+        "deepset_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 29,
+              "n": 60,
+              "rate": 0.483,
+              "ci95": [
+                0.362,
+                0.607
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 16,
+              "n": 60,
+              "rate": 0.267,
+              "ci95": [
+                0.171,
+                0.39
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0,
+          "roc_auc": 0.896
+        },
+        "jbb_benign": {
+          "at_0.5": {
+            "fpr": {
+              "k": 2,
+              "n": 100,
+              "rate": 0.02,
+              "ci95": [
+                0.006,
+                0.07
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 2,
+              "n": 100,
+              "rate": 0.02,
+              "ci95": [
+                0.006,
+                0.07
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "jbllms_clean": {
+          "at_0.5": {
+            "detection": {
+              "k": 205,
+              "n": 244,
+              "rate": 0.84,
+              "ci95": [
+                0.789,
+                0.881
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 181,
+              "n": 244,
+              "rate": 0.742,
+              "ci95": [
+                0.683,
+                0.793
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "safeguard_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 622,
+              "n": 650,
+              "rate": 0.957,
+              "ci95": [
+                0.938,
+                0.97
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 1410,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.003
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 606,
+              "n": 650,
+              "rate": 0.932,
+              "ci95": [
+                0.91,
+                0.949
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 1410,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.003
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0,
+          "roc_auc": 0.998
+        },
+        "jackhhao_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 118,
+              "n": 139,
+              "rate": 0.849,
+              "ci95": [
+                0.78,
+                0.899
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 123,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.03
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 107,
+              "n": 139,
+              "rate": 0.77,
+              "ci95": [
+                0.693,
+                0.832
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 123,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.03
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0,
+          "roc_auc": 0.983
+        },
+        "gandalf_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 108,
+              "n": 112,
+              "rate": 0.964,
+              "ci95": [
+                0.912,
+                0.986
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 107,
+              "n": 112,
+              "rate": 0.955,
+              "ci95": [
+                0.9,
+                0.981
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "short_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 40,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.088
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 40,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.088
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "in_domain_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 30,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.114
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 30,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.114
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "own_corpus": {
+          "at_0.5": {
+            "detection": {
+              "k": 41,
+              "n": 78,
+              "rate": 0.526,
+              "ci95": [
+                0.416,
+                0.633
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 17,
+              "rate": 0.118,
+              "ci95": [
+                0.033,
+                0.343
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 28,
+              "n": 78,
+              "rate": 0.359,
+              "ci95": [
+                0.261,
+                0.47
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 17,
+              "rate": 0.118,
+              "ci95": [
+                0.033,
+                0.343
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0,
+          "roc_auc": 0.738
+        },
+        "oasst_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 500,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.008
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 500,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.008
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "persona_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 5,
+              "n": 650,
+              "rate": 0.008,
+              "ci95": [
+                0.003,
+                0.018
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 3,
+              "n": 650,
+              "rate": 0.005,
+              "ci95": [
+                0.002,
+                0.013
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        }
+      },
+      "runtime_1thread": {
+        "rss_after_imports_mb": 46.4,
+        "rss_after_load_mb": 148.6,
+        "rss_peak_mb": 159.2,
+        "p50_ms": 32.1,
+        "p95_ms": 409.7
+      },
+      "runtime_1thread_no_arena": {
+        "rss_after_imports_mb": 46.1,
+        "rss_after_load_mb": 148.4,
+        "rss_peak_mb": 152.1,
+        "p50_ms": 45.4,
+        "p95_ms": 435.8
+      },
+      "runtime_4threads": {
+        "rss_after_imports_mb": 46.3,
+        "rss_after_load_mb": 150.3,
+        "rss_peak_mb": 160.1,
+        "p50_ms": 4.9,
+        "p95_ms": 18.0
+      }
+    },
+    "int8-matmul": {
+      "status": "ok",
+      "size_mb": 56.0,
+      "val_auc": 0.9892,
+      "val_decision_agreement_at_threshold": 0.9879,
+      "val_max_abs_margin_diff": 5.192,
+      "sets": {
+        "deepset_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 29,
+              "n": 60,
+              "rate": 0.483,
+              "ci95": [
+                0.362,
+                0.607
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 17,
+              "n": 60,
+              "rate": 0.283,
+              "ci95": [
+                0.185,
+                0.408
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0,
+          "roc_auc": 0.904
+        },
+        "jbb_benign": {
+          "at_0.5": {
+            "fpr": {
+              "k": 2,
+              "n": 100,
+              "rate": 0.02,
+              "ci95": [
+                0.006,
+                0.07
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 2,
+              "n": 100,
+              "rate": 0.02,
+              "ci95": [
+                0.006,
+                0.07
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "jbllms_clean": {
+          "at_0.5": {
+            "detection": {
+              "k": 205,
+              "n": 244,
+              "rate": 0.84,
+              "ci95": [
+                0.789,
+                0.881
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 178,
+              "n": 244,
+              "rate": 0.73,
+              "ci95": [
+                0.671,
+                0.781
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9672
+        },
+        "safeguard_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 625,
+              "n": 650,
+              "rate": 0.962,
+              "ci95": [
+                0.944,
+                0.974
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 1410,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.003
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 609,
+              "n": 650,
+              "rate": 0.937,
+              "ci95": [
+                0.916,
+                0.953
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 1410,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.003
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9985,
+          "roc_auc": 0.998
+        },
+        "jackhhao_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 118,
+              "n": 139,
+              "rate": 0.849,
+              "ci95": [
+                0.78,
+                0.899
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 123,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.03
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 103,
+              "n": 139,
+              "rate": 0.741,
+              "ci95": [
+                0.662,
+                0.807
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 123,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.03
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9924,
+          "roc_auc": 0.983
+        },
+        "gandalf_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 108,
+              "n": 112,
+              "rate": 0.964,
+              "ci95": [
+                0.912,
+                0.986
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 108,
+              "n": 112,
+              "rate": 0.964,
+              "ci95": [
+                0.912,
+                0.986
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "short_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 40,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.088
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 40,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.088
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "in_domain_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 30,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.114
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 30,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.114
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "own_corpus": {
+          "at_0.5": {
+            "detection": {
+              "k": 41,
+              "n": 78,
+              "rate": 0.526,
+              "ci95": [
+                0.416,
+                0.633
+              ]
+            },
+            "fpr": {
+              "k": 3,
+              "n": 17,
+              "rate": 0.176,
+              "ci95": [
+                0.062,
+                0.41
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 30,
+              "n": 78,
+              "rate": 0.385,
+              "ci95": [
+                0.284,
+                0.496
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 17,
+              "rate": 0.118,
+              "ci95": [
+                0.033,
+                0.343
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9474,
+          "roc_auc": 0.729
+        },
+        "oasst_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 500,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.008
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 500,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.008
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "persona_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 2,
+              "n": 650,
+              "rate": 0.003,
+              "ci95": [
+                0.001,
+                0.011
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 650,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.006
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9954
+        }
+      },
+      "runtime_1thread": {
+        "rss_after_imports_mb": 46.4,
+        "rss_after_load_mb": 119.0,
+        "rss_peak_mb": 130.2,
+        "p50_ms": 4.8,
+        "p95_ms": 28.5
+      },
+      "runtime_1thread_no_arena": {
+        "rss_after_imports_mb": 46.5,
+        "rss_after_load_mb": 118.9,
+        "rss_peak_mb": 122.7,
+        "p50_ms": 5.2,
+        "p95_ms": 37.0
+      },
+      "runtime_4threads": {
+        "rss_after_imports_mb": 46.5,
+        "rss_after_load_mb": 120.2,
+        "rss_peak_mb": 131.5,
+        "p50_ms": 2.6,
+        "p95_ms": 9.4
+      }
+    },
+    "int8-matmul-perchannel": {
+      "status": "ok",
+      "size_mb": 56.2,
+      "val_auc": 0.9897,
+      "val_decision_agreement_at_threshold": 0.9967,
+      "val_max_abs_margin_diff": 1.803,
+      "sets": {
+        "deepset_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 29,
+              "n": 60,
+              "rate": 0.483,
+              "ci95": [
+                0.362,
+                0.607
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 15,
+              "n": 60,
+              "rate": 0.25,
+              "ci95": [
+                0.158,
+                0.372
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0,
+          "roc_auc": 0.902
+        },
+        "jbb_benign": {
+          "at_0.5": {
+            "fpr": {
+              "k": 2,
+              "n": 100,
+              "rate": 0.02,
+              "ci95": [
+                0.006,
+                0.07
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 2,
+              "n": 100,
+              "rate": 0.02,
+              "ci95": [
+                0.006,
+                0.07
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "jbllms_clean": {
+          "at_0.5": {
+            "detection": {
+              "k": 202,
+              "n": 244,
+              "rate": 0.828,
+              "ci95": [
+                0.776,
+                0.87
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 179,
+              "n": 244,
+              "rate": 0.734,
+              "ci95": [
+                0.675,
+                0.785
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9877
+        },
+        "safeguard_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 620,
+              "n": 650,
+              "rate": 0.954,
+              "ci95": [
+                0.935,
+                0.967
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 1410,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.003
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 604,
+              "n": 650,
+              "rate": 0.929,
+              "ci95": [
+                0.907,
+                0.947
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 1410,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.003
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.999,
+          "roc_auc": 0.999
+        },
+        "jackhhao_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 118,
+              "n": 139,
+              "rate": 0.849,
+              "ci95": [
+                0.78,
+                0.899
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 123,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.03
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 106,
+              "n": 139,
+              "rate": 0.763,
+              "ci95": [
+                0.685,
+                0.826
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 123,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.03
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0,
+          "roc_auc": 0.982
+        },
+        "gandalf_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 108,
+              "n": 112,
+              "rate": 0.964,
+              "ci95": [
+                0.912,
+                0.986
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 108,
+              "n": 112,
+              "rate": 0.964,
+              "ci95": [
+                0.912,
+                0.986
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "short_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 40,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.088
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 40,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.088
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "in_domain_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 30,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.114
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 30,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.114
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "own_corpus": {
+          "at_0.5": {
+            "detection": {
+              "k": 42,
+              "n": 78,
+              "rate": 0.538,
+              "ci95": [
+                0.429,
+                0.645
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 17,
+              "rate": 0.118,
+              "ci95": [
+                0.033,
+                0.343
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 29,
+              "n": 78,
+              "rate": 0.372,
+              "ci95": [
+                0.273,
+                0.483
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 17,
+              "rate": 0.118,
+              "ci95": [
+                0.033,
+                0.343
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9684,
+          "roc_auc": 0.741
+        },
+        "oasst_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 500,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.008
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 500,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.008
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "persona_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 4,
+              "n": 650,
+              "rate": 0.006,
+              "ci95": [
+                0.002,
+                0.016
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 2,
+              "n": 650,
+              "rate": 0.003,
+              "ci95": [
+                0.001,
+                0.011
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9985
+        }
+      },
+      "runtime_1thread": {
+        "rss_after_imports_mb": 46.4,
+        "rss_after_load_mb": 119.4,
+        "rss_peak_mb": 130.5,
+        "p50_ms": 4.5,
+        "p95_ms": 25.1
+      },
+      "runtime_1thread_no_arena": {
+        "rss_after_imports_mb": 46.5,
+        "rss_after_load_mb": 119.2,
+        "rss_peak_mb": 122.5,
+        "p50_ms": 5.0,
+        "p95_ms": 37.0
+      },
+      "runtime_4threads": {
+        "rss_after_imports_mb": 46.3,
+        "rss_after_load_mb": 120.3,
+        "rss_peak_mb": 131.4,
+        "p50_ms": 2.4,
+        "p95_ms": 8.8
+      }
+    },
+    "int8-matmul-gather": {
+      "status": "ok",
+      "size_mb": 22.0,
+      "val_auc": 0.9894,
+      "val_decision_agreement_at_threshold": 0.9901,
+      "val_max_abs_margin_diff": 5.576,
+      "sets": {
+        "deepset_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 29,
+              "n": 60,
+              "rate": 0.483,
+              "ci95": [
+                0.362,
+                0.607
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 17,
+              "n": 60,
+              "rate": 0.283,
+              "ci95": [
+                0.185,
+                0.408
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0,
+          "roc_auc": 0.901
+        },
+        "jbb_benign": {
+          "at_0.5": {
+            "fpr": {
+              "k": 3,
+              "n": 100,
+              "rate": 0.03,
+              "ci95": [
+                0.01,
+                0.085
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 2,
+              "n": 100,
+              "rate": 0.02,
+              "ci95": [
+                0.006,
+                0.07
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.99
+        },
+        "jbllms_clean": {
+          "at_0.5": {
+            "detection": {
+              "k": 206,
+              "n": 244,
+              "rate": 0.844,
+              "ci95": [
+                0.793,
+                0.884
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 180,
+              "n": 244,
+              "rate": 0.738,
+              "ci95": [
+                0.679,
+                0.789
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9713
+        },
+        "safeguard_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 623,
+              "n": 650,
+              "rate": 0.958,
+              "ci95": [
+                0.94,
+                0.971
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 1410,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.003
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 607,
+              "n": 650,
+              "rate": 0.934,
+              "ci95": [
+                0.912,
+                0.951
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 1410,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.003
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9995,
+          "roc_auc": 0.998
+        },
+        "jackhhao_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 116,
+              "n": 139,
+              "rate": 0.835,
+              "ci95": [
+                0.764,
+                0.887
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 123,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.03
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 103,
+              "n": 139,
+              "rate": 0.741,
+              "ci95": [
+                0.662,
+                0.807
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 123,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.03
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9924,
+          "roc_auc": 0.983
+        },
+        "gandalf_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 108,
+              "n": 112,
+              "rate": 0.964,
+              "ci95": [
+                0.912,
+                0.986
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 108,
+              "n": 112,
+              "rate": 0.964,
+              "ci95": [
+                0.912,
+                0.986
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "short_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 40,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.088
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 40,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.088
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "in_domain_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 30,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.114
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 30,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.114
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "own_corpus": {
+          "at_0.5": {
+            "detection": {
+              "k": 41,
+              "n": 78,
+              "rate": 0.526,
+              "ci95": [
+                0.416,
+                0.633
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 17,
+              "rate": 0.118,
+              "ci95": [
+                0.033,
+                0.343
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 30,
+              "n": 78,
+              "rate": 0.385,
+              "ci95": [
+                0.284,
+                0.496
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 17,
+              "rate": 0.118,
+              "ci95": [
+                0.033,
+                0.343
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9579,
+          "roc_auc": 0.734
+        },
+        "oasst_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 500,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.008
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 500,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.008
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "persona_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 2,
+              "n": 650,
+              "rate": 0.003,
+              "ci95": [
+                0.001,
+                0.011
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 1,
+              "n": 650,
+              "rate": 0.002,
+              "ci95": [
+                0.0,
+                0.009
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9954
+        }
+      },
+      "runtime_1thread": {
+        "rss_after_imports_mb": 46.5,
+        "rss_after_load_mb": 85.2,
+        "rss_peak_mb": 96.1,
+        "p50_ms": 5.6,
+        "p95_ms": 28.9
+      },
+      "runtime_1thread_no_arena": {
+        "rss_after_imports_mb": 46.4,
+        "rss_after_load_mb": 85.1,
+        "rss_peak_mb": 88.5,
+        "p50_ms": 5.1,
+        "p95_ms": 38.1
+      },
+      "runtime_4threads": {
+        "rss_after_imports_mb": 46.2,
+        "rss_after_load_mb": 85.9,
+        "rss_peak_mb": 97.4,
+        "p50_ms": 2.8,
+        "p95_ms": 9.7
+      }
+    },
+    "int8-matmul-gather-perchannel": {
+      "status": "ok",
+      "size_mb": 22.1,
+      "val_auc": 0.9901,
+      "val_decision_agreement_at_threshold": 0.9967,
+      "val_max_abs_margin_diff": 1.978,
+      "sets": {
+        "deepset_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 29,
+              "n": 60,
+              "rate": 0.483,
+              "ci95": [
+                0.362,
+                0.607
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 16,
+              "n": 60,
+              "rate": 0.267,
+              "ci95": [
+                0.171,
+                0.39
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 56,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.064
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0,
+          "roc_auc": 0.901
+        },
+        "jbb_benign": {
+          "at_0.5": {
+            "fpr": {
+              "k": 2,
+              "n": 100,
+              "rate": 0.02,
+              "ci95": [
+                0.006,
+                0.07
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 2,
+              "n": 100,
+              "rate": 0.02,
+              "ci95": [
+                0.006,
+                0.07
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "jbllms_clean": {
+          "at_0.5": {
+            "detection": {
+              "k": 203,
+              "n": 244,
+              "rate": 0.832,
+              "ci95": [
+                0.78,
+                0.874
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 179,
+              "n": 244,
+              "rate": 0.734,
+              "ci95": [
+                0.675,
+                0.785
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9918
+        },
+        "safeguard_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 621,
+              "n": 650,
+              "rate": 0.955,
+              "ci95": [
+                0.937,
+                0.969
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 1410,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.003
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 607,
+              "n": 650,
+              "rate": 0.934,
+              "ci95": [
+                0.912,
+                0.951
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 1410,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.003
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9985,
+          "roc_auc": 0.998
+        },
+        "jackhhao_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 118,
+              "n": 139,
+              "rate": 0.849,
+              "ci95": [
+                0.78,
+                0.899
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 123,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.03
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 105,
+              "n": 139,
+              "rate": 0.755,
+              "ci95": [
+                0.678,
+                0.819
+              ]
+            },
+            "fpr": {
+              "k": 0,
+              "n": 123,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.03
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0,
+          "roc_auc": 0.983
+        },
+        "gandalf_test": {
+          "at_0.5": {
+            "detection": {
+              "k": 108,
+              "n": 112,
+              "rate": 0.964,
+              "ci95": [
+                0.912,
+                0.986
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 107,
+              "n": 112,
+              "rate": 0.955,
+              "ci95": [
+                0.9,
+                0.981
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "short_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 40,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.088
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 40,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.088
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "in_domain_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 30,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.114
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 30,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.114
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "own_corpus": {
+          "at_0.5": {
+            "detection": {
+              "k": 40,
+              "n": 78,
+              "rate": 0.513,
+              "ci95": [
+                0.404,
+                0.621
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 17,
+              "rate": 0.118,
+              "ci95": [
+                0.033,
+                0.343
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "detection": {
+              "k": 28,
+              "n": 78,
+              "rate": 0.359,
+              "ci95": [
+                0.261,
+                0.47
+              ]
+            },
+            "fpr": {
+              "k": 2,
+              "n": 17,
+              "rate": 0.118,
+              "ci95": [
+                0.033,
+                0.343
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9895,
+          "roc_auc": 0.74
+        },
+        "oasst_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 0,
+              "n": 500,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.008
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 0,
+              "n": 500,
+              "rate": 0.0,
+              "ci95": [
+                0,
+                0.008
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 1.0
+        },
+        "persona_benign_heldout": {
+          "at_0.5": {
+            "fpr": {
+              "k": 5,
+              "n": 650,
+              "rate": 0.008,
+              "ci95": [
+                0.003,
+                0.018
+              ]
+            }
+          },
+          "at_val_threshold": {
+            "fpr": {
+              "k": 2,
+              "n": 650,
+              "rate": 0.003,
+              "ci95": [
+                0.001,
+                0.011
+              ]
+            }
+          },
+          "decision_agreement_at_0.5": 0.9969
+        }
+      },
+      "runtime_1thread": {
+        "rss_after_imports_mb": 46.3,
+        "rss_after_load_mb": 85.5,
+        "rss_peak_mb": 96.8,
+        "p50_ms": 5.0,
+        "p95_ms": 26.0
+      },
+      "runtime_1thread_no_arena": {
+        "rss_after_imports_mb": 46.3,
+        "rss_after_load_mb": 85.2,
+        "rss_peak_mb": 88.5,
+        "p50_ms": 4.7,
+        "p95_ms": 36.2
+      },
+      "runtime_4threads": {
+        "rss_after_imports_mb": 46.3,
+        "rss_after_load_mb": 86.2,
+        "rss_peak_mb": 97.5,
+        "p50_ms": 2.6,
+        "p95_ms": 9.7
+      }
+    }
+  },
+  "chosen_variant": "int8-matmul-gather"
+}

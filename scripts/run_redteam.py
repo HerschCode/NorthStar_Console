@@ -14,7 +14,6 @@ Usage:
   python scripts/run_redteam.py --target http://localhost:8000 --backend stub_ops_agent --bypass-gateway
 """
 import argparse
-import csv
 import sys
 import time
 from pathlib import Path
@@ -96,7 +95,7 @@ def main():
                     response_text = resp.get("response")
             except httpx.ConnectError:
                 print(f"ERROR: could not connect to {args.target} -- is the gateway running?")
-                print(f"Start it with: uvicorn gateway.app:app --port 8000")
+                print("Start it with: uvicorn gateway.app:app --port 8000")
                 sys.exit(1)
 
             latency_ms = (time.perf_counter() - start) * 1000

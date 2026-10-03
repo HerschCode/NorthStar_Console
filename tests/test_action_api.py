@@ -87,3 +87,60 @@ def test_policy_summary_lists_tools_and_roles(client):
     p = client.get("/gateway/actions/policy").json()
     assert p["propose_intervention"]["approval"] is True and p["propose_intervention"]["roles"] == ["admin", "manager"]
     assert p["search_policy_documents"]["output_trust"] == "untrusted"
+
+
+def test_identity_mode_rejects_untrusted_claims_and_scopes_action_sessions(client, monkeypatch):
+    monkeypatch.setenv("GATEWAY_REQUIRE_IDENTITY", "1")
+    monkeypatch.setenv("GATEWAY_IDENTITY_TOKEN", "proxy-secret")
+    request = {"session_id": "shared", "kind": "retrieved_document", "text": POISONED, "trust": "untrusted"}
+    assert client.post("/gateway/actions/sources", json=request).status_code == 401
+
+    headers = {
+        "X-Gateway-Identity-Token": "proxy-secret",
+        "X-Gateway-User-ID": "alice",
+        "X-Gateway-Role": "manager",
+    }
+    assert client.post("/gateway/actions/sources", json=request, headers=headers).status_code == 200
+
+    # A different authenticated user cannot inherit Alice's tainted session, even with the same session_id.
+    bob_headers = {**headers, "X-Gateway-User-ID": "bob"}
+    decision = client.post(
+        "/gateway/actions/authorize",
+        json={"session_id": "shared", "role": "admin", "user_id": "alice",
+              "tool": "propose_intervention", "args": {**PI, "target": "ZX-9000"}},
+        headers=bob_headers,
+    ).json()
+    assert decision["effect"] == "require_approval"
+
+
+def test_identity_mode_uses_proxy_principal_and_protects_approval_reads(client, monkeypatch):
+    monkeypatch.setenv("GATEWAY_REQUIRE_IDENTITY", "1")
+    monkeypatch.setenv("GATEWAY_IDENTITY_TOKEN", "proxy-secret")
+    employee = {
+        "X-Gateway-Identity-Token": "proxy-secret",
+        "X-Gateway-User-ID": "mona",
+        "X-Gateway-Role": "employee",
+    }
+    assert client.get("/gateway/actions/approvals", headers=employee).status_code == 403
+    assert client.post(
+        "/gateway/actions/authorize",
+        json={"session_id": "s", "role": "admin", "user_id": "mona",
+              "tool": "propose_intervention", "args": PI},
+        headers=employee,
+    ).json()["effect"] == "deny"
+
+    manager = {**employee, "X-Gateway-User-ID": "max", "X-Gateway-Role": "manager"}
+    requester = {**employee, "X-Gateway-User-ID": "requester", "X-Gateway-Role": "manager"}
+    approval_id = client.post(
+        "/gateway/actions/authorize",
+        json={"session_id": "approval-session", "role": "admin", "user_id": "max",
+              "tool": "propose_intervention", "args": PI},
+        headers=requester,
+    ).json()["approval_id"]
+    assert client.get("/gateway/actions/approvals", headers=manager).status_code == 200
+    approved = client.post(
+        f"/gateway/actions/approvals/{approval_id}/approve",
+        json={"approver_id": "requester", "approver_role": "admin"},
+        headers=manager,
+    )
+    assert approved.status_code == 200 and approved.json()["decided_by"] == "max"

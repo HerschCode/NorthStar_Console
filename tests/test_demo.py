@@ -14,8 +14,8 @@ sys.path.insert(0, str(REPO_ROOT))
 def client(monkeypatch):
     monkeypatch.setenv("DEMO_RATE_LIMIT", "3")
     monkeypatch.setenv("DEMO_RATE_WINDOW", "60")
-    import gateway.demo as demo_mod
     import gateway.app as app_mod
+    import gateway.demo as demo_mod
     # Clear any cross-test hit history so each test starts at 0/3.
     # _rate_limited() now reads env vars at call time, so no module reload
     # is needed -- monkeypatch.setenv is enough.
@@ -54,7 +54,10 @@ def test_demo_run_surfaces_upstream_error_not_as_allowed(client):
     # operations_assistant with no OPS_ASSISTANT_URL -> adapter returns a
     # BACKEND_ERROR_PREFIX string; the endpoint must not report that as ALLOWED.
     import gateway.app as app_mod
-    from gateway.adapters.operations_assistant_adapter import OpsAssistantAdapter, FAKE_SYSTEM_PROMPT
+    from gateway.adapters.operations_assistant_adapter import (
+        FAKE_SYSTEM_PROMPT,
+        OpsAssistantAdapter,
+    )
     app_mod.BACKENDS["operations_assistant"] = (OpsAssistantAdapter(base_url="", api_key=""), FAKE_SYSTEM_PROMPT)
 
     r = client.post("/gateway/demo/run", json={"prompt": "hello", "backend": "operations_assistant"})

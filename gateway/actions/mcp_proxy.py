@@ -32,7 +32,6 @@ import json
 import subprocess  # nosec B404 - spawns the operator-configured upstream MCP server (an argv list, no shell)
 import sys
 import threading
-import time
 import uuid
 from dataclasses import dataclass, field
 

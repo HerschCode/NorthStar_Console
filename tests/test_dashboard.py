@@ -17,9 +17,9 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-import gateway.dashboard as dashboard  # noqa: E402
-from gateway.dashboard import _LogTail, compute_stats  # noqa: E402
-from gateway.logging_schema import GatewayLogger, LogRecord  # noqa: E402
+from gateway import dashboard
+from gateway.dashboard import _LogTail, compute_stats
+from gateway.logging_schema import GatewayLogger, LogRecord
 
 
 @pytest.fixture(autouse=True)
@@ -114,8 +114,7 @@ def test_log_tail_handles_rename_rotation(log):
 
     os.replace(log, log.with_suffix(".jsonl.1"))
     with open(log, "w") as f:
-        for i in range(5):
-            f.write(_rec(f"new-{i}") + "\n")
+        f.writelines(_rec(f"new-{i}") + "\n" for i in range(5))
 
     assert [r["session_id"] for r in tail.read_all()] == [f"new-{i}" for i in range(5)]
 
@@ -155,8 +154,7 @@ def test_log_tail_detects_truncate_in_place_even_if_the_new_file_is_larger(log):
     assert [r["session_id"] for r in tail.read_all()] == ["old-1"]
 
     with open(log, "w") as f:                                    # same inode, truncated, then refilled with MORE than before
-        for i in range(5):
-            f.write(_rec(f"new-{i}") + "\n")
+        f.writelines(_rec(f"new-{i}") + "\n" for i in range(5))
 
     assert [r["session_id"] for r in tail.read_all()] == [f"new-{i}" for i in range(5)]
 
