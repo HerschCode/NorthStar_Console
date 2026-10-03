@@ -2,6 +2,15 @@
 
 ## Unreleased -- Post-v1.0.0 upgrade work
 
+### Fix: CI failure from an unpinned scikit-learn vs a pickled model (2026-10-03)
+- After the 9,228-case resample, gradient boosting won model selection. Its pickle embeds sklearn-internal
+  loss classes, so `models/sla_risk_model.joblib` failed to load on CI's newer sklearn ("No module named
+  `_loss`"), failing `Tests` since 2026-09-29. The same unpinned install on Render would have broken
+  `/orders/{id}/risk` after a redeploy.
+- `requirements.txt` now pins `scikit-learn==1.7.1` (the training version); `meta.json` records
+  `sklearn_version`; a test fails with a readable message if the pin and the artifact drift apart.
+  Bump the pin together with a retrain.
+
 ### Finance module: AP controls, working capital, resample (2026-09-28/29)
 - **Recovered real BPI 2019 fields the original 8-column sample dropped**: match type
   (`item_category`), goods-receipt/invoice-verification flags, document/item type, company,

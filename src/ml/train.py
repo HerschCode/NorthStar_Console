@@ -328,6 +328,8 @@ def save_best_model(results: dict, out_path: str | Path = "models/sla_risk_model
     meta_path.write_text(json.dumps({
         "model_name": best_name,
         "trained_at": datetime.now(timezone.utc).isoformat(),
+        # pickles are bound to the sklearn version that wrote them; recorded so a mismatch fails with a clear message
+        "sklearn_version": __import__("sklearn").__version__,
         "train_row_count": results["_split"]["train_size"],
         "test_row_count": results["_split"]["test_size"],
         # roc_auc is the SERVED (calibrated) model's -- until 2026-09-25 this recorded the raw forest's

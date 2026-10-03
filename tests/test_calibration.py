@@ -124,3 +124,17 @@ def test_fit_calibrated_falls_back_to_raw_and_says_so_when_calibration_would_inv
     y_flipped_tail.iloc[800:] = 1 - y_flipped_tail.iloc[800:]      # calibration slice contradicts the fit slice
     base, served, method, info = fit_calibrated(_forest, X, y_flipped_tail)
     assert method == "none" and served is base and "slope" in info["calibration_error"]
+
+
+def test_runtime_sklearn_matches_the_version_the_deployed_model_was_pickled_with():
+    """Regression (2026-10-03): after the resample, gradient boosting won model selection and its pickle
+    embeds sklearn-internal loss classes, so loading it on a different sklearn raised an obscure
+    "No module named '_loss'" in CI (and would have in production). requirements.txt now pins sklearn;
+    this fails with a readable message if the pin and the committed artifact ever drift apart."""
+    import json
+    import sklearn
+
+    meta = json.loads(Path("models/sla_risk_model.meta.json").read_text())
+    assert meta.get("sklearn_version") == sklearn.__version__, (
+        f"models/sla_risk_model.joblib was trained with scikit-learn {meta.get('sklearn_version')} "
+        f"but {sklearn.__version__} is installed -- retrain, or fix the pin in requirements.txt")

@@ -4,7 +4,8 @@ sqlalchemy>=2.0
 psycopg2-binary>=2.9
 python-dotenv>=1.0
 pyyaml>=6.0
-scikit-learn>=1.4
+scikit-learn==1.7.1   # PINNED: models/sla_risk_model.joblib is a pickle; a gradient-boosting pickle written by one sklearn
+                      # version fails to load on another (CI: 'No module named _loss'). Bump together with a retrain.
 scipy>=1.11
 prometheus-client>=0.20
 shap>=0.45
