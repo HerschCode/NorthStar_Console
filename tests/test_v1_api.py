@@ -65,7 +65,7 @@ def down(monkeypatch):
 
 
 LIVE_URLS = ["/v1/overview?as_of=2018-01-20", "/v1/queue?as_of=2018-01-20&limit=10", "/v1/suppliers?as_of=2018-02-10&min_n=1",
-             "/v1/process/flow?as_of=2018-02-10", "/v1/process/flow?as_of=2018-02-10&group=activity", "/v1/process/variants?as_of=2018-02-10",
+             "/v1/process/flow?as_of=2018-02-10", "/v1/process/flow?as_of=2018-02-10&group=activity", "/v1/process/variants?as_of=2018-02-10", "/v1/evidence",
              "/v1/risk-map?as_of=2018-01-20", "/v1/briefing?as_of=2018-01-20", "/v1/search?q=c1", "/v1/experiments", "/v1/lineage"]
 
 
@@ -180,3 +180,11 @@ def test_openapi_contract_is_exported_and_lists_the_v1_paths():
     spec = json.loads(Path("openapi/p1.json").read_text(encoding="utf-8"))
     for p in ("/v1/overview", "/v1/queue", "/v1/cases/{case_id}", "/v1/suppliers/{supplier_id}", "/v1/process/flow", "/v1/models"):
         assert p in spec["paths"]
+
+
+def test_overview_trend_is_grouped_by_deadline_month_with_intervals(live, ctx):
+    r = client.get("/v1/overview?as_of=2018-04-16").json()
+    tr = r["trend"]
+    assert tr["provenance"] == "measured" and "deadline month" in tr["note"]
+    for pt in tr["series"]:
+        assert pt["n"] >= 30 and pt["ci95"][0] <= pt["breach_rate"] <= pt["ci95"][1]

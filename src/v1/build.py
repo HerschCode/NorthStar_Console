@@ -90,6 +90,7 @@ class Context:
         st = replay_state(self.cases, self.events, t, self.model)
         pct = float(self.cfg["breach_cost_pct_of_value"])
         if st.empty:
+            st = st.assign(p_eff=pd.Series(dtype=float), expected_loss_eur=pd.Series(dtype=float), tier=pd.Series(dtype=object))
             self._states[key] = st
             return st
         st = st.copy()
@@ -161,8 +162,17 @@ def overview(ctx: Context, as_of=DEFAULT_AS_OF) -> dict:
     ap_total = None
     if ctx.ap_df is not None and len(ctx.ap_df):
         ap_total = int(len(ctx.ap_df))
+    trend = []
+    for month, g in dec.groupby(dec["deadline"].dt.strftime("%Y-%m")):
+        if len(g) >= 30:
+            k, n = int(g["breached_by_clock"].sum()), len(g)
+            lo, hi = wilson(k, n)
+            trend.append({"month": month, "n": n, "breach_rate": _r(100 * k / n, 1), "ci95": [_r(100 * lo, 1), _r(100 * hi, 1)]})
     return {
         "as_of": str(t), "model": MODEL_NAME,
+        "trend": {"series": trend, "provenance": "measured", "unit": "%",
+                  "source": "cases grouped by the month their realistic target window ended (still-open cases count as breached), Wilson 95% interval",
+                  "note": "Cases are grouped by deadline month, not completion month, so the series is not biased towards fast cases. Months with fewer than 30 cases are omitted."},
         "kpis": {
             "open_cases": metric(len(st), "cases", "measured", src, t, n=len(st)),
             "already_late": metric(len(late), "cases", "measured", src, t, n=len(st),
@@ -532,6 +542,14 @@ EXPERIMENTS = [
     {"id": "c4_external", "name": "Duplicate-invoice control on Online Retail II", "hypothesis": "C4 isolates unusual repeats on out-of-domain data.", "result": "promising",
      "decision": "Kept; proxy label only", "detail": "21x lift vs reversal base rate.", "doc": "docs/external-validation.md"},
 ]
+
+
+def evidence(ctx: Context | None = None) -> dict:
+    """Headline claims with their status, and the known limitations (also served by the older /app shell)."""
+    from src.api.product import _evidence
+
+    e = _evidence()
+    return {**e, "provenance": "measured", "source": "docs/ and reports/ in this repository"}
 
 
 def experiments(ctx: Context | None = None) -> dict:

@@ -707,6 +707,25 @@
     }
    }
   },
+  "/v1/evidence": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Evidence",
+    "operationId": "v1_evidence_v1_evidence_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
   "/v1/briefing": {
    "get": {
     "tags": [
@@ -781,6 +800,66 @@
       }
      }
     ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/interventions/{intervention_id}/outcome": {
+   "patch": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Record Outcome",
+    "description": "Record whether the case breached after an intervention (admin key required). Outcomes on holdout rows are what\nturn the assumed effects into measured uplift; until some exist, /v1/interventions/roi reports only simulated results.",
+    "operationId": "v1_record_outcome_v1_interventions__intervention_id__outcome_patch",
+    "parameters": [
+     {
+      "name": "intervention_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Intervention Id"
+      }
+     },
+     {
+      "name": "x-api-key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "title": "X-Api-Key"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/OutcomeBody"
+       }
+      }
+     }
+    },
     "responses": {
      "200": {
       "description": "Successful Response",
@@ -1386,6 +1465,31 @@
      "cost"
     ],
     "title": "InterventionCreated"
+   },
+   "OutcomeBody": {
+    "properties": {
+     "breached_after": {
+      "type": "boolean",
+      "title": "Breached After"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "breached_after"
+    ],
+    "title": "OutcomeBody"
    },
    "PipelineRunRow": {
     "properties": {

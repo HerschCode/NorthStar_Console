@@ -26,6 +26,10 @@ from src.ml.early_risk import EarlyRiskModel, sequence_arrays, static_vector, su
 DEFAULT_AS_OF = pd.Timestamp("2018-04-16", tz="UTC")
 
 
+REPLAY_COLUMNS = ["case_id", "supplier_id", "category", "start_time", "events_seen", "elapsed_hours", "idle_hours", "current_activity",
+                  "value_so_far", "target_hours", "status", "breach_probability", "k"]
+
+
 def to_utc(ts) -> pd.Timestamp:
     t = pd.Timestamp(ts)
     return t.tz_localize("UTC") if t.tzinfo is None else t.tz_convert("UTC")
@@ -47,7 +51,7 @@ def replay_state(cases: pd.DataFrame, events: pd.DataFrame, as_of=DEFAULT_AS_OF,
     prior = meta["target"]["prior_breach_rate"]
     op = open_cases(cases, t)
     if op.empty:
-        return pd.DataFrame(columns=["case_id", "status"])
+        return pd.DataFrame(columns=REPLAY_COLUMNS)
     ev = events[events["case_id"].isin(op["case_id"]) & (events["timestamp"] <= t)]
     ev = ev.sort_values(["case_id", "timestamp", "activity"], kind="stable")
     g = ev.groupby("case_id")

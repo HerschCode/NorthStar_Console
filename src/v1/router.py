@@ -172,6 +172,11 @@ def v1_experiments():
     return build.experiments()
 
 
+@router.get("/evidence")
+def v1_evidence():
+    return build.evidence()
+
+
 @router.get("/briefing")
 def v1_briefing(request: Request, as_of: str = AsOf):
     return _serve(request, "briefing", build.briefing, as_of=as_of)
