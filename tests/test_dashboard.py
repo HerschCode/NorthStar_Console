@@ -141,3 +141,9 @@ def test_one_failing_section_does_not_break_the_others():
     for key in ("executive_overview", "bottlenecks", "suppliers", "conformance", "sla_risk"):
         assert key in body
         assert "available" in body[key]
+
+
+def test_root_serves_the_northstar_shell_and_dashboard_keeps_the_classic_page():
+    root = client.get("/")
+    assert root.status_code == 200 and "Northstar Procurement Intelligence" in root.text and 'id="nav"' in root.text
+    assert "Procure-to-Pay Intelligence" in client.get("/dashboard").text

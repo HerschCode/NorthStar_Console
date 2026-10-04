@@ -3,7 +3,7 @@
 ![Tests](https://github.com/HerschCode/operations-performance/actions/workflows/test.yml/badge.svg)
 ![dbt](https://github.com/HerschCode/operations-performance/actions/workflows/dbt.yml/badge.svg)
 
-**Live dashboard:** <https://operations-performance.onrender.com/dashboard> ([what it shows](dashboard/README.md)) · **Live API:** <https://operations-performance.onrender.com/docs> (Neon Postgres, real BPI 2019 procurement
+**Live product shell:** <https://operations-performance.onrender.com/> (control tower, action center, PO/supplier 360, process mining, finance, governance lab; falls back to a labelled snapshot if the database is down) · classic single-page dashboard: <https://operations-performance.onrender.com/dashboard> ([what it shows](dashboard/README.md)) · **Live API:** <https://operations-performance.onrender.com/docs> (Neon Postgres, real BPI 2019 procurement
 data; free tier, the first request may be slow to wake). A conversational layer over the same data lives
 in [`operations-assistant`](https://operations-assistant.onrender.com).
 

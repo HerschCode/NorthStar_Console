@@ -300,7 +300,8 @@ def _dashboard_html() -> str:
 
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
 def root_page():
-    return _dashboard_html()
+    """The Northstar product shell (src/api/app.html); the original single-page dashboard stays at /dashboard."""
+    return (Path(__file__).parent / "app.html").read_text(encoding="utf-8")
 
 
 @router.get("/dashboard", response_class=HTMLResponse, include_in_schema=False)

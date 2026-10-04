@@ -107,6 +107,7 @@ const NAV = [
   ['Decisions', [['interventions','Intervention Center'],['investigate','Investigations']]],
   ['Governance', [['governance','AI Security & Attack Lab'],['audit','Audit Log']]],
   ['Platform', [['models','Model Health'],['data','Data Quality'],['lineage','Data Lineage'],['architecture','Architecture'],['evidence','Evidence & Limitations'],['alerts','Alerts']]],
+  ['', [['classic','Classic dashboard ↗']]],
 ];
 let D = null;
 const $ = s => document.querySelector(s);
@@ -541,7 +542,7 @@ function render() {
   if (!D) return;
   const {name, arg} = route(), fn = V[name] || V.overview;
   $('#view').innerHTML = (D.snapshot && D.snapshot.live === false ? `<div class="banner">Showing a saved snapshot from ${esc(D.snapshot.as_of || 'an earlier build')}${D.snapshot.reason ? ' — the live database is unavailable' : ''}. Numbers are real but not current.</div>` : '') + fn(arg);
-  $('#nav').innerHTML = NAV.map(([g, items]) => (g ? `<div class="nav-group">${g}</div>` : '') + items.map(([k, l]) => `<a href="#/${k}" class="${k === name || (k === 'queue' && name === 'po') || (k === 'suppliers' && name === 'supplier') ? 'active' : ''}">${l}</a>`).join('')).join('');
+  $('#nav').innerHTML = NAV.map(([g, items]) => (g ? `<div class="nav-group">${g}</div>` : '') + items.map(([k, l]) => k === 'classic' ? `<a href="/dashboard">${l}</a>` : `<a href="#/${k}" class="${k === name || (k === 'queue' && name === 'po') || (k === 'suppliers' && name === 'supplier') ? 'active' : ''}">${l}</a>`).join('')).join('');
   window.scrollTo(0, 0);
   if (name === 'governance') runLab();
 }
