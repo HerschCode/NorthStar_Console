@@ -23,6 +23,11 @@ from src.tools import client as p1_client
 from src.tools.client import OpsPerformanceUnavailable
 
 PROPOSE_ROLES = {"analyst", "manager", "finance", "admin"}
+# P3's tool policy (config/tool_policies.yaml) allows `propose_intervention` only with an `action` from a fixed list and strict
+# arguments (no extra keys), so P2's business intervention types are mapped onto those actions here. The gateway, not this
+# service, decides whether the caller's role may do it.
+ACTION_FOR_TYPE = {"expedite_approval": "request_approval", "supplier_escalation": "escalate_case", "reassign_owner": "notify_manager",
+                   "hold_payment": "hold_payment", "release_payment": "release_payment"}
 APPROVE_ROLES = {"manager", "admin"}
 OUTCOME_ROLES = {"manager", "admin"}
 
@@ -120,8 +125,13 @@ class Ledger:
         session = f"p2-int-{iid}"
         for s in sources or []:
             gateway.register_source(session, s["kind"], s["text"], s["trust"], trace_header)
-        decision = gateway.authorize(session, role, user, "propose_intervention",
-                                     {"target": case_id, "intervention_type": intervention_type, "reason": rationale[:300]}, trace_header)
+        action = ACTION_FOR_TYPE.get(intervention_type)
+        if action is None:
+            with self._c() as c:
+                self._log(c, iid, "gateway_denied", "p2", {"note": f"intervention type {intervention_type!r} has no mapped gateway action"})
+            return self.get(iid)
+        args = {"action": action, "target": case_id, "reason": rationale[:300], "priority": "high" if action == "hold_payment" else "normal"}
+        decision = gateway.authorize(session, role, user, "propose_intervention", args, trace_header)
         with self._c() as c:
             c.execute("UPDATE interventions SET gateway_decision = ?, approval_id = ? WHERE id = ?", (json.dumps(decision), decision.get("approval_id"), iid))
             effect = decision.get("effect")
