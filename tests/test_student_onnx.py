@@ -158,7 +158,11 @@ def detector():
 @needs_student
 def test_meta_records_how_the_operating_point_was_chosen():
     meta = json.loads((STUDENT_DIR / "meta.json").read_text(encoding="utf-8"))
-    assert meta["max_length"] > 0 and "validation" in meta["threshold_selection"] and meta["base_model"] and meta["teacher"]
+    assert meta["max_length"] > 0 and meta["base_model"] and meta["teacher"]
+    # the shipped operating point is 0.5, chosen on the leave-one-source-out folds; the stricter validation-fixed threshold is recorded beside it, not used
+    assert meta["threshold_margin"] == 0.0 and "leave-one-source-out" in meta["threshold_selection"]
+    assert meta["conservative_threshold_margin"] > meta["threshold_margin"] and "validation" in meta["conservative_threshold_selection"]
+    assert meta["train"]["variant"] == "hardkd_tkd" and meta["n_transfer"] > 0
 
 
 @needs_student
