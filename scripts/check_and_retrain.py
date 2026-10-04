@@ -21,6 +21,7 @@ import sys
 
 from dotenv import load_dotenv
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 
 from src.api.db import get_engine, load_cases
 from src.ml.retrain_trigger import check_retrain_needed
@@ -60,7 +61,15 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
-    case_count = get_current_case_count()
+    try:
+        case_count = get_current_case_count()
+    except OperationalError as exc:
+        # The hosted free-tier database can be suspended or over quota. That is an availability problem, not a
+        # retraining failure: surface it as a workflow warning annotation and skip, instead of leaving the
+        # scheduled check permanently red (which hides real failures behind a known one).
+        print(f"::warning title=Retrain check skipped::database unreachable ({type(exc).__name__}); no decision made")
+        logger.warning("Retrain check skipped: database unreachable", extra={"error": str(exc)[:200]})
+        return 0
     logger.info("Checking retrain need", extra={"current_case_count": case_count})
 
     result = check_retrain_needed(current_case_count=case_count)

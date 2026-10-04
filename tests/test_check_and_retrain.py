@@ -110,3 +110,18 @@ def test_fails_fast_with_clear_message_when_db_secrets_are_empty(monkeypatch, ca
     count.assert_not_called()
     err = capsys.readouterr().err
     assert "DB_HOST" in err and "Secrets and variables" in err
+
+
+def test_unreachable_database_skips_with_a_warning_instead_of_failing(monkeypatch, capsys):
+    from sqlalchemy.exc import OperationalError
+    from scripts import check_and_retrain as job
+
+    for k in job.REQUIRED_DB_ENV:
+        monkeypatch.setenv(k, "x")
+    monkeypatch.setattr(job, "load_dotenv", lambda: None)
+
+    def boom():
+        raise OperationalError("select 1", {}, Exception("quota exceeded"))
+    monkeypatch.setattr(job, "get_current_case_count", boom)
+    assert job.main() == 0
+    assert "::warning" in capsys.readouterr().out
