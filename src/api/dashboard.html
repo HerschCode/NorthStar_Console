@@ -1231,6 +1231,20 @@ async function renderDataQuality() {
 // ── Main load / refresh loop ──────────────────────────────────────────────────
 let refreshTimer;
 
+function renderSnapshotBanner(snap) {
+  let el = document.getElementById('snapshot-banner');
+  if (!snap) { if (el) el.remove(); return; }
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'snapshot-banner';
+    el.setAttribute('role', 'status');
+    el.style.cssText = 'margin:0 0 12px;padding:10px 14px;border-radius:8px;border:1px solid var(--warn);color:var(--text);background:var(--panel2);font-size:13px';
+    document.querySelector('header').insertAdjacentElement('afterend', el);
+  }
+  el.textContent = 'Showing a saved snapshot from ' + (snap.as_of || 'an earlier build') +
+    ' because the live database is unavailable. Numbers are real but not current.';
+}
+
 async function loadDashboard() {
   const label = document.getElementById('refresh-label');
   label.textContent = 'Refreshing…';
@@ -1238,6 +1252,7 @@ async function loadDashboard() {
     const res = await fetch('/dashboard/data');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    renderSnapshotBanner(data.snapshot);
     renderKpis(data.executive_overview);
     renderBottlenecks(data.bottlenecks);
     renderRisk(data.sla_risk);

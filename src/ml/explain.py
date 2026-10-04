@@ -17,6 +17,8 @@ Two strategies, both available:
 import numpy as np
 import pandas as pd
 
+from src.ml.explain_shap import _unwrap_for_shap
+
 
 def explain_shap(
     feature_row: pd.Series,
@@ -45,10 +47,10 @@ def explain_shap(
     columns = model_bundle["columns"]
 
     try:
-        base_rf = calibrated.calibrated_classifiers_[0].estimator
-        # sklearn >= 1.6 wraps the base estimator in FrozenEstimator; unwrap it
-        if hasattr(base_rf, "estimator"):
-            base_rf = base_rf.estimator
+        # handles HeldOutCalibratedClassifier (current), CalibratedClassifierCV and FrozenEstimator
+        base_rf = _unwrap_for_shap(calibrated)
+        if not hasattr(base_rf, "predict_proba"):
+            raise AttributeError("no unwrappable base estimator")
     except (AttributeError, IndexError):
         return explain_prediction(feature_row, model_bundle.get("feature_importances", {}), top_n)
 
@@ -95,10 +97,10 @@ def explain_shap_batch(
     columns = model_bundle["columns"]
 
     try:
-        base_rf = calibrated.calibrated_classifiers_[0].estimator
-        # sklearn >= 1.6 wraps the base estimator in FrozenEstimator; unwrap it
-        if hasattr(base_rf, "estimator"):
-            base_rf = base_rf.estimator
+        # handles HeldOutCalibratedClassifier (current), CalibratedClassifierCV and FrozenEstimator
+        base_rf = _unwrap_for_shap(calibrated)
+        if not hasattr(base_rf, "predict_proba"):
+            raise AttributeError("no unwrappable base estimator")
     except (AttributeError, IndexError):
         fi = model_bundle.get("feature_importances", {})
         return [explain_prediction(features.iloc[i], fi, top_n) for i in range(len(features))]

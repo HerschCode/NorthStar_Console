@@ -2,6 +2,12 @@
 
 ## Unreleased -- Post-v1.0.0 upgrade work
 
+### Dashboard: snapshot fallback + SHAP fix (2026-10-04)
+- When the database is unreachable (Neon quota/suspend) `/dashboard/data` serves `reports/dashboard_snapshot.json`,
+  built by `scripts/build_dashboard_snapshot.py` from the same section functions, and the page shows a banner with its date.
+- Bug fix: `explain_shap_batch`/`explain_prediction_shap` only unwrapped `CalibratedClassifierCV`, so with the held-out calibrated
+  model (since 2026-09-25) the top-risk panel silently lost real SHAP values and errored (`KeyError: shap`). Now unwrapped; test added.
+
 ### Retrain on completed-only supplier history + staleness guard (2026-10-03)
 - The look-ahead fix (1452cbe) changed features but the served model was still the 2026-09-29 artifact. Retrained;
   `meta.json` now stores `feature_code_sha256` and a test fails if `src/ml/features.py` changes without a retrain.

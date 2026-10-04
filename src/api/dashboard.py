@@ -31,6 +31,7 @@ from src.ml.predict import load_model, predict_sla_risk
 from src.ml.features import build_features
 from src.ml.explain import explain_shap_batch
 from src.api.db import get_engine
+from src.api.snapshot import load_snapshot
 from src.controls.ap_controls import load_config as load_ap_config
 from src.analytics.working_capital import working_capital_summary
 
@@ -192,11 +193,12 @@ def _sla_risk(cases):
     }
 
 
-def _ap_controls():
+def _ap_controls(df=None):
     """Top-line AP controls summary for the dashboard: real exception counts + exposure, per
     control, straight from analytics.ap_control_exceptions (docs/ap-controls.md). Labelled
     anomaly triage, not fraud, same as the API's /controls/summary."""
-    df = pd.read_sql("select control_id, severity, exposure_eur from analytics.ap_control_exceptions", get_engine())
+    if df is None:
+        df = pd.read_sql("select control_id, severity, exposure_eur from analytics.ap_control_exceptions", get_engine())
     if df.empty:
         raise ValueError("No AP control run yet -- run scripts.run_ap_controls")
     rows = []
@@ -228,6 +230,7 @@ def _compute_dashboard_data() -> dict:
     # the difference between a slow-but-tolerable first load and a multi-minute one.
     # Loaded outside the per-section try/except: if the DB itself is unreachable,
     # every section should show that failure, not attempt 5 identical failing calls.
+    cases_error = events_error = None
     try:
         cases = load_cases()
     except Exception as exc:
@@ -239,6 +242,18 @@ def _compute_dashboard_data() -> dict:
         events = None
         events_error = str(exc)
 
+    if cases is None and events is None:
+        # Database unreachable (e.g. free-tier Neon quota/suspend): serve the last committed snapshot,
+        # clearly labelled, instead of an empty page. See scripts/build_dashboard_snapshot.py.
+        snap = load_snapshot()
+        if snap is not None:
+            return snap
+    return build_sections(cases, events, cases_error=cases_error, events_error=events_error)
+
+
+def build_sections(cases, events, ap_df=None, cases_error=None, events_error=None) -> dict:
+    """Every dashboard section from already-loaded frames (the live path and the snapshot builder
+    share this, so a snapshot can never drift from what the live page computes)."""
     def cases_section(fn):
         if cases is None:
             return {"available": False, "reason": cases_error}
@@ -256,7 +271,7 @@ def _compute_dashboard_data() -> dict:
         "conformance": events_section(_conformance),
         "sla_risk": cases_section(_sla_risk),
         "top_risk_cases": cases_section(_top_risk_cases),
-        "ap_controls": _section(_ap_controls),
+        "ap_controls": _section(_ap_controls, ap_df) if ap_df is not None else _section(_ap_controls),
         "working_capital": events_section(_working_capital),
     }
 
