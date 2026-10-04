@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Northstar Procurement Assistant</title>
+<title>Northstar Procurement Intelligence</title>
 <style>
   :root {
     --bg: #0b0f14; --panel: #131922; --surface: #1a222c; --border: #232b36;
@@ -12,6 +12,7 @@
     --input-bg: #0e141b; --assistant-bg: #151e28; --warn: #f0a500;
     --good: #2ea043; --bad: #c0392b; --divider: #1d2530;
     --shadow: 0 2px 8px rgba(0,0,0,0.4);
+    --risk-high: #ef4444; --risk-med: #f59e0b; --risk-low: #22c55e;
   }
   [data-theme="light"] {
     --bg: #f0f2f5; --panel: #ffffff; --surface: #f6f8fa; --border: #d0d7de;
@@ -20,6 +21,7 @@
     --input-bg: #f6f8fa; --assistant-bg: #f0f6ff; --warn: #d4860e;
     --good: #1a7f37; --bad: #b91c1c; --divider: #e2e8f0;
     --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    --risk-high: #dc2626; --risk-med: #d97706; --risk-low: #16a34a;
   }
   * { box-sizing: border-box; }
   body {
@@ -44,9 +46,7 @@
     color: var(--muted); background: var(--surface); border: 1px solid var(--border);
     padding: 3px 9px; border-radius: 999px;
   }
-  .status-dot {
-    width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex-shrink: 0;
-  }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
   .status-dot.ok   { background: var(--good); }
   .status-dot.warn { background: var(--warn); }
   .status-dot.err  { background: var(--bad); }
@@ -59,21 +59,41 @@
   .github-link { font-size: 0.75rem; color: var(--muted); text-decoration: none; }
   .github-link:hover { color: var(--accent); }
 
-  /* ── Layout ── */
-  .outer { width: 100%; max-width: 1200px; padding: 20px 16px 0; }
-  .layout { display: grid; grid-template-columns: 320px 1fr; gap: 18px; align-items: start; }
-  .col-left {
-    min-width: 0; display: flex; flex-direction: column; gap: 12px;
-    position: sticky; top: 48px;
-    max-height: calc(100vh - 60px); overflow-y: auto;
-    padding-right: 4px; /* room for scrollbar */
-    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  /* ── Tab navigation ── */
+  .tab-bar {
+    width: 100%; background: var(--panel); border-bottom: 1px solid var(--border);
+    padding: 0 20px; display: flex; align-items: center; gap: 2px; position: sticky; top: 41px; z-index: 9;
   }
-  .col-left::-webkit-scrollbar { width: 4px; }
-  .col-left::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-  .col-right { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+  .tab-btn {
+    background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); font-size: 0.83rem; font-weight: 500; padding: 10px 14px;
+    cursor: pointer; white-space: nowrap; font-family: inherit; transition: color 0.15s, border-color 0.15s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-  /* ── Shared card style ── */
+  /* ── Notice bar ── */
+  .notice-bar {
+    width: 100%; background: color-mix(in srgb, var(--warn) 10%, var(--panel));
+    border-bottom: 1px solid color-mix(in srgb, var(--warn) 30%, var(--border));
+    padding: 6px 20px; display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; font-size: 0.73rem; color: var(--muted);
+  }
+  .notice-bar.hidden { display: none; }
+  .notice-bar-text { flex: 1; }
+  .notice-bar-text strong { color: var(--warn); }
+  .notice-dismiss {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 1rem; padding: 0 4px; line-height: 1; flex-shrink: 0; transition: color 0.15s;
+  }
+  .notice-dismiss:hover { color: var(--text); }
+
+  /* ── Outer/layout ── */
+  .outer { width: 100%; max-width: 1200px; padding: 20px 16px 0; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── Shared card ── */
   .panel-card {
     border: 1px solid var(--border); border-radius: 12px;
     background: var(--panel); overflow: hidden; box-shadow: var(--shadow);
@@ -94,7 +114,97 @@
   .card-body { padding: 14px; }
   .card-body.hidden { display: none; }
 
-  /* ── Guide: sections ── */
+  /* ── KPI strip ── */
+  .kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  @media (max-width: 900px) { .kpi-strip { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 500px) { .kpi-strip { grid-template-columns: 1fr; } }
+  .kpi-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; box-shadow: var(--shadow); cursor: pointer; transition: border-color 0.15s;
+  }
+  .kpi-card:hover { border-color: var(--accent); }
+  .kpi-label { font-size: 0.71rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted); margin-bottom: 6px; }
+  .kpi-value { font-size: 1.7rem; font-weight: 700; line-height: 1.1; color: var(--text); margin-bottom: 4px; }
+  .kpi-sub { font-size: 0.75rem; color: var(--muted); }
+  .kpi-delta { display: inline-flex; align-items: center; gap: 3px; font-size: 0.73rem;
+    font-weight: 600; padding: 1px 6px; border-radius: 5px; }
+  .kpi-delta.up   { background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--bad); }
+  .kpi-delta.down { background: color-mix(in srgb, var(--good) 12%, transparent); color: var(--good); }
+  .kpi-delta.neu  { background: color-mix(in srgb, var(--muted) 15%, transparent); color: var(--muted); }
+  .kpi-skeleton { height: 80px; background: var(--surface); border-radius: 12px; animation: shimmer 1.5s infinite; }
+  @keyframes shimmer { 0%,100%{opacity:0.4} 50%{opacity:0.9} }
+
+  /* ── Two-column layout for bottlenecks + suppliers ── */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 800px) { .overview-grid { grid-template-columns: 1fr; } }
+
+  /* ── Bottleneck bars ── */
+  .bottleneck-list { display: flex; flex-direction: column; gap: 10px; }
+  .bn-row { display: flex; flex-direction: column; gap: 4px; }
+  .bn-label-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .bn-name { font-size: 0.8rem; color: var(--text); }
+  .bn-days { font-size: 0.75rem; color: var(--muted); }
+  .bn-bar-bg { height: 6px; background: var(--surface); border-radius: 3px; overflow: hidden; }
+  .bn-bar { height: 6px; border-radius: 3px; transition: width 0.6s ease; }
+  .bn-bar.high { background: var(--risk-high); }
+  .bn-bar.med  { background: var(--risk-med); }
+  .bn-bar.low  { background: var(--risk-low); }
+
+  /* ── Supplier table ── */
+  .supplier-table { width: 100%; border-collapse: collapse; font-size: 0.79rem; }
+  .supplier-table th {
+    font-size: 0.69rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--muted); padding: 4px 8px 6px; text-align: left; border-bottom: 1px solid var(--border);
+  }
+  .supplier-table td { padding: 6px 8px; border-bottom: 1px solid var(--divider); color: var(--text); }
+  .supplier-table tr:last-child td { border-bottom: none; }
+  .risk-badge {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 0.7rem;
+    font-weight: 600; padding: 1px 7px; border-radius: 5px;
+  }
+  .risk-badge.high { background: color-mix(in srgb, var(--risk-high) 15%, transparent); color: var(--risk-high); }
+  .risk-badge.med  { background: color-mix(in srgb, var(--risk-med)  15%, transparent); color: var(--risk-med); }
+  .risk-badge.low  { background: color-mix(in srgb, var(--risk-low)  15%, transparent); color: var(--risk-low); }
+
+  /* ── Overview ask chips ── */
+  .overview-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 6px; }
+  .ask-chip {
+    font-size: 0.73rem; color: var(--accent);
+    border: 1px solid var(--accent-dim);
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+    padding: 5px 12px; border-radius: 999px; cursor: pointer;
+    font-weight: 400; font-family: inherit;
+    transition: background 0.12s, border-color 0.12s;
+    line-height: 1.4; text-align: left;
+  }
+  .ask-chip:hover { background: var(--accent-dim); border-color: var(--accent); }
+  .investigate-chip {
+    font-size: 0.73rem; color: var(--doc-tag);
+    border: 1px solid color-mix(in srgb, var(--doc-tag) 30%, transparent);
+    background: color-mix(in srgb, var(--doc-tag) 6%, transparent);
+    padding: 5px 12px; border-radius: 999px; cursor: pointer;
+    font-weight: 400; font-family: inherit;
+    transition: background 0.12s, border-color 0.12s;
+    line-height: 1.4; text-align: left;
+  }
+  .investigate-chip:hover { background: color-mix(in srgb, var(--doc-tag) 12%, transparent); border-color: var(--doc-tag); }
+
+  /* ── Ask tab layout ── */
+  .ask-layout { display: grid; grid-template-columns: 300px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 900px) { .ask-layout { grid-template-columns: 1fr; } }
+  .col-left {
+    min-width: 0; display: flex; flex-direction: column; gap: 12px;
+    position: sticky; top: 80px;
+    max-height: calc(100vh - 90px); overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  .col-left::-webkit-scrollbar { width: 4px; }
+  .col-left::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .col-right { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+
+  /* Guide sections */
   .guide-section { margin-bottom: 10px; }
   .guide-section:last-child { margin-bottom: 0; }
   .guide-section-header {
@@ -122,25 +232,15 @@
     line-height: 1.4; text-align: left;
   }
   .chip:hover { background: var(--accent-dim); border-color: var(--accent); }
-
-  /* Combined section: full-width block buttons (too long for pills) */
-  .chip.block {
-    display: block; width: 100%; border-radius: 8px;
-    padding: 7px 11px; white-space: normal; line-height: 1.5;
-  }
-
-  /* Policy docs: card-style list */
+  .chip.block { display: block; width: 100%; border-radius: 8px; padding: 7px 11px; white-space: normal; line-height: 1.5; }
   .guide-docs { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
   .guide-docs li {
     font-size: 0.74rem; color: var(--text); padding: 6px 10px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 7px; display: flex; align-items: center; gap: 7px;
-    line-height: 1.4;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 7px;
+    display: flex; align-items: center; gap: 7px; line-height: 1.4;
   }
   .doc-icon { font-size: 0.8rem; flex-shrink: 0; opacity: 0.7; }
   .guide-divider { border: none; border-top: 1px solid var(--divider); margin: 8px 0; }
-
-  /* Collapsed-guide re-open button */
   .guide-reopen { display: none; }
   .guide-reopen-btn {
     background: none; border: 1px solid var(--border); border-radius: 8px;
@@ -150,22 +250,16 @@
   .guide-reopen-btn:hover { border-color: var(--accent); color: var(--accent); }
   .guide-reopen.visible { display: block; }
 
-  /* ── Architecture card ── */
+  /* Arch card */
   .arch-section { margin-bottom: 12px; }
   .arch-section:last-child { margin-bottom: 0; }
-  .arch-section-label {
-    font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
-    color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; gap: 5px;
-  }
+  .arch-section-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
   .arch-rows { display: flex; flex-direction: column; gap: 4px; }
   .arch-row { display: flex; align-items: baseline; gap: 7px; font-size: 0.75rem; line-height: 1.5; }
   .arch-row-icon { color: var(--step-color); flex-shrink: 0; font-size: 0.65rem; }
   .arch-row-text { color: var(--muted); }
   .arch-row-text strong { color: var(--text); font-weight: 500; }
-  .arch-tag {
-    display: inline-flex; align-items: center; font-size: 0.68rem;
-    padding: 1px 7px; border-radius: 999px; border: 1px solid; font-weight: 500; margin: 1px;
-  }
+  .arch-tag { display: inline-flex; align-items: center; font-size: 0.68rem; padding: 1px 7px; border-radius: 999px; border: 1px solid; font-weight: 500; margin: 1px; }
   .arch-tag.retrieval { border-color: var(--accent-dim); color: var(--accent); }
   .arch-tag.eval { border-color: rgba(47,158,111,0.4); color: var(--data-tag); }
   .arch-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
@@ -173,8 +267,7 @@
   /* ── Chat panel ── */
   .chat-panel {
     background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-    padding: 14px; display: flex; flex-direction: column; gap: 12px;
-    box-shadow: var(--shadow);
+    padding: 14px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow);
   }
   #log {
     display: flex; flex-direction: column; gap: 0;
@@ -182,10 +275,7 @@
   }
   .pair { display: flex; flex-direction: column; }
   .pair + .pair { border-top: 1px solid var(--divider); padding-top: 12px; margin-top: 4px; }
-  .msg {
-    padding: 10px 13px; border-radius: 10px; line-height: 1.65; font-size: 0.9rem;
-    white-space: pre-wrap;
-  }
+  .msg { padding: 10px 13px; border-radius: 10px; line-height: 1.65; font-size: 0.9rem; white-space: pre-wrap; }
   .msg.user { background: var(--accent-dim); align-self: flex-end; max-width: 85%; margin-bottom: 10px; }
   .msg.assistant { background: var(--assistant-bg); border: 1px solid var(--border); }
   .msg.error { background: #3a1f1f; border: 1px solid #5c2f2f; color: #ffb4b4; }
@@ -194,6 +284,13 @@
     min-height: 140px; text-align: center; color: var(--muted); font-size: 0.86rem;
     line-height: 1.7; padding: 20px;
   }
+  /* Context note */
+  .context-note {
+    font-size: 0.75rem; color: var(--step-color); padding: 5px 10px;
+    background: color-mix(in srgb, var(--step-color) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--step-color) 20%, transparent);
+    border-radius: 7px; margin-bottom: 4px;
+  }
 
   /* Citations */
   .citations { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
@@ -201,48 +298,38 @@
     display: inline-flex; align-items: center; gap: 4px;
     font-size: 0.71rem; padding: 3px 9px; border-radius: 999px;
     border: 1px solid; font-weight: 500; max-width: 240px; overflow: hidden;
-    text-overflow: ellipsis; white-space: nowrap;
+    text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
+    transition: opacity 0.12s;
   }
-  .cite-tag.data {
-    border-color: rgba(47,158,111,0.4); color: var(--data-tag);
-    background: color-mix(in srgb, var(--data-tag) 8%, transparent);
-  }
-  .cite-tag.document {
-    border-color: rgba(185,138,47,0.4); color: var(--doc-tag);
-    background: color-mix(in srgb, var(--doc-tag) 8%, transparent);
-  }
+  .cite-tag:hover { opacity: 0.75; }
+  .cite-tag.data { border-color: rgba(47,158,111,0.4); color: var(--data-tag); background: color-mix(in srgb, var(--data-tag) 8%, transparent); }
+  .cite-tag.document { border-color: rgba(185,138,47,0.4); color: var(--doc-tag); background: color-mix(in srgb, var(--doc-tag) 8%, transparent); }
   .cite-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
   .cite-tag.data .cite-dot { background: var(--data-tag); }
   .cite-tag.document .cite-dot { background: var(--doc-tag); }
-
-  /* Reasoning trace */
-  .trace { margin-top: 8px; }
-  .trace-toggle {
-    background: none; border: none; padding: 0; color: var(--step-color);
-    font-size: 0.73rem; cursor: pointer; display: flex; align-items: center; gap: 4px;
-    font-family: inherit;
+  /* Citation drawer */
+  .cite-drawer {
+    display: none; margin-top: 4px; padding: 8px 12px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border); font-size: 0.75rem;
+    color: var(--muted); line-height: 1.5;
   }
+  .cite-drawer.open { display: block; }
+  .cite-drawer strong { color: var(--text); }
+
+  /* Trace */
+  .trace { margin-top: 8px; }
+  .trace-toggle { background: none; border: none; padding: 0; color: var(--step-color); font-size: 0.73rem; cursor: pointer; display: flex; align-items: center; gap: 4px; font-family: inherit; }
   .trace-toggle:hover { color: var(--accent); }
   .trace-toggle .arrow { transition: transform 0.15s; display: inline-block; }
   .trace-toggle.open .arrow { transform: rotate(90deg); }
-  .trace-steps {
-    margin-top: 6px; border-left: 2px solid var(--border); padding-left: 10px;
-    display: flex; flex-direction: column; gap: 2px;
-  }
+  .trace-steps { margin-top: 6px; border-left: 2px solid var(--border); padding-left: 10px; display: flex; flex-direction: column; gap: 2px; }
   .trace-steps.hidden { display: none; }
   .trace-step { font-size: 0.75rem; color: var(--step-color); line-height: 1.5; }
   .trace-step::before { content: "→ "; }
 
-  /* Response metadata row */
-  .resp-meta {
-    display: flex; align-items: center; gap: 10px; margin-top: 8px;
-    padding-top: 8px; border-top: 1px solid var(--divider);
-    flex-wrap: wrap;
-  }
-  .resp-meta-item {
-    display: flex; align-items: center; gap: 4px;
-    font-size: 0.7rem; color: var(--muted);
-  }
+  /* Meta bar */
+  .resp-meta { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--divider); flex-wrap: wrap; }
+  .resp-meta-item { display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: var(--muted); }
   .resp-meta-icon { opacity: 0.7; }
 
   /* Provider selector */
@@ -268,84 +355,94 @@
   }
   button[type=submit]:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  /* Streaming toggle */
-  .stream-toggle {
-    display: flex; align-items: center; gap: 5px;
-    font-size: 0.72rem; color: var(--muted); cursor: pointer; user-select: none;
-  }
+  /* Rate / stream */
+  .stream-toggle { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--muted); cursor: pointer; user-select: none; }
   .stream-toggle input[type=checkbox] { accent-color: var(--accent); cursor: pointer; }
   .stream-toggle span { white-space: nowrap; }
-
-  /* Rate counter */
-  .rate-row {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 0.74rem; color: var(--muted);
-  }
+  .rate-row { display: flex; align-items: center; gap: 8px; font-size: 0.74rem; color: var(--muted); }
   .rate-warn { color: var(--warn); font-weight: 600; font-size: 0.76rem; }
   .rate-dots { display: flex; gap: 4px; align-items: center; }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); transition: background 0.3s; }
   .dot.used { background: var(--border); }
 
-  /* ── Notice bar ── */
-  .notice-bar {
-    width: 100%; background: color-mix(in srgb, var(--warn) 10%, var(--panel));
-    border-bottom: 1px solid color-mix(in srgb, var(--warn) 30%, var(--border));
-    padding: 6px 20px; display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; font-size: 0.73rem; color: var(--muted);
+  /* ── Investigate tab ── */
+  .investigate-layout { display: flex; flex-direction: column; gap: 16px; }
+  .investigate-form-panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; box-shadow: var(--shadow);
   }
-  .notice-bar.hidden { display: none; }
-  .notice-bar-text { flex: 1; }
-  .notice-bar-text strong { color: var(--warn); }
-  .notice-dismiss {
-    background: none; border: none; color: var(--muted); cursor: pointer;
-    font-size: 1rem; padding: 0 4px; line-height: 1; flex-shrink: 0;
-    transition: color 0.15s;
+  .investigate-form-title { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+  .investigate-form-sub { font-size: 0.8rem; color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
+  .investigate-form { display: flex; gap: 8px; }
+  .investigate-input {
+    flex: 1; background: var(--input-bg); border: 1px solid var(--border); color: var(--text);
+    padding: 12px 14px; border-radius: 8px; font-size: 0.9rem; outline: none;
+    transition: border-color 0.15s; font-family: inherit;
   }
-  .notice-dismiss:hover { color: var(--text); }
+  .investigate-input:focus { border-color: var(--accent); }
+  .investigate-input::placeholder { color: var(--muted); }
+  .investigate-btn {
+    background: var(--accent); color: white; border: none; padding: 0 20px;
+    border-radius: 8px; font-size: 0.9rem; cursor: pointer; font-weight: 600;
+    white-space: nowrap; transition: opacity 0.15s;
+  }
+  .investigate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .investigate-suggest { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+  /* Workspace */
+  .workspace {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; box-shadow: var(--shadow); display: none;
+  }
+  .workspace.visible { display: block; }
+  .workspace-header {
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .workspace-title { font-size: 0.92rem; font-weight: 700; color: var(--text); flex: 1; line-height: 1.3; }
+  .workspace-meta { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+  .workspace-sections { padding: 0; }
+  .ws-section { padding: 14px 18px; border-bottom: 1px solid var(--divider); }
+  .ws-section:last-child { border-bottom: none; }
+  .ws-section-label {
+    font-size: 0.69rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--accent); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+  }
+  .ws-text { font-size: 0.87rem; color: var(--text); line-height: 1.65; }
+  .ws-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+  .ws-list li { font-size: 0.85rem; color: var(--text); line-height: 1.5; padding-left: 14px; position: relative; }
+  .ws-list li::before { content: "▸"; position: absolute; left: 0; color: var(--accent); font-size: 0.7rem; top: 3px; }
+  .ws-policy-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+  .ws-policy-item { font-size: 0.82rem; color: var(--doc-tag); padding: 5px 10px; background: color-mix(in srgb, var(--doc-tag) 8%, transparent); border: 1px solid color-mix(in srgb, var(--doc-tag) 25%, transparent); border-radius: 7px; }
+  .ws-limitations { font-size: 0.82rem; color: var(--muted); line-height: 1.5; font-style: italic; }
+  .workspace-loading {
+    padding: 40px 18px; text-align: center; color: var(--muted); font-size: 0.88rem;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ── Toast ── */
-  .toast-container {
-    position: fixed; bottom: 20px; right: 20px;
-    display: flex; flex-direction: column; gap: 8px;
-    z-index: 1000; max-width: 360px;
-  }
-  .toast {
-    display: flex; align-items: flex-start; gap: 10px;
-    padding: 11px 14px; border-radius: 10px; font-size: 0.81rem;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4); line-height: 1.5;
-    animation: toast-in 0.2s ease;
-  }
+  .toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 1000; max-width: 360px; }
+  .toast { display: flex; align-items: flex-start; gap: 10px; padding: 11px 14px; border-radius: 10px; font-size: 0.81rem; box-shadow: 0 4px 16px rgba(0,0,0,0.4); line-height: 1.5; animation: toast-in 0.2s ease; }
   @keyframes toast-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-  .toast-quota {
-    background: #2b1f0f; border: 1px solid #7a4e10; color: #f5c270;
-  }
-  .toast-rate {
-    background: #1a2535; border: 1px solid #2d4a72; color: #8ab4f8;
-  }
-  .toast-body { flex: 1; }
+  .toast-quota { background: #2b1f0f; border: 1px solid #7a4e10; color: #f5c270; }
+  .toast-rate  { background: #1a2535; border: 1px solid #2d4a72; color: #8ab4f8; }
+  .toast-body  { flex: 1; }
   .toast-title { font-weight: 700; margin-bottom: 3px; }
-  .toast-close {
-    background: none; border: none; color: inherit; opacity: 0.6;
-    cursor: pointer; font-size: 1rem; padding: 0; line-height: 1; flex-shrink: 0;
-  }
+  .toast-close { background: none; border: none; color: inherit; opacity: 0.6; cursor: pointer; font-size: 1rem; padding: 0; line-height: 1; flex-shrink: 0; }
   .toast-close:hover { opacity: 1; }
 
-  footer {
-    color: var(--muted); font-size: 0.74rem; text-align: center; line-height: 1.7;
-    padding-top: 2px;
-  }
+  footer { color: var(--muted); font-size: 0.74rem; text-align: center; line-height: 1.7; padding-top: 2px; }
   footer a { color: var(--accent); }
 
-  @media (max-width: 900px) {
-    .layout { grid-template-columns: 1fr; }
-    .topbar-sub { display: none; }
-    #guideBody { max-height: min(52vh, 520px); }
-  }
   @media (max-width: 600px) {
     .outer { padding: 12px 10px 0; }
     .msg.user { max-width: 96%; }
     button[type=submit] { padding: 0 12px; }
     .topbar-logo { font-size: 0.85rem; }
+    .topbar-sub { display: none; }
+    .investigate-form { flex-direction: column; }
+    .investigate-btn { padding: 10px 16px; }
   }
 </style>
 </head>
@@ -354,8 +451,8 @@
 <!-- Top bar -->
 <div class="topbar">
   <div class="topbar-brand">
-    <span class="topbar-logo">Northstar Procurement Assistant</span>
-    <span class="topbar-sub">Grounded analytics · procurement policy</span>
+    <span class="topbar-logo">Northstar</span>
+    <span class="topbar-sub">Procurement Intelligence</span>
   </div>
   <div class="topbar-right">
     <div class="status-pill">
@@ -367,223 +464,328 @@
   </div>
 </div>
 
-<!-- Quota / free-tier notice bar -->
+<!-- Tab navigation -->
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="overview">📊 Operations Overview</button>
+  <button class="tab-btn" data-tab="ask">💬 Ask Northstar</button>
+  <button class="tab-btn" data-tab="investigate">🔍 Investigate</button>
+</div>
+
+<!-- Notice bar (Ask tab) -->
 <div class="notice-bar" id="noticeBar">
   <span class="notice-bar-text">
-    <strong>Free-tier demo</strong> — defaults to Groq (gpt-oss-120b, the model the evaluations used). Switch between Groq and Gemini with the model selector. <strong>5 questions / 10 min</strong> per visitor.
+    <strong>Free-tier demo</strong> — defaults to Groq (gpt-oss-120b). Switch between Groq and Gemini with the model selector. <strong>5 questions / 10 min</strong> per visitor.
     If you see a <em>"provider rate-limited"</em> error, the daily token quota may be exhausted — try again after midnight UTC.
   </span>
   <button class="notice-dismiss" id="noticeDismiss" title="Dismiss notice" aria-label="Dismiss notice">×</button>
 </div>
 
 <div class="outer">
-  <div class="layout">
 
-  <!-- ── Left column ── -->
-  <div class="col-left">
+  <!-- ══════════════════════════════════════ OVERVIEW TAB ══════════════════════════════════════ -->
+  <div class="tab-content active" id="tab-overview">
 
-  <!-- Guide panel -->
-  <div class="panel-card" id="guidePanel">
-    <div class="card-header" id="guideHeader">
-      <div class="card-header-left">
-        <span class="card-title">What can I ask?</span>
-        <span class="card-sub">scroll for examples · click to try</span>
-      </div>
-      <button class="collapse-btn" id="guideCollapseBtn" aria-label="Expand guide" aria-expanded="false">▾ Expand</button>
+    <!-- KPI strip -->
+    <div class="kpi-strip" id="kpiStrip">
+      <div class="kpi-skeleton"></div>
+      <div class="kpi-skeleton"></div>
+      <div class="kpi-skeleton"></div>
+      <div class="kpi-skeleton"></div>
     </div>
-    <div class="card-body hidden" id="guideBody">
 
-      <div class="guide-section">
-        <div class="guide-section-header">📊 Analytics · live data</div>
-        <div class="guide-chips">
-          <button class="chip" type="button">What is the average cycle time?</button>
-          <button class="chip" type="button">What is the median vs P90 cycle time?</button>
-          <button class="chip" type="button">What is the SLA breach rate?</button>
-          <button class="chip" type="button">Show me the top 5 bottleneck stages</button>
-          <button class="chip" type="button">Which suppliers have the highest breach rate?</button>
-          <button class="chip" type="button">How many orders are HIGH risk right now?</button>
-          <button class="chip" type="button">What is the process conformance rate?</button>
-          <button class="chip" type="button">Which supplier has the fastest cycle time?</button>
+    <!-- Bottlenecks + Suppliers -->
+    <div class="overview-grid">
+
+      <div class="panel-card">
+        <div class="card-header" style="cursor:default">
+          <div class="card-header-left">
+            <span class="card-title">⛓ Process Bottlenecks</span>
+            <span class="card-sub">average days by stage</span>
+          </div>
+        </div>
+        <div class="card-body" id="bottleneckBody">
+          <div class="kpi-skeleton" style="height:140px"></div>
         </div>
       </div>
 
-      <hr class="guide-divider">
-
-      <div class="guide-section">
-        <div class="guide-section-header">📄 Policy · 4 SOPs indexed</div>
-        <ul class="guide-docs">
-          <li><span class="doc-icon">📄</span>Purchase Order Approval Thresholds</li>
-          <li><span class="doc-icon">📄</span>SLA Cycle Time Targets by Category</li>
-          <li><span class="doc-icon">📄</span>Escalation Triggers &amp; Paths</li>
-          <li><span class="doc-icon">📄</span>Exception Handling Procedures</li>
-        </ul>
-        <div class="guide-chips">
-          <button class="chip" type="button">What is the approval threshold for high-value orders?</button>
-          <button class="chip" type="button">Who approves orders over $50,000?</button>
-          <button class="chip" type="button">When should a delayed order be escalated?</button>
-          <button class="chip" type="button">What is the process for an emergency purchase?</button>
-          <button class="chip" type="button">How are supplier disputes handled under policy?</button>
+      <div class="panel-card">
+        <div class="card-header" style="cursor:default">
+          <div class="card-header-left">
+            <span class="card-title">🏭 Supplier Risk</span>
+            <span class="card-sub">ranked by SLA breach rate</span>
+          </div>
+        </div>
+        <div class="card-body" style="padding:0" id="supplierBody">
+          <div class="card-body">
+            <div class="kpi-skeleton" style="height:140px"></div>
+          </div>
         </div>
       </div>
 
-      <hr class="guide-divider">
+    </div>
 
-      <div class="guide-section">
-        <div class="guide-section-header">🔗 Combined · data + policy</div>
-        <div class="guide-chips">
-          <button class="chip block" type="button">Why are high-value orders breaching SLA, and does policy explain the extra step?</button>
-          <button class="chip block" type="button">Which supplier should I escalate first based on our policy?</button>
-          <button class="chip block" type="button">Is our current breach rate within the policy's acceptable range?</button>
-          <button class="chip block" type="button">Which HIGH risk orders also require dual approval under policy?</button>
+    <!-- Contextual action chips -->
+    <div class="panel-card" style="margin-bottom:16px">
+      <div class="card-header" style="cursor:default">
+        <div class="card-header-left">
+          <span class="card-title">💡 Explore &amp; Investigate</span>
+          <span class="card-sub">click any question to open it in Ask or Investigate</span>
         </div>
       </div>
+      <div class="card-body">
+        <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px;font-weight:600">📊 Quick questions for Ask Northstar</div>
+        <div class="overview-chips">
+          <button class="ask-chip" data-q="What is the average procurement cycle time and which category is slowest?">What is the cycle time by category?</button>
+          <button class="ask-chip" data-q="Which suppliers have the highest SLA breach rate and what are the main reasons?">Why are suppliers breaching SLA?</button>
+          <button class="ask-chip" data-q="How many HIGH risk orders are there right now and what is the total value?">How many HIGH risk orders?</button>
+          <button class="ask-chip" data-q="What is our SLA breach rate and is it within the policy's acceptable range?">Is our SLA breach rate acceptable?</button>
+          <button class="ask-chip" data-q="Which supplier should I escalate first based on our escalation policy?">Which supplier to escalate first?</button>
+        </div>
+        <div style="font-size:0.74rem;color:var(--muted);margin:12px 0 8px;font-weight:600">🔍 Deep investigations</div>
+        <div class="overview-chips">
+          <button class="investigate-chip" data-q="Why is our SLA breach rate high and what are the root causes?">Why is SLA breach rate high?</button>
+          <button class="investigate-chip" data-q="Why is the goods receipt stage the main procurement bottleneck and what policy applies?">Why is receipt the main bottleneck?</button>
+          <button class="investigate-chip" data-q="Which suppliers are underperforming and what does our escalation policy say about them?">Investigate underperforming suppliers</button>
+        </div>
+      </div>
+    </div>
 
-    </div><!-- /card-body -->
-  </div><!-- /guide-panel -->
+    <div id="overviewError" style="display:none;padding:12px;background:#3a1f1f;border:1px solid #5c2f2f;color:#ffb4b4;border-radius:10px;font-size:0.84rem;margin-bottom:16px"></div>
 
-  <!-- Re-open guide (mobile) -->
-  <div class="guide-reopen" id="guideReopen">
-    <button class="guide-reopen-btn" id="guideReopenBtn" type="button">What can I ask? ▾</button>
+    <footer style="padding-bottom:0;margin-top:4px">
+      <a href="https://github.com/HerschCode/operations-assistant" target="_blank" rel="noopener">operations-assistant</a>
+      · Real Neon Postgres · Real Chroma retrieval · Live P1 analytics
+      · <a href="https://operations-performance.onrender.com/dashboard" target="_blank" rel="noopener">View P1 dashboard →</a>
+    </footer>
   </div>
 
-  <!-- Architecture card -->
-  <div class="panel-card" id="archPanel">
-    <div class="card-header" id="archHeader">
-      <div class="card-header-left">
-        <span class="card-title">🏗 System Architecture</span>
+  <!-- ══════════════════════════════════════ ASK TAB ══════════════════════════════════════ -->
+  <div class="tab-content" id="tab-ask">
+    <div class="ask-layout">
+
+      <!-- Left column -->
+      <div class="col-left">
+
+        <!-- Guide panel -->
+        <div class="panel-card" id="guidePanel">
+          <div class="card-header" id="guideHeader">
+            <div class="card-header-left">
+              <span class="card-title">What can I ask?</span>
+              <span class="card-sub">scroll · click to try</span>
+            </div>
+            <button class="collapse-btn" id="guideCollapseBtn" aria-label="Expand guide" aria-expanded="false">▾ Expand</button>
+          </div>
+          <div class="card-body hidden" id="guideBody">
+            <div class="guide-section">
+              <div class="guide-section-header">📊 Analytics · live data</div>
+              <div class="guide-chips">
+                <button class="chip" type="button">What is the average cycle time?</button>
+                <button class="chip" type="button">What is the median vs P90 cycle time?</button>
+                <button class="chip" type="button">What is the SLA breach rate?</button>
+                <button class="chip" type="button">Show me the top 5 bottleneck stages</button>
+                <button class="chip" type="button">Which suppliers have the highest breach rate?</button>
+                <button class="chip" type="button">How many orders are HIGH risk right now?</button>
+                <button class="chip" type="button">What is the process conformance rate?</button>
+                <button class="chip" type="button">Which supplier has the fastest cycle time?</button>
+              </div>
+            </div>
+            <hr class="guide-divider">
+            <div class="guide-section">
+              <div class="guide-section-header">📄 Policy · 4 SOPs indexed</div>
+              <ul class="guide-docs">
+                <li><span class="doc-icon">📄</span>Purchase Order Approval Thresholds</li>
+                <li><span class="doc-icon">📄</span>SLA Cycle Time Targets by Category</li>
+                <li><span class="doc-icon">📄</span>Escalation Triggers &amp; Paths</li>
+                <li><span class="doc-icon">📄</span>Exception Handling Procedures</li>
+              </ul>
+              <div class="guide-chips">
+                <button class="chip" type="button">What is the approval threshold for high-value orders?</button>
+                <button class="chip" type="button">Who approves orders over $50,000?</button>
+                <button class="chip" type="button">When should a delayed order be escalated?</button>
+                <button class="chip" type="button">What is the process for an emergency purchase?</button>
+                <button class="chip" type="button">How are supplier disputes handled under policy?</button>
+              </div>
+            </div>
+            <hr class="guide-divider">
+            <div class="guide-section">
+              <div class="guide-section-header">🔗 Combined · data + policy</div>
+              <div class="guide-chips">
+                <button class="chip block" type="button">Why are high-value orders breaching SLA, and does policy explain the extra step?</button>
+                <button class="chip block" type="button">Which supplier should I escalate first based on our policy?</button>
+                <button class="chip block" type="button">Is our current breach rate within the policy's acceptable range?</button>
+                <button class="chip block" type="button">Which HIGH risk orders also require dual approval under policy?</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Re-open guide (mobile) -->
+        <div class="guide-reopen" id="guideReopen">
+          <button class="guide-reopen-btn" id="guideReopenBtn" type="button">What can I ask? ▾</button>
+        </div>
+
+        <!-- Architecture card -->
+        <div class="panel-card" id="archPanel">
+          <div class="card-header" id="archHeader">
+            <div class="card-header-left">
+              <span class="card-title">🏗 System Architecture</span>
+            </div>
+            <button class="collapse-btn" id="archCollapseBtn">▾ Expand</button>
+          </div>
+          <div class="card-body hidden" id="archBody">
+            <div class="arch-section">
+              <div class="arch-section-label">Retrieval</div>
+              <div class="arch-rows">
+                <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text"><strong>Hybrid BM25 + embedding</strong> (RRF fusion, top-5)</span></div>
+                <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">Cross-encoder <strong>reranker</strong> re-scores top candidates</span></div>
+                <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text"><strong>Chroma</strong> vector store · 4 policy documents indexed</span></div>
+                <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">Grounded: citations only from documents the model actually retrieved</span></div>
+              </div>
+              <div class="arch-tags">
+                <span class="arch-tag retrieval">BM25</span>
+                <span class="arch-tag retrieval">sentence-transformers</span>
+                <span class="arch-tag retrieval">cross-encoder</span>
+                <span class="arch-tag retrieval">Chroma</span>
+              </div>
+            </div>
+            <hr class="guide-divider">
+            <div class="arch-section">
+              <div class="arch-section-label">Agent</div>
+              <div class="arch-rows">
+                <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">LangChain <strong>bind_tools</strong> · 9-tool belt · max 6 calls/turn</span></div>
+                <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">Tools: <em>cycle_time, SLA, bottlenecks, suppliers, risk, management report, pipeline, conformance, policy search</em></span></div>
+                <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">Provider-swappable: Groq · Gemini via env vars</span></div>
+                <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">Reads live data from the <strong>operations-performance</strong> API</span></div>
+              </div>
+              <div class="arch-tags">
+                <span class="arch-tag retrieval">LangChain</span>
+                <span class="arch-tag retrieval">Groq / Gemini</span>
+                <span class="arch-tag retrieval">FastAPI</span>
+              </div>
+            </div>
+            <hr class="guide-divider">
+            <div class="arch-section">
+              <div class="arch-section-label">Evaluation pipeline</div>
+              <div class="arch-rows">
+                <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text"><strong>Retrieval eval:</strong> hit-rate@K and MRR · hybrid vs semantic-only</span></div>
+                <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text"><strong>Tool selection:</strong> expected-tool-set accuracy across 101 questions</span></div>
+                <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text"><strong>Faithfulness:</strong> NLI sentence-level grounding; detects ungrounded claims</span></div>
+                <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text"><strong>Adversarial:</strong> prompt-injection resistance + system-prompt-leakage</span></div>
+              </div>
+              <div class="arch-tags">
+                <span class="arch-tag eval">hit-rate@K</span>
+                <span class="arch-tag eval">MRR</span>
+                <span class="arch-tag eval">faithfulness</span>
+                <span class="arch-tag eval">adversarial</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /col-left -->
+
+      <!-- Right column -->
+      <div class="col-right">
+        <div class="chat-panel">
+          <div id="log">
+            <div class="empty-state" id="emptyState">
+              Ask about Northstar Manufacturing's procurement operations.<br>
+              I have live analytics data (cycle time, SLA, suppliers) and 4 indexed policy documents.<br>
+              Try the Overview tab for a live dashboard, or type your own question.
+            </div>
+          </div>
+          <div id="contextBanner" style="display:none"></div>
+          <div class="provider-row">
+            <span class="provider-label">Model</span>
+            <button class="provider-btn" data-provider="gemini" title="Gemini Flash via Google AI">⚡ Gemini Flash</button>
+            <button class="provider-btn active" data-provider="groq" title="gpt-oss-120b via Groq — free tier">🦙 Groq</button>
+          </div>
+          <form id="form">
+            <input id="question" type="text" placeholder="Ask about cycle time, SLA breaches, suppliers, or procurement policy…" autocomplete="off" />
+            <button id="send" type="submit">Ask</button>
+          </form>
+          <div class="rate-row" style="justify-content:space-between">
+            <label class="stream-toggle" title="Stream tool-call events in real time via SSE">
+              <input type="checkbox" id="streamToggle" checked>
+              <span>Stream</span>
+            </label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span id="rateWarn" class="rate-warn" style="display:none"></span>
+              <span id="rateLabel">5 / 5 questions remaining</span>
+              <div class="rate-dots" id="rateDots">
+                <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                <div class="dot"></div><div class="dot"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer>
+          <a href="https://github.com/HerschCode/operations-assistant" target="_blank" rel="noopener">operations-assistant</a>
+          · Real Groq LLM · Real Neon Postgres · Real Chroma retrieval — nothing scripted.
+          · <a href="https://operations-performance.onrender.com/dashboard" target="_blank" rel="noopener">View operations dashboard →</a>
+        </footer>
       </div>
-      <button class="collapse-btn" id="archCollapseBtn">▾ Expand</button>
     </div>
-    <div class="card-body hidden" id="archBody">
+  </div><!-- /tab-ask -->
 
-      <div class="arch-section">
-        <div class="arch-section-label">Retrieval</div>
-        <div class="arch-rows">
-          <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text"><strong>Hybrid BM25 + embedding</strong> (RRF fusion, top-5)</span></div>
-          <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">Cross-encoder <strong>reranker</strong> re-scores top candidates</span></div>
-          <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text"><strong>Chroma</strong> vector store · 4 policy documents indexed</span></div>
-          <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">Grounded: citations only from documents the model actually retrieved</span></div>
-        </div>
-        <div class="arch-tags">
-          <span class="arch-tag retrieval">BM25</span>
-          <span class="arch-tag retrieval">sentence-transformers</span>
-          <span class="arch-tag retrieval">cross-encoder</span>
-          <span class="arch-tag retrieval">Chroma</span>
-        </div>
-      </div>
+  <!-- ══════════════════════════════════════ INVESTIGATE TAB ══════════════════════════════════════ -->
+  <div class="tab-content" id="tab-investigate">
+    <div class="investigate-layout">
 
-      <hr class="guide-divider">
-
-      <div class="arch-section">
-        <div class="arch-section-label">Agent</div>
-        <div class="arch-rows">
-          <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">LangChain <strong>bind_tools</strong> · 9-tool belt · max 6 calls/turn</span></div>
-          <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">Tools: <em>get_cycle_time, get_sla_metrics, get_bottlenecks, get_supplier_performance, predict_sla_risk, get_management_report, get_pipeline_status, get_conformance, search_policy_documents</em></span></div>
-          <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">Provider-swappable: Groq · Gemini via env vars</span></div>
-          <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text">Reads live data from the <strong>operations-performance</strong> API</span></div>
+      <div class="investigate-form-panel">
+        <div class="investigate-form-title">🔍 Investigation Workspace</div>
+        <div class="investigate-form-sub">
+          Ask a deep question. The agent gathers evidence from live procurement data and policy documents,
+          then compiles a structured report: Summary → Evidence → Root Causes → Policy → Recommendations.
         </div>
-        <div class="arch-tags">
-          <span class="arch-tag retrieval">LangChain</span>
-          <span class="arch-tag retrieval">Groq llama-3.3-70b</span>
-          <span class="arch-tag retrieval">FastAPI</span>
+        <div class="investigate-form">
+          <input class="investigate-input" id="investigateQ" type="text"
+            placeholder="e.g. Why is the SLA breach rate increasing this period?" autocomplete="off" />
+          <button class="investigate-btn" id="investigateBtn" type="button">Investigate</button>
+        </div>
+        <div class="investigate-suggest">
+          <button class="investigate-chip" data-q="Why is our SLA breach rate high and what are the root causes?">SLA breach rate</button>
+          <button class="investigate-chip" data-q="Why is the goods receipt stage the main bottleneck and what does policy say?">Receipt bottleneck</button>
+          <button class="investigate-chip" data-q="Which suppliers are underperforming and what escalation actions does policy require?">Supplier escalation</button>
+          <button class="investigate-chip" data-q="What is driving long approval cycle times and is there a policy fix?">Approval delays</button>
         </div>
       </div>
 
-      <hr class="guide-divider">
-
-      <div class="arch-section">
-        <div class="arch-section-label">Evaluation pipeline</div>
-        <div class="arch-rows">
-          <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text"><strong>Retrieval eval:</strong> hit-rate@K and MRR on 20 labelled questions; hybrid vs. semantic-only comparison</span></div>
-          <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text"><strong>Tool selection:</strong> expected-tool-set accuracy across 25 categorised agent questions</span></div>
-          <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text"><strong>Faithfulness:</strong> NLI sentence-level grounding score; detects ungrounded numeric claims</span></div>
-          <div class="arch-row"><span class="arch-row-icon">▸</span><span class="arch-row-text"><strong>Adversarial:</strong> prompt-injection resistance + system-prompt-leakage checks</span></div>
+      <!-- Investigation Workspace output -->
+      <div class="workspace" id="workspace">
+        <div class="workspace-loading" id="workspaceLoading" style="display:none">
+          <div class="spinner"></div>
+          <span>Gathering evidence from live data and policy documents…</span>
         </div>
-        <div class="arch-tags">
-          <span class="arch-tag eval">hit-rate@K</span>
-          <span class="arch-tag eval">MRR</span>
-          <span class="arch-tag eval">faithfulness</span>
-          <span class="arch-tag eval">adversarial</span>
-        </div>
+        <div id="workspaceContent"></div>
       </div>
 
-    </div><!-- /arch-body -->
-  </div><!-- /arch-panel -->
-
-  </div><!-- /col-left -->
-
-  <!-- ── Right column ── -->
-  <div class="col-right">
-
-  <!-- Chat panel -->
-  <div class="chat-panel">
-    <div id="log">
-      <div class="empty-state" id="emptyState">
-        Ask about Northstar Manufacturing's procurement operations.<br>
-        I have live analytics data (cycle time, SLA, suppliers) and 4 indexed policy documents.<br>
-        Try one of the examples on the left, or type your own question.
-      </div>
     </div>
 
-    <div class="provider-row">
-      <span class="provider-label">Model</span>
-      <button class="provider-btn" data-provider="gemini" title="Gemini Flash via Google AI">⚡ Gemini Flash</button>
-      <button class="provider-btn active" data-provider="groq" title="gpt-oss-120b via Groq — free tier">🦙 Groq</button>
-    </div>
-    <form id="form">
-      <input id="question" type="text" placeholder="Ask about cycle time, SLA breaches, suppliers, or procurement policy…" autocomplete="off" />
-      <button id="send" type="submit">Ask</button>
-    </form>
+    <footer style="margin-top:16px">
+      <a href="https://github.com/HerschCode/operations-assistant" target="_blank" rel="noopener">operations-assistant</a>
+      · Investigation mode: 2-pass agent (evidence gather + structured compile) · Rate-limited same as Ask.
+    </footer>
+  </div><!-- /tab-investigate -->
 
-    <div class="rate-row" style="justify-content:space-between">
-      <label class="stream-toggle" title="Stream tool-call events in real time via SSE">
-        <input type="checkbox" id="streamToggle" checked>
-        <span>Stream</span>
-      </label>
-      <div style="display:flex;align-items:center;gap:8px">
-      <span id="rateWarn" class="rate-warn" style="display:none"></span>
-      <span id="rateLabel">5 / 5 questions remaining</span>
-      <div class="rate-dots" id="rateDots">
-        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
-        <div class="dot"></div><div class="dot"></div>
-      </div>
-      </div><!-- /rate right group -->
-    </div>
-  </div>
-
-  <footer>
-    <a href="https://github.com/HerschCode/operations-assistant" target="_blank" rel="noopener">operations-assistant</a>
-    · Real Groq LLM · Real Neon Postgres · Real Chroma retrieval — nothing scripted.
-    · <a href="https://operations-performance.onrender.com/dashboard" target="_blank" rel="noopener">View operations dashboard →</a>
-  </footer>
-
-  </div><!-- /col-right -->
-  </div><!-- /layout -->
 </div><!-- /outer -->
+
+<div class="toast-container" id="toastContainer"></div>
 
 <script>
 // ── Element refs ──
-const log      = document.getElementById('log');
-const form     = document.getElementById('form');
-const input    = document.getElementById('question');
-const sendBtn      = document.getElementById('send');
-const streamToggle = document.getElementById('streamToggle');
-const rateDots  = document.getElementById('rateDots').querySelectorAll('.dot');
-const rateLabel = document.getElementById('rateLabel');
-const rateWarn  = document.getElementById('rateWarn');
-const emptyState = document.getElementById('emptyState');
-const guidePanel = document.getElementById('guidePanel');
-
-// ── Provider selector ──
-let selectedProvider = 'groq';
-document.querySelectorAll('.provider-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    selectedProvider = btn.dataset.provider;
-    document.querySelectorAll('.provider-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-  });
-});
-const guideBody  = document.getElementById('guideBody');
+const log            = document.getElementById('log');
+const form           = document.getElementById('form');
+const input          = document.getElementById('question');
+const sendBtn        = document.getElementById('send');
+const streamToggle   = document.getElementById('streamToggle');
+const rateDots       = document.getElementById('rateDots').querySelectorAll('.dot');
+const rateLabel      = document.getElementById('rateLabel');
+const rateWarn       = document.getElementById('rateWarn');
+const emptyState     = document.getElementById('emptyState');
+const guidePanel     = document.getElementById('guidePanel');
+const guideBody      = document.getElementById('guideBody');
 const guideCollapseBtn = document.getElementById('guideCollapseBtn');
 const guideHeader      = document.getElementById('guideHeader');
 const guideReopen      = document.getElementById('guideReopen');
@@ -591,9 +793,15 @@ const guideReopenBtn   = document.getElementById('guideReopenBtn');
 const archBody         = document.getElementById('archBody');
 const archCollapseBtn  = document.getElementById('archCollapseBtn');
 const archHeader       = document.getElementById('archHeader');
-const themeBtn  = document.getElementById('themeBtn');
-const statusDot = document.getElementById('statusDot');
-const statusLabel = document.getElementById('statusLabel');
+const themeBtn         = document.getElementById('themeBtn');
+const statusDot        = document.getElementById('statusDot');
+const statusLabel      = document.getElementById('statusLabel');
+const contextBanner    = document.getElementById('contextBanner');
+const investigateQ     = document.getElementById('investigateQ');
+const investigateBtn   = document.getElementById('investigateBtn');
+const workspace        = document.getElementById('workspace');
+const workspaceLoading = document.getElementById('workspaceLoading');
+const workspaceContent = document.getElementById('workspaceContent');
 
 let questionsAsked = 0;
 const MAX_QUESTIONS = 5;
@@ -610,10 +818,27 @@ themeBtn.addEventListener('click', () => {
   applyTheme((document.documentElement.getAttribute('data-theme') || 'dark') === 'dark' ? 'light' : 'dark');
 });
 
+// ── Tab navigation ──
+let currentTab = 'overview';
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+function switchTab(id) {
+  currentTab = id;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + id));
+  document.getElementById('noticeBar').style.display = (id === 'ask') ? '' : 'none';
+  if (id === 'overview' && !overviewLoaded) loadOverview();
+}
+// hide notice bar on non-ask tabs initially
+(function() {
+  try {
+    if (sessionStorage.getItem('noticeDismissed')) document.getElementById('noticeBar').classList.add('hidden');
+  } catch {}
+  if (currentTab !== 'ask') document.getElementById('noticeBar').style.display = 'none';
+})();
+
 // ── System health check ──
-// Delay 2s so the page renders before the health request fires (the ops-performance
-// service runs on Render free tier and may be asleep; we don't want the topbar to
-// show "partial outage" before the user has even read the page).
 setTimeout(async function checkHealth() {
   try {
     const r = await fetch('/health');
@@ -628,35 +853,149 @@ setTimeout(async function checkHealth() {
   }
 }, 2000);
 
-// ── Tool labels ──
-const TOOL_LABELS = {
-  get_cycle_time:           'queried cycle-time percentiles',
-  get_bottlenecks:          'ranked bottleneck stages',
-  get_sla_metrics:          'retrieved SLA breach metrics',
-  get_supplier_performance: 'fetched supplier scorecard',
-  predict_sla_risk:         'ran SLA-risk prediction',
-  get_management_report:    'pulled management report',
-  get_pipeline_status:      'checked pipeline run history',
-  get_conformance:          'assessed process conformance',
-  search_policy_documents:  'searched policy documents',
-};
-function toolLabel(name) { return TOOL_LABELS[name] || name.replace(/_/g, ' '); }
-
-// ── Rate counter ──
-function updateRateCounter() {
-  const rem = Math.max(0, MAX_QUESTIONS - questionsAsked);
-  rateLabel.textContent = `${rem} / ${MAX_QUESTIONS} questions remaining`;
-  rateDots.forEach((dot, i) => dot.classList.toggle('used', i >= rem));
-  if (rem === 0) {
-    rateLabel.style.color = '#ffb4b4';
-    rateWarn.style.display = 'none';
-  } else if (rem <= 2) {
-    rateWarn.textContent = `⚠️ ${rem} question${rem === 1 ? '' : 's'} remaining`;
-    rateWarn.style.display = '';
-  } else {
-    rateWarn.style.display = 'none';
+// ── Overview: load metrics ──
+let overviewLoaded = false;
+async function loadOverview() {
+  overviewLoaded = true;
+  try {
+    const r = await fetch('/demo/metrics');
+    if (!r.ok) throw new Error('metrics endpoint returned ' + r.status);
+    const d = await r.json();
+    renderKpis(d);
+    renderBottlenecks(d.bottlenecks || []);
+    renderSuppliers(d.suppliers || []);
+    if (d.degraded) {
+      const errEl = document.getElementById('overviewError');
+      errEl.textContent = 'Some data is unavailable — the live P1 API may be warming up on Render free tier. Retry in a moment.';
+      errEl.style.display = 'block';
+    }
+  } catch (e) {
+    document.getElementById('kpiStrip').innerHTML = `
+      <div style="grid-column:1/-1;padding:14px;background:#3a1f1f;border:1px solid #5c2f2f;color:#ffb4b4;border-radius:10px;font-size:0.84rem">
+        Could not load live data — the operations-performance API may be warming up (Render free tier). Try refreshing in 30 seconds.
+      </div>`;
+    document.getElementById('bottleneckBody').innerHTML = '<div style="color:var(--muted);font-size:0.82rem;padding:6px 0">Data unavailable</div>';
+    document.getElementById('supplierBody').innerHTML = '<div style="color:var(--muted);font-size:0.82rem;padding:14px">Data unavailable</div>';
   }
 }
+
+function renderKpis(d) {
+  const ct = d.cycle_time;
+  const sla = Array.isArray(d.sla) ? d.sla[0] : d.sla;
+  // Extract values defensively
+  const avgDays = ct ? (ct.mean_days ?? ct.mean ?? ct.average_days ?? '—') : '—';
+  const slaRate = sla ? (sla.breach_rate_pct ?? sla.breach_rate ?? sla.sla_breach_rate ?? '—') : '—';
+  const totalCases = sla ? (sla.total_cases ?? sla.total ?? sla.n ?? '—') : '—';
+  const highRisk = d.suppliers ? d.suppliers.filter(s => (s.sla_breach_rate || 0) > 0.4).length : '—';
+
+  document.getElementById('kpiStrip').innerHTML = `
+    <div class="kpi-card" title="Click to ask about cycle time" onclick="goAsk('What is the average cycle time and which stages are slowest?')">
+      <div class="kpi-label">Avg Cycle Time</div>
+      <div class="kpi-value">${avgDays !== '—' ? Number(avgDays).toFixed(1) + 'd' : '—'}</div>
+      <div class="kpi-sub">mean days per PO</div>
+    </div>
+    <div class="kpi-card" title="Click to ask about SLA" onclick="goAsk('What is the SLA breach rate and is it within our policy targets?')">
+      <div class="kpi-label">SLA Breach Rate</div>
+      <div class="kpi-value">${slaRate !== '—' ? (Number(slaRate) < 1 ? (Number(slaRate)*100).toFixed(1)+'%' : Number(slaRate).toFixed(1)+'%') : '—'}</div>
+      <div class="kpi-sub">orders missing SLA</div>
+    </div>
+    <div class="kpi-card" title="Click to ask about risk" onclick="goAsk('How many orders are HIGH risk right now and what is the total value at risk?')">
+      <div class="kpi-label">Cases</div>
+      <div class="kpi-value">${totalCases !== '—' ? Number(totalCases).toLocaleString() : '—'}</div>
+      <div class="kpi-sub">total POs in dataset</div>
+    </div>
+    <div class="kpi-card" title="Click to investigate suppliers" onclick="goInvestigate('Which suppliers are high risk and what does our escalation policy say about them?')">
+      <div class="kpi-label">High-Risk Suppliers</div>
+      <div class="kpi-value">${highRisk}</div>
+      <div class="kpi-sub">breach rate &gt; 40%</div>
+    </div>`;
+}
+
+function renderBottlenecks(rows) {
+  if (!rows.length) {
+    document.getElementById('bottleneckBody').innerHTML = '<div style="color:var(--muted);font-size:0.82rem">No bottleneck data available</div>';
+    return;
+  }
+  const maxDays = Math.max(...rows.map(r => r.avg_days ?? r.mean_days ?? r.duration_days ?? 0));
+  const html = rows.map((r, i) => {
+    const days = r.avg_days ?? r.mean_days ?? r.duration_days ?? 0;
+    const name = r.stage ?? r.activity ?? r.name ?? 'Stage ' + (i+1);
+    const pct = maxDays ? Math.round((days / maxDays) * 100) : 0;
+    const cls = pct > 70 ? 'high' : pct > 40 ? 'med' : 'low';
+    return `<div class="bn-row">
+      <div class="bn-label-row">
+        <span class="bn-name">${escHtml(String(name))}</span>
+        <span class="bn-days">${Number(days).toFixed(1)}d avg</span>
+      </div>
+      <div class="bn-bar-bg"><div class="bn-bar ${cls}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+  document.getElementById('bottleneckBody').innerHTML = `<div class="bottleneck-list">${html}</div>`;
+}
+
+function renderSuppliers(rows) {
+  if (!rows.length) {
+    document.getElementById('supplierBody').innerHTML = '<div style="padding:14px;color:var(--muted);font-size:0.82rem">No supplier data available</div>';
+    return;
+  }
+  const top = rows.slice(0, 6);
+  const trs = top.map(s => {
+    const breach = s.sla_breach_rate ?? s.breach_rate ?? 0;
+    const pct = breach < 1 ? (breach * 100) : breach;
+    const cls = pct > 40 ? 'high' : pct > 20 ? 'med' : 'low';
+    const label = pct > 40 ? '🔴 HIGH' : pct > 20 ? '🟠 MED' : '🟢 LOW';
+    const name = s.supplier ?? s.vendor_name ?? s.name ?? 'Unknown';
+    const ct = s.avg_cycle_days ?? s.mean_cycle_days ?? s.cycle_days ?? '—';
+    const vol = s.order_count ?? s.volume ?? '—';
+    return `<tr>
+      <td style="font-weight:500">${escHtml(String(name))}</td>
+      <td><span class="risk-badge ${cls}">${label}</span></td>
+      <td>${pct.toFixed(1)}%</td>
+      <td>${ct !== '—' ? Number(ct).toFixed(1)+'d' : '—'}</td>
+      <td>${vol}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('supplierBody').innerHTML = `
+    <table class="supplier-table">
+      <thead><tr><th>Supplier</th><th>Risk</th><th>Breach</th><th>Cycle</th><th>Orders</th></tr></thead>
+      <tbody>${trs}</tbody>
+    </table>`;
+}
+
+// ── Overview → Ask / Investigate routing ──
+function goAsk(q) {
+  input.value = q;
+  showContextBanner('From Operations Overview');
+  switchTab('ask');
+  setTimeout(() => input.focus(), 50);
+}
+function goInvestigate(q) {
+  investigateQ.value = q;
+  switchTab('investigate');
+  setTimeout(() => investigateQ.focus(), 50);
+}
+
+document.querySelectorAll('.ask-chip').forEach(btn => {
+  btn.addEventListener('click', () => goAsk(btn.dataset.q || btn.textContent.trim()));
+});
+document.querySelectorAll('.investigate-chip').forEach(btn => {
+  btn.addEventListener('click', () => goInvestigate(btn.dataset.q || btn.textContent.trim()));
+});
+
+function showContextBanner(ctx) {
+  contextBanner.innerHTML = `<div class="context-note">📊 Context from ${escHtml(ctx)}</div>`;
+  contextBanner.style.display = 'block';
+}
+
+// ── Provider selector ──
+let selectedProvider = 'groq';
+document.querySelectorAll('.provider-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedProvider = btn.dataset.provider;
+    document.querySelectorAll('.provider-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
 
 // ── Guide panel collapse ──
 function toggleGuideBody() {
@@ -679,19 +1018,33 @@ guideReopenBtn.addEventListener('click', () => {
 });
 
 // ── Architecture card collapse ──
-archHeader.addEventListener('click', e => {
-  if (e.target === archCollapseBtn) return;
-  toggleArch();
-});
+archHeader.addEventListener('click', e => { if (e.target === archCollapseBtn) return; toggleArch(); });
 archCollapseBtn.addEventListener('click', e => { e.stopPropagation(); toggleArch(); });
 function toggleArch() {
   const hidden = archBody.classList.toggle('hidden');
   archCollapseBtn.textContent = hidden ? '▾ Expand' : '▴ Collapse';
 }
 
+// ── Rate counter ──
+function updateRateCounter() {
+  const rem = Math.max(0, MAX_QUESTIONS - questionsAsked);
+  rateLabel.textContent = `${rem} / ${MAX_QUESTIONS} questions remaining`;
+  rateDots.forEach((dot, i) => dot.classList.toggle('used', i >= rem));
+  if (rem === 0) {
+    rateLabel.style.color = '#ffb4b4';
+    rateWarn.style.display = 'none';
+  } else if (rem <= 2) {
+    rateWarn.textContent = `⚠️ ${rem} question${rem === 1 ? '' : 's'} remaining`;
+    rateWarn.style.display = '';
+  } else {
+    rateWarn.style.display = 'none';
+  }
+}
+
 // ── Message helpers ──
 function removeEmptyState() {
   if (emptyState && emptyState.parentNode) emptyState.remove();
+  contextBanner.style.display = 'none';
 }
 
 function addPair(question) {
@@ -722,13 +1075,31 @@ function addCitations(container, citations) {
   citations.forEach(c => {
     const tag = document.createElement('span');
     tag.className = 'cite-tag ' + c.kind;
+    tag.setAttribute('role', 'button');
+    tag.setAttribute('tabindex', '0');
     const dot = document.createElement('span');
     dot.className = 'cite-dot';
     const label = document.createTextNode((c.kind === 'data' ? 'data: ' : 'policy: ') + c.reference);
     tag.appendChild(dot);
     tag.appendChild(label);
-    tag.title = c.reference;
+    tag.title = 'Click for source details';
+
+    // Expandable drawer
+    const drawer = document.createElement('div');
+    drawer.className = 'cite-drawer';
+    if (c.kind === 'data') {
+      drawer.innerHTML = `<strong>Data source</strong><br>Tool: ${escHtml(c.reference)}<br><span style="color:var(--data-tag)">Live call to operations-performance API</span>`;
+    } else {
+      drawer.innerHTML = `<strong>Policy document</strong><br>${escHtml(c.reference)}<br><span style="color:var(--doc-tag)">Retrieved from Chroma vector store (BM25 + embedding hybrid)</span>`;
+    }
+
+    tag.addEventListener('click', () => {
+      drawer.classList.toggle('open');
+    });
+    tag.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') drawer.classList.toggle('open'); });
+
     wrap.appendChild(tag);
+    wrap.appendChild(drawer);
   });
   container.appendChild(wrap);
 }
@@ -760,15 +1131,11 @@ function addReasoningTrace(container, toolsUsed) {
 function addRespMeta(container, data, elapsed_ms) {
   const bar = document.createElement('div');
   bar.className = 'resp-meta';
-
   const latencyVal = data.latency_ms != null
     ? (data.latency_ms / 1000).toFixed(1) + 's'
     : (elapsed_ms / 1000).toFixed(1) + 's';
-
   const costLabel = data.cost_usd != null
-    ? (data.cost_usd < 0.001 ? '<$0.001' : '$' + data.cost_usd.toFixed(4))
-    : null;
-
+    ? (data.cost_usd < 0.001 ? '<$0.001' : '$' + data.cost_usd.toFixed(4)) : null;
   const items = [
     { icon: '⏱', label: latencyVal + ' server' },
     data.model ? { icon: '🤖', label: data.model } : null,
@@ -776,22 +1143,27 @@ function addRespMeta(container, data, elapsed_ms) {
     data.citations && data.citations.length ? { icon: '📎', label: data.citations.length + ' source' + (data.citations.length > 1 ? 's' : '') } : null,
     costLabel ? { icon: '💰', label: costLabel } : null,
   ].filter(Boolean);
-
   items.forEach((item, i) => {
-    if (i > 0) {
-      const sep = document.createElement('span');
-      sep.style.cssText = 'color:var(--divider);font-size:0.75rem';
-      sep.textContent = '·';
-      bar.appendChild(sep);
-    }
-    const el = document.createElement('span');
-    el.className = 'resp-meta-item';
+    if (i > 0) { const sep = document.createElement('span'); sep.style.cssText = 'color:var(--divider);font-size:0.75rem'; sep.textContent = '·'; bar.appendChild(sep); }
+    const el = document.createElement('span'); el.className = 'resp-meta-item';
     el.innerHTML = `<span class="resp-meta-icon">${item.icon}</span>${item.label}`;
     bar.appendChild(el);
   });
-
   container.appendChild(bar);
 }
+
+const TOOL_LABELS = {
+  get_cycle_time:           'queried cycle-time percentiles',
+  get_bottlenecks:          'ranked bottleneck stages',
+  get_sla_metrics:          'retrieved SLA breach metrics',
+  get_supplier_performance: 'fetched supplier scorecard',
+  predict_sla_risk:         'ran SLA-risk prediction',
+  get_management_report:    'pulled management report',
+  get_pipeline_status:      'checked pipeline run history',
+  get_conformance:          'assessed process conformance',
+  search_policy_documents:  'searched policy documents',
+};
+function toolLabel(name) { return TOOL_LABELS[name] || name.replace(/_/g, ' '); }
 
 // ── Main ask (non-streaming) ──
 async function askBatch(question, pair) {
@@ -799,8 +1171,7 @@ async function askBatch(question, pair) {
   const t0 = Date.now();
   try {
     const res = await fetch('/demo/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, provider: selectedProvider })
     });
     const data = await res.json();
@@ -829,14 +1200,11 @@ function askStream(question, pair) {
     const t0 = Date.now();
     const toolsUsed = [];
     let toolBadgeEl = null;
-
     const url = '/demo/chat/stream?question=' + encodeURIComponent(question) + '&provider=' + encodeURIComponent(selectedProvider);
     const es = new EventSource(url);
-
     es.onmessage = e => {
       let event;
       try { event = JSON.parse(e.data); } catch { return; }
-
       if (event.type === 'tool_start') {
         if (!toolBadgeEl) {
           toolBadgeEl = document.createElement('div');
@@ -845,9 +1213,7 @@ function askStream(question, pair) {
           thinking.appendChild(toolBadgeEl);
         }
         toolsUsed.push(event.tool);
-        toolBadgeEl.innerHTML = toolsUsed.map(t =>
-          `<span style="margin-right:6px">⚙ ${t.replace(/_/g,' ')}</span>`
-        ).join('');
+        toolBadgeEl.innerHTML = toolsUsed.map(t => `<span style="margin-right:6px">⚙ ${t.replace(/_/g,' ')}</span>`).join('');
       } else if (event.type === 'answer') {
         es.close();
         const elapsed = Date.now() - t0;
@@ -866,7 +1232,6 @@ function askStream(question, pair) {
         resolve();
       }
     };
-
     es.onerror = () => {
       es.close();
       thinking.remove();
@@ -883,79 +1248,167 @@ async function ask(question) {
   sendBtn.disabled = true;
   questionsAsked++;
   updateRateCounter();
-
   if (window.innerWidth < 900 && questionsAsked === 1 && !guideCollapsedByUser) {
     guidePanel.style.display = 'none';
     guideReopen.classList.add('visible');
   }
-
   const pair = addPair(question);
   try {
-    if (streamToggle.checked) {
-      await askStream(question, pair);
-    } else {
-      await askBatch(question, pair);
-    }
+    if (streamToggle.checked) await askStream(question, pair);
+    else await askBatch(question, pair);
   } finally {
     sendBtn.disabled = false;
     log.scrollTop = log.scrollHeight;
   }
 }
 
-// ── Form submit ──
 form.addEventListener('submit', e => {
   e.preventDefault();
   const q = input.value.trim();
   if (q) ask(q);
 });
-
-// ── Chips ──
-document.querySelectorAll('.chip').forEach(btn => {
+document.querySelectorAll('#tab-ask .chip').forEach(btn => {
   btn.addEventListener('click', () => ask(btn.textContent.trim()));
 });
 
+// ── Investigation mode ──
+investigateBtn.addEventListener('click', () => runInvestigation());
+investigateQ.addEventListener('keydown', e => { if (e.key === 'Enter') runInvestigation(); });
+
+async function runInvestigation() {
+  const q = investigateQ.value.trim();
+  if (!q) return;
+  investigateBtn.disabled = true;
+  workspace.classList.add('visible');
+  workspaceContent.innerHTML = '';
+  workspaceLoading.style.display = 'flex';
+  questionsAsked++;
+  updateRateCounter();
+
+  try {
+    const res = await fetch('/demo/investigate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q })
+    });
+    const data = await res.json();
+    workspaceLoading.style.display = 'none';
+    if (!res.ok) {
+      const detail = data.detail || 'Investigation failed.';
+      workspaceContent.innerHTML = `<div style="padding:16px;color:#ffb4b4;font-size:0.84rem">${escHtml(detail)}</div>`;
+      handleApiError(detail, res.status);
+      return;
+    }
+    renderWorkspace(q, data);
+  } catch (e) {
+    workspaceLoading.style.display = 'none';
+    workspaceContent.innerHTML = `<div style="padding:16px;color:#ffb4b4;font-size:0.84rem">Could not reach the server. Try again in a moment.</div>`;
+  } finally {
+    investigateBtn.disabled = false;
+  }
+}
+
+function renderWorkspace(question, data) {
+  const r = data.report;
+  const toolsUsed = data.tools_used || [];
+
+  let html = `<div class="workspace-header">
+    <div>
+      <div class="workspace-title">${escHtml(question)}</div>
+      <div class="workspace-meta">${toolsUsed.length} tool call${toolsUsed.length !== 1 ? 's' : ''} · evidence-backed report</div>
+    </div>
+  </div>
+  <div class="workspace-sections">`;
+
+  if (r.executive_summary) html += `
+    <div class="ws-section">
+      <div class="ws-section-label">📋 Executive Summary</div>
+      <div class="ws-text">${escHtml(r.executive_summary)}</div>
+    </div>`;
+
+  if (r.problem) html += `
+    <div class="ws-section">
+      <div class="ws-section-label">❓ Problem Statement</div>
+      <div class="ws-text">${escHtml(r.problem)}</div>
+    </div>`;
+
+  if (r.evidence && r.evidence.length) html += `
+    <div class="ws-section">
+      <div class="ws-section-label">🔍 Evidence</div>
+      <ul class="ws-list">${r.evidence.map(e => `<li>${escHtml(e)}</li>`).join('')}</ul>
+    </div>`;
+
+  if (r.root_causes && r.root_causes.length) html += `
+    <div class="ws-section">
+      <div class="ws-section-label">🌿 Root Causes</div>
+      <ul class="ws-list">${r.root_causes.map(c => `<li>${escHtml(c)}</li>`).join('')}</ul>
+    </div>`;
+
+  if (r.relevant_policy && r.relevant_policy.length) html += `
+    <div class="ws-section">
+      <div class="ws-section-label">📄 Relevant Policy</div>
+      <ul class="ws-policy-list">${r.relevant_policy.map(p => `<li class="ws-policy-item">${escHtml(typeof p === 'string' ? p : (p.reference || JSON.stringify(p)))}</li>`).join('')}</ul>
+    </div>`;
+
+  if (r.recommendations && r.recommendations.length) html += `
+    <div class="ws-section">
+      <div class="ws-section-label">✅ Recommendations</div>
+      <ul class="ws-list">${r.recommendations.map(rec => `<li>${escHtml(rec)}</li>`).join('')}</ul>
+    </div>`;
+
+  if (r.limitations) html += `
+    <div class="ws-section">
+      <div class="ws-section-label">⚠️ Limitations</div>
+      <div class="ws-limitations">${escHtml(r.limitations)}</div>
+    </div>`;
+
+  if (toolsUsed.length) html += `
+    <div class="ws-section">
+      <div class="ws-section-label">🔧 Tools Used</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+        ${toolsUsed.map(t => `<span style="font-size:0.72rem;padding:2px 8px;border-radius:5px;background:var(--surface);border:1px solid var(--border);color:var(--muted)">${escHtml(toolLabel(t))}</span>`).join('')}
+      </div>
+    </div>`;
+
+  html += '</div>';
+  workspaceContent.innerHTML = html;
+}
+
+// ── Utils ──
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // ── Init ──
 updateRateCounter();
+loadOverview();
 
 // ── Notice bar dismiss ──
 document.getElementById('noticeDismiss').addEventListener('click', () => {
   document.getElementById('noticeBar').classList.add('hidden');
   try { sessionStorage.setItem('noticeDismissed', '1'); } catch {}
 });
-try { if (sessionStorage.getItem('noticeDismissed')) document.getElementById('noticeBar').classList.add('hidden'); } catch {}
 
 // ── Toast helper ──
 function showToast(title, body, type = 'quota', duration = 10000) {
   const ct = document.getElementById('toastContainer');
   const t = document.createElement('div');
   t.className = `toast toast-${type}`;
-  t.innerHTML = `
-    <div class="toast-body">
-      <div class="toast-title">${title}</div>
-      <div>${body}</div>
-    </div>
-    <button class="toast-close" title="Dismiss">×</button>`;
+  t.innerHTML = `<div class="toast-body"><div class="toast-title">${title}</div><div>${body}</div></div><button class="toast-close" title="Dismiss">×</button>`;
   t.querySelector('.toast-close').onclick = () => t.remove();
   ct.appendChild(t);
   if (duration > 0) setTimeout(() => t.remove(), duration);
 }
-
 function handleApiError(detail, statusCode) {
   if (!detail) return;
   if (detail.includes('provider is temporarily rate-limited') || detail.includes('rate-limited')) {
-    showToast(
-      '⚠ Provider rate-limited',
+    showToast('⚠ Provider rate-limited',
       'The Groq free-tier may have hit its daily token quota (resets midnight UTC), or a short-term rate limit. ' +
       'Try again in a few seconds — if it persists until tomorrow, the daily quota is exhausted.',
-      'quota', 15000
-    );
+      'quota', 15000);
   } else if (detail.includes('Demo rate limit')) {
     showToast('⏱ Demo limit', '5 questions per 10 minutes per visitor. Try again shortly.', 'rate', 8000);
   }
 }
 </script>
-
-<!-- Toast container -->
-<div class="toast-container" id="toastContainer"></div>
 </body>
 </html>

@@ -128,6 +128,63 @@ def demo_page():
     return (Path(__file__).parent / "demo.html").read_text(encoding="utf-8")
 
 
+@health_router.get("/demo/metrics")
+def demo_metrics():
+    """Structured KPI snapshot for the Overview tab.
+    Calls tool functions directly — no LLM, no rate limit needed."""
+    from src.tools.analytics import get_cycle_time, get_sla_metrics, get_supplier_performance, get_bottlenecks
+    out: dict = {"cycle_time": None, "sla": None, "bottlenecks": [], "suppliers": [], "degraded": False}
+    try:
+        out["cycle_time"] = get_cycle_time()
+    except Exception:
+        out["degraded"] = True
+    try:
+        out["sla"] = get_sla_metrics()
+    except Exception:
+        out["degraded"] = True
+    try:
+        out["bottlenecks"] = get_bottlenecks(top_n=5)
+    except Exception:
+        out["degraded"] = True
+    try:
+        out["suppliers"] = get_supplier_performance(top_n=6)
+    except Exception:
+        out["degraded"] = True
+    return out
+
+
+@health_router.post("/demo/investigate", response_model=InvestigateResponse)
+def demo_investigate(request: InvestigateRequest, http_request: Request):
+    """Investigation workspace for the demo surface.
+    Rate-limited per visitor IP (counts as one question)."""
+    forwarded_for = http_request.headers.get("x-forwarded-for")
+    client_ip = forwarded_for.split(",")[0].strip() if forwarded_for else (
+        http_request.client.host if http_request.client else "unknown"
+    )
+    if not rate_limit_is_allowed(client_ip):
+        raise HTTPException(
+            status_code=429,
+            detail="Demo rate limit reached (5 questions per 10 minutes) -- please try again shortly.",
+        )
+    try:
+        result = run_investigation(request.question)
+    except Exception as exc:
+        raise _agent_error_response(exc)
+    r = result.report
+    return InvestigateResponse(
+        report=InvestigationReport(
+            executive_summary=r.executive_summary,
+            problem=r.problem,
+            evidence=r.evidence,
+            root_causes=r.root_causes,
+            relevant_policy=[SourceCitation(kind="document", reference=p) for p in r.relevant_policy],
+            recommendations=r.recommendations,
+            limitations=r.limitations,
+        ),
+        tools_used=result.tools_used,
+    )
+
+
 @health_router.post("/demo/chat", response_model=ChatResponse)
 def demo_chat(request: ChatRequest, http_request: Request):
     """Same underlying agent as the authenticated /chat, minus persisted
