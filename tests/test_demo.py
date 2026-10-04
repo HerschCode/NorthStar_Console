@@ -16,7 +16,7 @@ def test_demo_page_serves_html_without_auth():
     response = client.get("/")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
-    assert "Northstar Procurement Assistant" in response.text
+    assert "Northstar Procurement Intelligence" in response.text
     assert 'data-provider="anthropic"' not in response.text
     assert 'data-provider="gemini"' in response.text
     assert 'data-provider="groq"' in response.text
@@ -104,3 +104,14 @@ def test_demo_chat_returns_502_on_agent_failure(mock_run_agent):
     mock_run_agent.side_effect = RuntimeError("model unavailable")
     response = client.post("/demo/chat", json={"question": "q"})
     assert response.status_code == 502
+
+
+def test_demo_page_supports_prefilled_question_deep_link_without_auto_submit():
+    """The Northstar dashboard links to /?q=<question>. The page must prefill the box and must NOT submit it
+    (the public demo is rate-limited)."""
+    from pathlib import Path
+
+    html = Path("src/api/demo.html").read_text(encoding="utf-8")
+    assert "get('q')" in html and "input.value = prefill" in html
+    block = html[html.index("Deep link from the Northstar dashboard"):html.index("Notice bar dismiss")]
+    assert "submit" not in block.replace("never auto-submits", "")

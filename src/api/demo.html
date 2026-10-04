@@ -1382,6 +1382,16 @@ function escHtml(str) {
 updateRateCounter();
 loadOverview();
 
+// ── Deep link from the Northstar dashboard: /?q=<question> prefills the box (never auto-submits: the demo is rate-limited) ──
+try {
+  const prefill = new URLSearchParams(location.search).get('q');
+  if (prefill) {
+    input.value = prefill.slice(0, 500);
+    input.focus();
+    showToast('Question prefilled', 'From the Northstar dashboard. Review it and press Ask.', 'rate', 8000);
+  }
+} catch {}
+
 // ── Notice bar dismiss ──
 document.getElementById('noticeDismiss').addEventListener('click', () => {
   document.getElementById('noticeBar').classList.add('hidden');

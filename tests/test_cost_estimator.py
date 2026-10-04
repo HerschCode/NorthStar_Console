@@ -7,7 +7,7 @@ from src.evaluation.cost_estimator import (
 def test_load_pricing_reads_real_config():
     pricing = load_pricing()
     assert "claude-sonnet-4-6" in pricing["models"]
-    assert pricing["default_model"] == "claude-sonnet-4-6"
+    assert pricing["default_model"] in pricing["models"]   # the default moves with new model generations
 
 
 def test_estimate_tokens_rough_heuristic():
