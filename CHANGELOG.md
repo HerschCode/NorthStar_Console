@@ -2,6 +2,19 @@
 
 ## Unreleased -- Post-v1.0.0 upgrade work
 
+### Round 10: replay clock and versioned /v1 API (2026-10-04)
+- `src/replay/clock.py`: an honest "open cases at time T" over the closed BPI log (events <= as_of only, early-warning
+  model on the first k events, realistic p75 target, `already_late` / `too_early` statuses); property test that
+  truncating the log at `as_of` changes nothing. Default clock 2018-04-16 (why: docs/v1-api.md).
+- `/v1` API (`src/v1/`): overview, queue ranked by simulated expected loss (a small order cannot be CRITICAL), Case 360,
+  Supplier 360 (Wilson CIs, n >= 20), stage-grouped process flow (`config/stages.yaml`), risk map, finance, ROI,
+  models, data quality, lineage, experiments (failed/leaked/tied included), briefing facts, search,
+  `PATCH /v1/interventions/{id}/outcome`. Every metric carries provenance; every endpoint has a committed snapshot
+  fallback (`reports/v1_snapshot/`, `scripts/build_v1_snapshot.py`) and `openapi/p1.json` is exported.
+- `traceparent` accepted, trace id logged and echoed (`X-Trace-ID`).
+- The scheduled Retrain check no longer stays red when the free-tier database is unreachable: it emits a warning
+  annotation and skips (real errors still fail).
+
 ### Northstar product shell at /app (2026-10-04)
 - One application shell (sidebar, search, dark/light, data-freshness badge) over the existing analytics: Overview
   (KPIs, risk funnel, trend, risk x value, stage delays, auto-generated brief), Action Center, PO 360 (SHAP drivers +

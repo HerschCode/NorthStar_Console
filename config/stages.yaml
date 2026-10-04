@@ -1,0 +1,64 @@
+# Business stages for the process-mining view (src/v1/build.py -> /v1/process/flow?group=stage).
+# BPI 2019 has 38 raw activities; the transition graph over them is unreadable. Each activity maps to exactly one
+# of seven stages, in the order a typical purchase item moves through them. A test fails if an activity in the
+# log is not mapped (it would otherwise be silently dropped from the graph).
+stages:
+  - id: order
+    label: Requisition & order
+    activities:
+      - Create Purchase Requisition Item
+      - Create Purchase Order Item
+      - Release Purchase Order
+  - id: approval
+    label: Approval & transmission (SRM)
+    activities:
+      - "SRM: Created"
+      - "SRM: Awaiting Approval"
+      - "SRM: Complete"
+      - "SRM: Ordered"
+      - "SRM: Document Completed"
+      - "SRM: In Transfer to Execution Syst."
+      - "SRM: Change was Transmitted"
+      - "SRM: Transfer Failed (E.Sys.)"
+      - "SRM: Held"
+      - "SRM: Incomplete"
+      - "SRM: Transaction Completed"
+      - "SRM: Deleted"
+      - Change Approval for Purchase Order
+  - id: changes
+    label: Order changes & confirmation
+    activities:
+      - Change Quantity
+      - Change Price
+      - Change Delivery Indicator
+      - Change Storage Location
+      - Receive Order Confirmation
+      - Update Order Confirmation
+      - Block Purchase Order Item
+      - Reactivate Purchase Order Item
+      - Delete Purchase Order Item
+  - id: receipt
+    label: Goods / service receipt
+    activities:
+      - Record Goods Receipt
+      - Record Service Entry Sheet
+      - Cancel Goods Receipt
+  - id: invoicing
+    label: Invoicing
+    activities:
+      - Vendor creates invoice
+      - Vendor creates debit memo
+      - Record Invoice Receipt
+      - Record Subsequent Invoice
+      - Cancel Invoice Receipt
+      - Cancel Subsequent Invoice
+      - Change Final Invoice Indicator
+  - id: block
+    label: Payment block
+    activities:
+      - Set Payment Block
+      - Remove Payment Block
+  - id: payment
+    label: Clearing & payment
+    activities:
+      - Clear Invoice

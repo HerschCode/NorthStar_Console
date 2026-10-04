@@ -1,0 +1,1794 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "Operations Performance API",
+  "description": "Analytics API over the Northstar Manufacturing procurement process. Read-only except the admin-only intervention ledger (POST /interventions). Wraps the same analytics/ML logic used by the local pipeline and dashboard, so there's one source of truth for every number -- including for operations-assistant, which consumes these endpoints as agent tools rather than reimplementing the logic.",
+  "version": "0.1.0"
+ },
+ "paths": {
+  "/v1/overview": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Overview",
+    "operationId": "v1_overview_v1_overview_get",
+    "parameters": [
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant.",
+       "default": "2018-04-16",
+       "title": "As Of"
+      },
+      "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/queue": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Queue",
+    "operationId": "v1_queue_v1_queue_get",
+    "parameters": [
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant.",
+       "default": "2018-04-16",
+       "title": "As Of"
+      },
+      "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant."
+     },
+     {
+      "name": "min_value",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "number",
+       "default": 0.0,
+       "title": "Min Value"
+      }
+     },
+     {
+      "name": "supplier",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Supplier"
+      }
+     },
+     {
+      "name": "stage",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Stage"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 500,
+       "minimum": 1,
+       "default": 100,
+       "title": "Limit"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/cases/{case_id}": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Case",
+    "operationId": "v1_case_v1_cases__case_id__get",
+    "parameters": [
+     {
+      "name": "case_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Case Id"
+      }
+     },
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant.",
+       "default": "2018-04-16",
+       "title": "As Of"
+      },
+      "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/suppliers": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Suppliers",
+    "operationId": "v1_suppliers_v1_suppliers_get",
+    "parameters": [
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant.",
+       "default": "2018-04-16",
+       "title": "As Of"
+      },
+      "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant."
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "ci_lower",
+       "title": "Sort"
+      }
+     },
+     {
+      "name": "min_n",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 20,
+       "title": "Min N"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/suppliers/{supplier_id}": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Supplier",
+    "operationId": "v1_supplier_v1_suppliers__supplier_id__get",
+    "parameters": [
+     {
+      "name": "supplier_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Supplier Id"
+      }
+     },
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant.",
+       "default": "2018-04-16",
+       "title": "As Of"
+      },
+      "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/process/flow": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Flow",
+    "operationId": "v1_flow_v1_process_flow_get",
+    "parameters": [
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant.",
+       "default": "2018-04-16",
+       "title": "As Of"
+      },
+      "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant."
+     },
+     {
+      "name": "metric",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "pattern": "^(median|p75|p90|breach_contribution)$",
+       "default": "median",
+       "title": "Metric"
+      }
+     },
+     {
+      "name": "group",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "pattern": "^(stage|activity)$",
+       "default": "stage",
+       "title": "Group"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/process/variants": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Variants",
+    "operationId": "v1_variants_v1_process_variants_get",
+    "parameters": [
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant.",
+       "default": "2018-04-16",
+       "title": "As Of"
+      },
+      "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/risk-map": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Risk Map",
+    "operationId": "v1_risk_map_v1_risk_map_get",
+    "parameters": [
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant.",
+       "default": "2018-04-16",
+       "title": "As Of"
+      },
+      "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/finance/controls": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Fin Controls",
+    "operationId": "v1_fin_controls_v1_finance_controls_get",
+    "parameters": [
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant.",
+       "default": "2018-04-16",
+       "title": "As Of"
+      },
+      "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/finance/exceptions": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Fin Exc",
+    "operationId": "v1_fin_exc_v1_finance_exceptions_get",
+    "parameters": [
+     {
+      "name": "control",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Control"
+      }
+     },
+     {
+      "name": "min_exposure",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "number",
+       "default": 0.0,
+       "title": "Min Exposure"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/finance/working-capital": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Fin Wc",
+    "operationId": "v1_fin_wc_v1_finance_working_capital_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/interventions/roi": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Roi",
+    "operationId": "v1_roi_v1_interventions_roi_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/models": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Models",
+    "operationId": "v1_models_v1_models_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/data-quality": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Dq",
+    "operationId": "v1_dq_v1_data_quality_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/lineage": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Lineage",
+    "operationId": "v1_lineage_v1_lineage_get",
+    "parameters": [
+     {
+      "name": "metric",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Metric"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/experiments": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Experiments",
+    "operationId": "v1_experiments_v1_experiments_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/briefing": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Briefing",
+    "operationId": "v1_briefing_v1_briefing_get",
+    "parameters": [
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant.",
+       "default": "2018-04-16",
+       "title": "As Of"
+      },
+      "description": "Replay clock (ISO date/time). Open cases and their features use only events up to this instant."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/search": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Search",
+    "operationId": "v1_search_v1_search_get",
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "minLength": 1,
+       "title": "Q"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 50,
+       "minimum": 1,
+       "default": 20,
+       "title": "Limit"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "ApControlException": {
+    "properties": {
+     "exception_id": {
+      "type": "integer",
+      "title": "Exception Id"
+     },
+     "case_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Case Id"
+     },
+     "control_id": {
+      "type": "string",
+      "title": "Control Id"
+     },
+     "severity": {
+      "type": "string",
+      "title": "Severity"
+     },
+     "exposure_eur": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Exposure Eur"
+     },
+     "evidence": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Evidence"
+     },
+     "supplier_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Supplier Id"
+     },
+     "category": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Category"
+     }
+    },
+    "type": "object",
+    "required": [
+     "exception_id",
+     "case_id",
+     "control_id",
+     "severity",
+     "exposure_eur",
+     "evidence"
+    ],
+    "title": "ApControlException"
+   },
+   "ApControlsSummaryResponse": {
+    "properties": {
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "total_exceptions": {
+      "type": "integer",
+      "title": "Total Exceptions"
+     },
+     "controls": {
+      "items": {
+       "$ref": "#/components/schemas/ApControlsSummaryRow"
+      },
+      "type": "array",
+      "title": "Controls"
+     },
+     "note": {
+      "type": "string",
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "label",
+     "total_exceptions",
+     "controls",
+     "note"
+    ],
+    "title": "ApControlsSummaryResponse"
+   },
+   "ApControlsSummaryRow": {
+    "properties": {
+     "control_id": {
+      "type": "string",
+      "title": "Control Id"
+     },
+     "count": {
+      "type": "integer",
+      "title": "Count"
+     },
+     "total_exposure_eur": {
+      "type": "number",
+      "title": "Total Exposure Eur"
+     },
+     "severity_breakdown": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Severity Breakdown"
+     }
+    },
+    "type": "object",
+    "required": [
+     "control_id",
+     "count",
+     "total_exposure_eur",
+     "severity_breakdown"
+    ],
+    "title": "ApControlsSummaryRow"
+   },
+   "BottleneckRow": {
+    "properties": {
+     "stage": {
+      "type": "string",
+      "title": "Stage"
+     },
+     "avg_hours": {
+      "type": "number",
+      "title": "Avg Hours"
+     },
+     "median_hours": {
+      "type": "number",
+      "title": "Median Hours"
+     },
+     "p90_hours": {
+      "type": "number",
+      "title": "P90 Hours"
+     },
+     "case_count": {
+      "type": "integer",
+      "title": "Case Count"
+     },
+     "pct_of_total_delay": {
+      "type": "number",
+      "title": "Pct Of Total Delay"
+     }
+    },
+    "type": "object",
+    "required": [
+     "stage",
+     "avg_hours",
+     "median_hours",
+     "p90_hours",
+     "case_count",
+     "pct_of_total_delay"
+    ],
+    "title": "BottleneckRow"
+   },
+   "ConformanceResponse": {
+    "properties": {
+     "total_cases": {
+      "type": "integer",
+      "title": "Total Cases"
+     },
+     "conformant_cases": {
+      "type": "integer",
+      "title": "Conformant Cases"
+     },
+     "conformance_rate_pct": {
+      "type": "number",
+      "title": "Conformance Rate Pct"
+     },
+     "deviation_breakdown": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Deviation Breakdown"
+     }
+    },
+    "type": "object",
+    "required": [
+     "total_cases",
+     "conformant_cases",
+     "conformance_rate_pct",
+     "deviation_breakdown"
+    ],
+    "title": "ConformanceResponse"
+   },
+   "DataQualityCheck": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "value": {
+      "type": "string",
+      "title": "Value"
+     },
+     "detail": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "status",
+     "value"
+    ],
+    "title": "DataQualityCheck"
+   },
+   "DataQualityReport": {
+    "properties": {
+     "overall": {
+      "type": "string",
+      "title": "Overall"
+     },
+     "checked_at": {
+      "type": "string",
+      "title": "Checked At"
+     },
+     "checks": {
+      "items": {
+       "$ref": "#/components/schemas/DataQualityCheck"
+      },
+      "type": "array",
+      "title": "Checks"
+     }
+    },
+    "type": "object",
+    "required": [
+     "overall",
+     "checked_at",
+     "checks"
+    ],
+    "title": "DataQualityReport"
+   },
+   "EarlyRiskResponse": {
+    "properties": {
+     "case_id": {
+      "type": "string",
+      "title": "Case Id"
+     },
+     "k": {
+      "type": "integer",
+      "title": "K"
+     },
+     "breach_probability": {
+      "type": "number",
+      "title": "Breach Probability"
+     },
+     "target_definition": {
+      "type": "string",
+      "title": "Target Definition"
+     },
+     "target_hours": {
+      "type": "number",
+      "title": "Target Hours"
+     },
+     "elapsed_hours_at_k": {
+      "type": "number",
+      "title": "Elapsed Hours At K"
+     },
+     "test_roc_auc": {
+      "type": "number",
+      "title": "Test Roc Auc"
+     },
+     "test_roc_auc_ci95": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Test Roc Auc Ci95"
+     },
+     "base_rate": {
+      "type": "number",
+      "title": "Base Rate"
+     },
+     "n_test": {
+      "type": "integer",
+      "title": "N Test"
+     },
+     "model": {
+      "type": "string",
+      "title": "Model"
+     },
+     "warning": {
+      "type": "string",
+      "title": "Warning"
+     }
+    },
+    "type": "object",
+    "required": [
+     "case_id",
+     "k",
+     "breach_probability",
+     "target_definition",
+     "target_hours",
+     "elapsed_hours_at_k",
+     "test_roc_auc",
+     "test_roc_auc_ci95",
+     "base_rate",
+     "n_test",
+     "model",
+     "warning"
+    ],
+    "title": "EarlyRiskResponse"
+   },
+   "FactorExplanation": {
+    "properties": {
+     "feature": {
+      "type": "string",
+      "title": "Feature"
+     },
+     "shap_value": {
+      "type": "number",
+      "title": "Shap Value"
+     },
+     "value": {
+      "type": "number",
+      "title": "Value"
+     }
+    },
+    "type": "object",
+    "required": [
+     "feature",
+     "shap_value",
+     "value"
+    ],
+    "title": "FactorExplanation"
+   },
+   "FeatureDriftReportSchema": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "checked_at": {
+      "type": "string",
+      "title": "Checked At"
+     },
+     "n_current_rows": {
+      "type": "integer",
+      "title": "N Current Rows"
+     },
+     "alert_features": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Alert Features"
+     },
+     "features": {
+      "items": {
+       "$ref": "#/components/schemas/FeatureDriftRow"
+      },
+      "type": "array",
+      "title": "Features"
+     },
+     "thresholds": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Thresholds"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status",
+     "checked_at",
+     "n_current_rows",
+     "alert_features",
+     "features",
+     "thresholds"
+    ],
+    "title": "FeatureDriftReportSchema"
+   },
+   "FeatureDriftRow": {
+    "properties": {
+     "feature": {
+      "type": "string",
+      "title": "Feature"
+     },
+     "psi": {
+      "type": "number",
+      "title": "Psi"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     }
+    },
+    "type": "object",
+    "required": [
+     "feature",
+     "psi",
+     "status"
+    ],
+    "title": "FeatureDriftRow"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "HealthResponse": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "database_connected": {
+      "type": "boolean",
+      "title": "Database Connected"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status",
+     "database_connected"
+    ],
+    "title": "HealthResponse"
+   },
+   "InterventionCreate": {
+    "properties": {
+     "case_id": {
+      "type": "string",
+      "title": "Case Id"
+     },
+     "intervention_type": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Intervention Type"
+     },
+     "risk_at_intervention": {
+      "type": "number",
+      "title": "Risk At Intervention"
+     },
+     "cost": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cost"
+     },
+     "breached_after": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Breached After"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "case_id",
+     "risk_at_intervention"
+    ],
+    "title": "InterventionCreate"
+   },
+   "InterventionCreated": {
+    "properties": {
+     "intervention_id": {
+      "type": "integer",
+      "title": "Intervention Id"
+     },
+     "case_id": {
+      "type": "string",
+      "title": "Case Id"
+     },
+     "intervention_type": {
+      "type": "string",
+      "title": "Intervention Type"
+     },
+     "cost": {
+      "type": "number",
+      "title": "Cost"
+     },
+     "assignment": {
+      "type": "string",
+      "title": "Assignment",
+      "default": "treat"
+     },
+     "action_required": {
+      "type": "boolean",
+      "title": "Action Required",
+      "default": true
+     },
+     "experiment_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Experiment Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "intervention_id",
+     "case_id",
+     "intervention_type",
+     "cost"
+    ],
+    "title": "InterventionCreated"
+   },
+   "PipelineRunRow": {
+    "properties": {
+     "run_id": {
+      "type": "integer",
+      "title": "Run Id"
+     },
+     "started_at": {
+      "type": "string",
+      "title": "Started At"
+     },
+     "finished_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Finished At"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "raw_row_count": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Raw Row Count"
+     },
+     "cleaned_row_count": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cleaned Row Count"
+     },
+     "case_count": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Case Count"
+     },
+     "error_message": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Error Message"
+     }
+    },
+    "type": "object",
+    "required": [
+     "run_id",
+     "started_at",
+     "status"
+    ],
+    "title": "PipelineRunRow"
+   },
+   "PredictionDriftReport": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "checked_at": {
+      "type": "string",
+      "title": "Checked At"
+     },
+     "total_current_predictions": {
+      "type": "integer",
+      "title": "Total Current Predictions"
+     },
+     "baseline_source": {
+      "type": "string",
+      "title": "Baseline Source"
+     },
+     "buckets": {
+      "items": {
+       "$ref": "#/components/schemas/RiskBucketDrift"
+      },
+      "type": "array",
+      "title": "Buckets"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status",
+     "checked_at",
+     "total_current_predictions",
+     "baseline_source",
+     "buckets"
+    ],
+    "title": "PredictionDriftReport"
+   },
+   "RiskBucketDrift": {
+    "properties": {
+     "bucket": {
+      "type": "string",
+      "title": "Bucket"
+     },
+     "baseline_pct": {
+      "type": "number",
+      "title": "Baseline Pct"
+     },
+     "current_pct": {
+      "type": "number",
+      "title": "Current Pct"
+     },
+     "delta_pct": {
+      "type": "number",
+      "title": "Delta Pct"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     }
+    },
+    "type": "object",
+    "required": [
+     "bucket",
+     "baseline_pct",
+     "current_pct",
+     "delta_pct",
+     "status"
+    ],
+    "title": "RiskBucketDrift"
+   },
+   "SlaRiskBucket": {
+    "properties": {
+     "risk_level": {
+      "type": "string",
+      "title": "Risk Level"
+     },
+     "case_count": {
+      "type": "integer",
+      "title": "Case Count"
+     }
+    },
+    "type": "object",
+    "required": [
+     "risk_level",
+     "case_count"
+    ],
+    "title": "SlaRiskBucket"
+   },
+   "SlaRiskDistributionResponse": {
+    "properties": {
+     "total_cases_scored": {
+      "type": "integer",
+      "title": "Total Cases Scored"
+     },
+     "buckets": {
+      "items": {
+       "$ref": "#/components/schemas/SlaRiskBucket"
+      },
+      "type": "array",
+      "title": "Buckets"
+     }
+    },
+    "type": "object",
+    "required": [
+     "total_cases_scored",
+     "buckets"
+    ],
+    "title": "SlaRiskDistributionResponse"
+   },
+   "SlaRiskResponse": {
+    "properties": {
+     "case_id": {
+      "type": "string",
+      "title": "Case Id"
+     },
+     "breach_probability": {
+      "type": "number",
+      "title": "Breach Probability"
+     },
+     "risk_level": {
+      "type": "string",
+      "title": "Risk Level"
+     },
+     "explanation": {
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/FactorExplanation"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Explanation"
+     }
+    },
+    "type": "object",
+    "required": [
+     "case_id",
+     "breach_probability",
+     "risk_level"
+    ],
+    "title": "SlaRiskResponse"
+   },
+   "SlaSummaryRow": {
+    "properties": {
+     "segment": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Segment"
+     },
+     "case_count": {
+      "type": "integer",
+      "title": "Case Count"
+     },
+     "breach_count": {
+      "type": "integer",
+      "title": "Breach Count"
+     },
+     "breach_rate_pct": {
+      "type": "number",
+      "title": "Breach Rate Pct"
+     }
+    },
+    "type": "object",
+    "required": [
+     "case_count",
+     "breach_count",
+     "breach_rate_pct"
+    ],
+    "title": "SlaSummaryRow"
+   },
+   "SupplierScoreRow": {
+    "properties": {
+     "supplier_id": {
+      "type": "string",
+      "title": "Supplier Id"
+     },
+     "order_count": {
+      "type": "integer",
+      "title": "Order Count"
+     },
+     "avg_cycle_time_hours": {
+      "type": "number",
+      "title": "Avg Cycle Time Hours"
+     },
+     "cycle_time_std_hours": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cycle Time Std Hours"
+     },
+     "sla_breach_rate": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sla Breach Rate"
+     },
+     "rank_by_cycle_time": {
+      "type": "number",
+      "title": "Rank By Cycle Time"
+     }
+    },
+    "type": "object",
+    "required": [
+     "supplier_id",
+     "order_count",
+     "avg_cycle_time_hours",
+     "rank_by_cycle_time"
+    ],
+    "title": "SupplierScoreRow"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   },
+   "WorkingCapitalSummaryResponse": {
+    "properties": {
+     "dpo_by_supplier": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Dpo By Supplier"
+     },
+     "dpo_by_spend_area": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Dpo By Spend Area"
+     },
+     "late_payment": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Late Payment"
+     },
+     "early_discount_scenario": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Early Discount Scenario"
+     },
+     "assumptions": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Assumptions"
+     }
+    },
+    "type": "object",
+    "required": [
+     "dpo_by_supplier",
+     "dpo_by_spend_area",
+     "late_payment",
+     "early_discount_scenario",
+     "assumptions"
+    ],
+    "title": "WorkingCapitalSummaryResponse"
+   }
+  }
+ }
+}

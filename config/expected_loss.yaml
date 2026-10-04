@@ -1,0 +1,18 @@
+# Expected-loss ranking for the action queue (src/v1/build.py).
+#   expected_loss_eur = P(breach) x order_value_eur x breach_cost_pct_of_value
+# P(breach) is the early-warning model's probability for the realistic target (1.0 for a case already past its
+# target). Order value is the largest cumulative net worth seen on the case up to `as_of` (EUR, BPI 2019).
+#
+# ASSUMPTION, NOT A MEASUREMENT: no cost-of-delay data exists in the public log. 2% of order value is a placeholder a
+# business owner would replace; every API response echoes it with provenance "simulated".
+breach_cost_pct_of_value: 0.02
+
+# Priority tiers are cut on expected loss among the open cases at the chosen as_of (quantiles), so the labels stay
+# meaningful whatever the clock says. A tiny order can never be CRITICAL: its expected loss is tiny.
+tiers:
+  critical: 0.99   # top 1% of expected loss
+  high: 0.95       # next 4%
+  elevated: 0.85   # next 10%
+
+# A scored open case counts as "at risk" when P(breach) is at least this (the training-window base rate is ~0.27).
+at_risk_probability: 0.30

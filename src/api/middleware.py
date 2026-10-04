@@ -9,6 +9,16 @@ from src.api.metrics import REQUEST_COUNT, REQUEST_LATENCY_SECONDS
 logger = get_logger("api.requests")
 
 
+def parse_traceparent(value: str | None) -> str | None:
+    """Trace id from a W3C `traceparent` header (version-traceid-spanid-flags); None if absent or malformed."""
+    if not value:
+        return None
+    parts = value.strip().split("-")
+    if len(parts) == 4 and len(parts[1]) == 32 and all(c in "0123456789abcdef" for c in parts[1]) and set(parts[1]) != {"0"}:
+        return parts[1]
+    return None
+
+
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Logs every request: path, status, latency. Assigns a request_id so a single
     request's log line can be correlated with whatever else it touches (a future
@@ -20,6 +30,8 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         request_id = str(uuid.uuid4())[:8]
+        # W3C trace context: keep the caller's trace id so one correlation id spans console -> gateway -> agent -> API.
+        trace_id = parse_traceparent(request.headers.get("traceparent"))
         start = time.monotonic()
 
         response = await call_next(request)
@@ -30,6 +42,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             "request handled",
             extra={
                 "request_id": request_id,
+                "trace_id": trace_id,
                 "method": request.method,
                 "path": request.url.path,
                 "status_code": response.status_code,
@@ -48,4 +61,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         REQUEST_LATENCY_SECONDS.labels(method=request.method, path=path_label).observe(duration_s)
 
         response.headers["X-Request-ID"] = request_id
+        if trace_id:
+            response.headers["X-Trace-ID"] = trace_id
         return response

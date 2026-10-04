@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.routes import router, health_router
 from src.api.dashboard import router as dashboard_router
 from src.api.app_routes import router as app_router
+from src.v1.router import router as v1_router
 from src.api.middleware import RequestLoggingMiddleware
 from src.api.auth import require_api_key
 from src.observability.logging_config import configure_logging
@@ -54,6 +55,7 @@ app.include_router(health_router)
 # visitor viewing aggregate, non-sensitive analytics shouldn't need an API key.
 app.include_router(dashboard_router)
 app.include_router(app_router)
+app.include_router(v1_router)
 app.include_router(router, dependencies=[Depends(require_api_key)])
 
 
