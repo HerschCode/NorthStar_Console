@@ -200,7 +200,7 @@ def _run(args: argparse.Namespace) -> dict[str, Any]:
 
             client = OpenAI(api_key="ollama", base_url=args.ollama_base_url, max_retries=0)
             llm = OpenAILLM(client, model_id)
-            llm.name = f"ollama-{model_id}"
+            llm.name = ModelsEnum.LOCAL
     else:
         llm = args.model
         report_model, report_model_id = args.model, args.model_id
@@ -387,20 +387,21 @@ def main() -> int:
         return 2
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-    for name, result in report["runs"].items():
-        metrics = result["metrics"]
-        print(
-            f"{name}: cases={metrics['cases']}, security={metrics['security_rate']}, "
-            f"attack_success={metrics['attack_success_rate']}, utility={metrics['utility_rate']}, "
-            f"llm_calls={result['budget']['llm_calls']}, complete={result.get('complete', True)}"
-        )
-        if result.get("budget_stop_reason"):
-            print(f"{name}: stopped: {result['budget_stop_reason']}")
     if report.get("dry_run"):
         print(
             f"DRY RUN: {report['pair_count_per_arm']} pairs/arm; "
             f"at most {report['max_total_llm_calls']} model calls total"
         )
+    else:
+        for name, result in report["runs"].items():
+            metrics = result["metrics"]
+            print(
+                f"{name}: cases={metrics['cases']}, security={metrics['security_rate']}, "
+                f"attack_success={metrics['attack_success_rate']}, utility={metrics['utility_rate']}, "
+                f"llm_calls={result['budget']['llm_calls']}, complete={result.get('complete', True)}"
+            )
+            if result.get("budget_stop_reason"):
+                print(f"{name}: stopped: {result['budget_stop_reason']}")
     print(f"Wrote {args.report}")
     return 0
 

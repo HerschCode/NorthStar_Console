@@ -115,11 +115,16 @@ def _message_text(content: Any) -> str:
         return content
     if not isinstance(content, list):
         return ""
-    return "\n".join(
-        block["text"]
-        for block in content
-        if isinstance(block, dict) and block.get("type") == "text" and isinstance(block.get("text"), str)
-    )
+    texts = []
+    for block in content:
+        if not isinstance(block, dict) or block.get("type") != "text":
+            continue
+        text = block.get("text")
+        if not isinstance(text, str):
+            text = block.get("content")
+        if isinstance(text, str):
+            texts.append(text)
+    return "\n".join(texts)
 
 
 def _omit_text(content: Any) -> Any:
@@ -127,12 +132,15 @@ def _omit_text(content: Any) -> Any:
         return _OMITTED_TEXT
     if isinstance(content, list):
         return [
-            {"type": "text", "text": _OMITTED_TEXT}
+            {
+                **block,
+                "content" if "content" in block and "text" not in block else "text": _OMITTED_TEXT,
+            }
             if isinstance(block, dict) and block.get("type") == "text"
             else block
             for block in content
         ]
-    return [{"type": "text", "text": _OMITTED_TEXT}]
+    return [{"type": "text", "content": _OMITTED_TEXT}]
 
 
 class GatewayActionFirewallExecutor(_ToolsExecutor):
@@ -155,7 +163,7 @@ class GatewayActionFirewallExecutor(_ToolsExecutor):
     def _tool_result(tool_call: Any, text: str, error: str | None = None) -> dict[str, Any]:
         return {
             "role": "tool",
-            "content": [{"type": "text", "text": text}],
+            "content": [{"type": "text", "content": text}],
             "tool_call_id": getattr(tool_call, "id", None),
             "tool_call": tool_call,
             "error": error,
