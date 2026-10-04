@@ -130,7 +130,9 @@ def test_the_render_image_is_torch_free_and_the_context_excludes_generated_and_s
 
 # ---- lock files ---------------------------------------------------------------------------------------------------------------------
 
-LOCKS = {"requirements-render.lock": "requirements-render.txt", "requirements.lock": "requirements.txt", "requirements-ci.lock": "requirements-ci.txt"}
+LOCKS = {"requirements-render.lock": "requirements-render.txt", "requirements.lock": "requirements.txt", "requirements-ci.lock": "requirements-ci.txt",
+         "requirements-student.lock": "requirements-student.txt"}
+MIN_PACKAGES = {"requirements-student.lock": 3}          # a deliberately tiny lock: onnxruntime and its few dependencies
 
 
 def lock_packages(path):
@@ -149,7 +151,7 @@ def lock_packages(path):
 @pytest.mark.parametrize("lock", LOCKS)
 def test_every_locked_package_is_exactly_pinned_and_has_hashes(lock):
     pkgs = lock_packages(REPO / lock)
-    assert len(pkgs) > 15
+    assert len(pkgs) > MIN_PACKAGES.get(lock, 15)
     assert [p for p, n in pkgs.items() if n == 0] == []
 
 
@@ -170,3 +172,21 @@ def test_no_lock_file_contains_an_index_or_direct_url_override():
 
 def test_the_security_documents_exist():
     assert (REPO / "SECURITY.md").exists() and (REPO / "docs" / "security-scans.md").exists()
+
+
+def lock_versions(path):
+    return {m.group(1).lower().replace("_", "-"): m.group(2) for line in path.read_text(encoding="utf-8").splitlines() if (m := re.match(r"^([A-Za-z0-9_.-]+)==(\S+)", line))}
+
+
+def test_the_student_lock_never_moves_a_package_it_shares_with_the_render_lock():
+    """CI installs both with --no-deps into one environment: a numpy that differs between them would silently replace the one the suite is tested against."""
+    render, student = lock_versions(REPO / "requirements-render.lock"), lock_versions(REPO / "requirements-student.lock")
+    shared = set(render) & set(student)
+    assert "numpy" in shared
+    assert {p: (render[p], student[p]) for p in shared if render[p] != student[p]} == {}
+
+
+def test_ci_installs_and_audits_the_student_lock():
+    text = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "pip install --require-hashes --no-deps -r requirements-student.lock" in text
+    assert "pip-audit -r requirements-student.lock --require-hashes --strict" in text

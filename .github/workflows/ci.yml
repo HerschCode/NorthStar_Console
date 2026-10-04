@@ -30,6 +30,8 @@ jobs:
         run: |
           pip install --require-hashes --no-deps -r requirements-render.lock
           pip install --require-hashes --no-deps -r requirements-ci.lock
+          # ONNX Runtime for the opt-in student guard: its tests run here instead of skipping (constrained to the render lock, so numpy does not move)
+          pip install --require-hashes --no-deps -r requirements-student.lock
 
       - name: Run test suite
         run: python -m pytest tests/ -v
@@ -71,3 +73,4 @@ jobs:
         run: |
           pip-audit -r requirements-render.lock --require-hashes --strict
           pip-audit -r requirements.lock --require-hashes --strict
+          pip-audit -r requirements-student.lock --require-hashes --strict
