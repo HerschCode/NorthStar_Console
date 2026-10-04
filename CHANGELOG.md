@@ -2,6 +2,21 @@
 
 ## Unreleased -- Post-v1.0.0 upgrade work
 
+### Northstar product shell at /app (2026-10-04)
+- One application shell (sidebar, search, dark/light, data-freshness badge) over the existing analytics: Overview
+  (KPIs, risk funnel, trend, risk x value, stage delays, auto-generated brief), Action Center, PO 360 (SHAP drivers +
+  timeline), Supplier 360 and quadrant, Risk Map, Process Mining (directly-follows graph with median/P75/P90/breach
+  metrics), Finance (control health, AP exceptions, working capital, external validation), Intervention Center
+  (simulated review/approval flow), Investigations, AI Security and Attack Lab (replay of committed P3 results),
+  Audit Log (browser-local), Model Health, Data Quality, Lineage, Architecture, Evidence & Limitations, Alerts.
+- `Ask Northstar` buttons deep-link into operations-assistant with the case/supplier question prefilled
+  (the demo prefills but never auto-submits; it is rate-limited).
+- Honest by construction: priority tiers are score percentiles (the deployed model is trained on a ~95%-breach target),
+  Benford is shown as not valid, model-vs-rules as not established, interventions as simulated, replay data labelled.
+- `src/api/product.py` builds one payload shared by the live path and `scripts/build_product_snapshot.py`; the page
+  falls back to `reports/product_snapshot.json` when the database is unreachable.
+  `scripts/export_governance_summary.py` copies P3's committed results into `reports/governance_summary.json`.
+
 ### Dashboard: snapshot fallback + SHAP fix (2026-10-04)
 - When the database is unreachable (Neon quota/suspend) `/dashboard/data` serves `reports/dashboard_snapshot.json`,
   built by `scripts/build_dashboard_snapshot.py` from the same section functions, and the page shows a banner with its date.

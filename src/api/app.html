@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Northstar Procurement Intelligence</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg:#f3f6fa; --panel:#ffffff; --panel2:#f5f8fb; --border:#dce5ee; --text:#172b3a; --muted:#607487;
+    --accent:#087e8b; --accent-soft:#e3f4f3; --good:#18794e; --warn:#a15c07; --bad:#bd3b35; --info:#3b6fb6;
+    --good-soft:#e2f3ea; --warn-soft:#fbf0dc; --bad-soft:#f9e4e2; --grid:#e8eef4; --shadow:rgba(27,50,69,.08);
+    --side:#0f2233; --side-text:#c8d6e2; --side-active:#16384f;
+  }
+  [data-theme="dark"] {
+    color-scheme: dark;
+    --bg:#0e1822; --panel:#16232f; --panel2:#1d2d3b; --border:#2b3f50; --text:#e6eef5; --muted:#a2b2c0;
+    --accent:#55c4c4; --accent-soft:#1f3b43; --good:#57c58a; --warn:#e8b454; --bad:#f07870; --info:#7fa8e0;
+    --good-soft:#1c3a2b; --warn-soft:#3b3015; --bad-soft:#412120; --grid:#263746; --shadow:rgba(0,0,0,.25);
+    --side:#0a131c; --side-text:#b7c6d3; --side-active:#173246;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:underline; }
+  button { font:inherit; cursor:pointer; }
+  .shell { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
+  aside { background:var(--side); color:var(--side-text); padding:16px 0; position:sticky; top:0; height:100vh; overflow-y:auto; }
+  .brand { padding:0 20px 14px; border-bottom:1px solid rgba(255,255,255,.08); margin-bottom:10px; }
+  .brand b { display:block; color:#fff; font-size:17px; letter-spacing:.04em; }
+  .brand span { font-size:11px; opacity:.7; }
+  .nav-group { padding:10px 20px 4px; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; opacity:.55; }
+  .nav a { display:block; padding:7px 20px; color:var(--side-text); font-size:13.5px; border-left:3px solid transparent; }
+  .nav a:hover { background:rgba(255,255,255,.05); text-decoration:none; }
+  .nav a.active { background:var(--side-active); color:#fff; border-left-color:var(--accent); }
+  main { min-width:0; }
+  .topbar { display:flex; align-items:center; gap:12px; padding:10px 24px; background:var(--panel); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:5; flex-wrap:wrap; }
+  .search { flex:1; min-width:180px; max-width:420px; position:relative; }
+  .search input { width:100%; padding:7px 12px; border:1px solid var(--border); border-radius:8px; background:var(--panel2); color:var(--text); }
+  .results { position:absolute; top:38px; left:0; right:0; background:var(--panel); border:1px solid var(--border); border-radius:8px; box-shadow:0 8px 24px var(--shadow); max-height:340px; overflow:auto; z-index:20; }
+  .results a { display:block; padding:8px 12px; color:var(--text); border-bottom:1px solid var(--grid); font-size:13px; }
+  .results a small { color:var(--muted); margin-left:6px; }
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:99px; font-size:12px; border:1px solid var(--border); background:var(--panel2); }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--good); } .dot.snap { background:var(--warn); }
+  .btn { padding:6px 12px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text); }
+  .btn:hover { border-color:var(--accent); }
+  .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .btn.danger { color:var(--bad); }
+  .content { padding:22px 24px 60px; max-width:1280px; }
+  h1 { font-size:22px; margin-bottom:4px; } h2 { font-size:15px; margin:0 0 10px; } h3 { font-size:13px; margin-bottom:6px; color:var(--muted); font-weight:600; }
+  .sub { color:var(--muted); margin-bottom:16px; }
+  .banner { padding:10px 14px; border-radius:8px; border:1px solid var(--warn); background:var(--warn-soft); margin-bottom:14px; font-size:13px; }
+  .banner.info { border-color:var(--info); background:var(--panel2); }
+  .grid { display:grid; gap:14px; } .g2 { grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); } .g3 { grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
+  .g4 { grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px 16px; box-shadow:0 1px 2px var(--shadow); min-width:0; }
+  .kpi .v { font-size:26px; font-weight:650; line-height:1.15; } .kpi .l { color:var(--muted); font-size:12px; }
+  .kpi .n { font-size:11.5px; color:var(--muted); margin-top:4px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; color:var(--muted); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; padding:6px 8px; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--panel); }
+  td { padding:7px 8px; border-bottom:1px solid var(--grid); }
+  tr.click { cursor:pointer; } tr.click:hover td { background:var(--panel2); }
+  .tag { display:inline-block; padding:1px 8px; border-radius:99px; font-size:11.5px; font-weight:600; }
+  .t-crit,.t-bad { background:var(--bad-soft); color:var(--bad); } .t-high,.t-warn { background:var(--warn-soft); color:var(--warn); }
+  .t-elev { background:var(--accent-soft); color:var(--accent); } .t-std,.t-info { background:var(--panel2); color:var(--muted); } .t-good { background:var(--good-soft); color:var(--good); }
+  .bar { height:9px; border-radius:5px; background:var(--grid); overflow:hidden; } .bar > i { display:block; height:100%; background:var(--accent); }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; } .sp { flex:1; }
+  .scroll { max-height:520px; overflow:auto; }
+  .muted { color:var(--muted); } .small { font-size:12px; }
+  .crumb { font-size:12px; color:var(--muted); margin-bottom:8px; }
+  .tl { position:relative; margin:6px 0 0 8px; padding-left:18px; border-left:2px solid var(--border); }
+  .tl div { position:relative; padding:4px 0; font-size:13px; } .tl div::before { content:""; position:absolute; left:-25px; top:10px; width:10px; height:10px; border-radius:50%; background:var(--accent); border:2px solid var(--panel); }
+  .tl div.slow::before { background:var(--bad); }
+  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:50; padding:16px; }
+  .modal { background:var(--panel); border-radius:12px; max-width:560px; width:100%; padding:20px; max-height:90vh; overflow:auto; border:1px solid var(--border); }
+  label { display:block; font-size:12px; color:var(--muted); margin:8px 0 3px; }
+  input[type=number], select, input[type=text] { padding:6px 8px; border:1px solid var(--border); border-radius:6px; background:var(--panel2); color:var(--text); width:100%; }
+  svg text { fill:var(--muted); font-size:11px; } svg .axis { stroke:var(--border); } svg .grid { stroke:var(--grid); }
+  .legend { font-size:12px; color:var(--muted); margin-top:6px; }
+  details summary { cursor:pointer; color:var(--muted); font-size:12px; }
+  @media (max-width: 860px) { .shell { grid-template-columns:1fr; } aside { position:static; height:auto; } .content { padding:16px; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <div class="brand"><b>NORTHSTAR</b><span>Procurement Intelligence</span></div>
+    <nav class="nav" id="nav"></nav>
+  </aside>
+  <main>
+    <div class="topbar">
+      <div class="search"><input id="search" type="text" placeholder="Search POs, suppliers, pages…  (press / or Ctrl+K)" autocomplete="off"><div class="results" id="results" hidden></div></div>
+      <a class="pill" href="#/alerts" id="alerts-pill">Alerts</a>
+      <span class="pill" id="fresh"><span class="dot"></span><span id="fresh-text">Loading…</span></span>
+      <button class="btn" id="theme">Dark</button>
+    </div>
+    <div class="content" id="view"><p class="muted">Loading…</p></div>
+  </main>
+</div>
+<div id="modal-root"></div>
+
+<script>
+const P2_URL = 'https://operations-assistant.onrender.com/';
+const NAV = [
+  ['', [['overview','Overview']]],
+  ['Operations', [['queue','Action Center'],['riskmap','Risk Map'],['suppliers','Suppliers'],['process','Process Mining']]],
+  ['Finance', [['finance','AP Controls & Working Capital']]],
+  ['Decisions', [['interventions','Intervention Center'],['investigate','Investigations']]],
+  ['Governance', [['governance','AI Security & Attack Lab'],['audit','Audit Log']]],
+  ['Platform', [['models','Model Health'],['data','Data Quality'],['lineage','Data Lineage'],['architecture','Architecture'],['evidence','Evidence & Limitations'],['alerts','Alerts']]],
+];
+let D = null;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = (n, d=0) => n == null ? '—' : Number(n).toLocaleString(undefined, {maximumFractionDigits:d, minimumFractionDigits:d});
+const money = n => n == null ? '—' : (Math.abs(n) >= 1e6 ? '€' + fmt(n/1e6, 2) + 'M' : Math.abs(n) >= 1e3 ? '€' + fmt(n/1e3, 0) + 'K' : '€' + fmt(n));
+const store = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+const tierTag = l => `<span class="tag ${({CRITICAL:'t-crit',HIGH:'t-high',ELEVATED:'t-elev'})[l] || 't-std'}">${esc(l)}</span>`;
+
+/* ── audit log (this browser only; honest label on the Audit page) ── */
+function audit(action, detail) {
+  const log = store.get('ns-audit', []);
+  log.unshift({ at: new Date().toISOString(), action, detail });
+  store.set('ns-audit', log.slice(0, 200));
+}
+
+/* ── Ask Northstar (P2) ── */
+function askUrl(q) { return P2_URL + '?q=' + encodeURIComponent(q); }
+function askButton(q, label = 'Ask Northstar', cls = 'btn primary') {
+  return `<a class="${cls}" href="${askUrl(q)}" target="_blank" rel="noreferrer" onclick="audit('ask_p2', ${esc(JSON.stringify(JSON.stringify(q)))})" title="Opens the Procurement Intelligence Agent (P2) with this question prefilled">${esc(label)} ↗</a>`;
+}
+
+/* ── SVG helpers ── */
+function lineChart(pts, key, {w=560, h=190, unit='%', color='var(--accent)'} = {}) {
+  if (!pts.length) return '<p class="muted small">No data.</p>';
+  const xs = pts.map((_, i) => i), ys = pts.map(p => p[key]);
+  const lo = Math.min(...ys, 0), hi = Math.max(...ys) * 1.1 || 1, L = 40, B = 24, T = 8;
+  const X = i => L + (w - L - 8) * (pts.length === 1 ? .5 : i / (pts.length - 1)), Y = v => T + (h - T - B) * (1 - (v - lo) / (hi - lo));
+  let g = '';
+  for (let k = 0; k <= 4; k++) { const v = lo + (hi - lo) * k / 4; g += `<line class="grid" x1="${L}" x2="${w - 8}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end">${fmt(v, hi < 10 ? 1 : 0)}${unit}</text>`; }
+  const path = pts.map((p, i) => `${i ? 'L' : 'M'}${X(i)},${Y(p[key])}`).join(' ');
+  const labels = pts.map((p, i) => (i % Math.ceil(pts.length / 6) === 0) ? `<text x="${X(i)}" y="${h - 6}" text-anchor="middle">${esc(p.month || p.label || i)}</text>` : '').join('');
+  const dots = pts.map((p, i) => `<circle cx="${X(i)}" cy="${Y(p[key])}" r="3" fill="${color}"><title>${esc(p.month || '')}: ${fmt(p[key], 1)}${unit}</title></circle>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img">${g}<path d="${path}" fill="none" stroke="${color}" stroke-width="2"/>${dots}${labels}</svg>`;
+}
+function barRows(rows, {max, fmtv = v => fmt(v, 1), color = 'var(--accent)'} = {}) {
+  const m = max ?? Math.max(...rows.map(r => r.value), 1e-9);
+  return rows.map(r => `<div style="margin:6px 0"><div class="row small"><span>${esc(r.label)}</span><span class="sp"></span><b>${esc(r.text ?? fmtv(r.value))}</b></div><div class="bar"><i style="width:${Math.max(2, 100 * Math.abs(r.value) / m)}%;background:${r.color || color}"></i></div></div>`).join('');
+}
+function scatter(pts, {xKey, yKey, xLabel, yLabel, w = 620, h = 340, logX = false, onClickFn, rKey, colorFn}) {
+  if (!pts.length) return '<p class="muted small">No data.</p>';
+  const L = 52, B = 36, T = 10, R = 12;
+  const xv = pts.map(p => logX ? Math.log10(Math.max(p[xKey], 1)) : p[xKey]), yv = pts.map(p => p[yKey]);
+  const x0 = Math.min(...xv), x1 = Math.max(...xv), y0 = Math.min(...yv), y1 = Math.max(...yv);
+  const X = v => L + (w - L - R) * ((v - x0) / ((x1 - x0) || 1)), Y = v => T + (h - T - B) * (1 - (v - y0) / ((y1 - y0) || 1));
+  const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+  let out = `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img"><line class="axis" x1="${L}" x2="${L}" y1="${T}" y2="${h - B}"/><line class="axis" x1="${L}" x2="${w - R}" y1="${h - B}" y2="${h - B}"/>`;
+  out += `<line class="grid" x1="${X(mx)}" x2="${X(mx)}" y1="${T}" y2="${h - B}" stroke-dasharray="4 4"/><line class="grid" x1="${L}" x2="${w - R}" y1="${Y(my)}" y2="${Y(my)}" stroke-dasharray="4 4"/>`;
+  out += `<text x="${(L + w) / 2}" y="${h - 6}" text-anchor="middle">${esc(xLabel)}</text><text x="12" y="${(T + h) / 2}" transform="rotate(-90 12 ${(T + h) / 2})" text-anchor="middle">${esc(yLabel)}</text>`;
+  const rmax = rKey ? Math.max(...pts.map(p => p[rKey])) : 1;
+  pts.forEach((p, i) => {
+    const r = rKey ? 3 + 11 * Math.sqrt(p[rKey] / rmax) : 4;
+    out += `<circle cx="${X(xv[i])}" cy="${Y(yv[i])}" r="${r}" fill="${colorFn(p)}" fill-opacity=".6" stroke="${colorFn(p)}" style="cursor:pointer" onclick="${onClickFn}(${esc(JSON.stringify(JSON.stringify(p.id)))})"><title>${esc(p.tip)}</title></circle>`;
+  });
+  return out + '</svg>';
+}
+
+/* ── views ── */
+const V = {};
+
+V.overview = () => {
+  const k = D.kpis, t = D.trend, q = D.queue || [];
+  const crit = q.filter(x => x.level === 'CRITICAL').length;
+  const worst = (D.suppliers || [])[0];
+  const stage = (D.where_time || [])[0];
+  const brief = [
+    `${fmt(k.cases)} closed purchase-order cases analysed across ${fmt(k.suppliers)} suppliers; average cycle time ${fmt(k.avg_cycle_days, 1)} days.`,
+    k.high_risk != null ? `${fmt(k.high_risk)} cases are in the top decile of model risk scores, carrying ${money(k.high_risk_value)} of order value.` : 'Risk model unavailable.',
+    stage ? `Largest single delay: <b>${esc(stage.stage)}</b> (${fmt(stage.pct_of_total_delay, 1)}% of total delay, median ${fmt(stage.median_hours, 0)}h).` : '',
+    worst ? `Supplier with the most high-priority cases: <b>${esc(worst.supplier_id)}</b> (${worst.high_risk_cases} high-priority of ${worst.cases}).` : '',
+  ].filter(Boolean).map(s => `<li>${s}</li>`).join('');
+  return `
+  <h1>Procurement Control Tower</h1>
+  <p class="sub">Monitor → Investigate → Prioritise → Act → Measure. ${esc(D.replay_note)}</p>
+  <div class="grid g4">
+    <div class="card kpi"><div class="l">Cases analysed</div><div class="v">${fmt(k.cases)}</div><div class="n">${fmt(k.suppliers)} suppliers</div></div>
+    <div class="card kpi"><div class="l">SLA breach rate (configured targets)</div><div class="v">${fmt(k.breach_rate, 1)}%</div><div class="n">${esc(k.sla_note || '')}</div></div>
+    <div class="card kpi"><div class="l">High-priority cases</div><div class="v">${fmt(k.high_risk)}</div><div class="n">top decile of model score · ${crit} critical in queue</div></div>
+    <div class="card kpi"><div class="l">Value in high-priority cases</div><div class="v">${money(k.high_risk_value)}</div><div class="n">max order net worth per case</div></div>
+    <div class="card kpi"><div class="l">Average cycle time</div><div class="v">${fmt(k.avg_cycle_days, 1)} d</div><div class="n">${esc(k.delta_note || '')}</div></div>
+    <div class="card kpi"><div class="l">Interventions recorded</div><div class="v">0</div><div class="n">none recorded; ROI is simulated · <a href="#/interventions">Intervention Center</a></div></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><h2>Executive brief <span class="tag t-info">auto-generated from the figures here, no LLM</span></h2><ul style="padding-left:18px">${brief}</ul>
+      <div class="row" style="margin-top:12px">${askButton('Why do so many cases breach their SLA, and which stages and suppliers drive it?', 'Investigate in Ask Northstar')} <a class="btn" href="#/queue">Review Action Center</a></div></div>
+    <div class="card"><h2>Risk funnel</h2>${funnel(D.funnel)}</div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><h2>Breach rate by completion month</h2>${lineChart(t, 'breach_rate')}<div class="legend">Months with ≥30 completed cases. Late months are right-censored (only slow cases finish late), so read the shape, not the last point.</div></div>
+    <div class="card"><h2>Where the time goes</h2>${barRows((D.where_time || []).slice(0, 6).map(s => ({label: s.stage, value: s.pct_of_total_delay, text: fmt(s.pct_of_total_delay, 1) + '% · median ' + fmt(s.median_hours, 0) + 'h'})))}
+      <div class="row small" style="margin-top:8px"><a href="#/process">Open process explorer →</a>${askButton('Which process stage causes the most delay and why?', 'Ask about bottlenecks', 'btn')}</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><h2>Risk × value</h2>${riskScatter(420, 260)}<div class="legend">Each dot is a case. Top-right = high model score and high order value. <a href="#/riskmap">Full map →</a></div></div>
+    <div class="card"><h2>Action Center — top of the queue</h2>${queueTable((D.queue || []).slice(0, 6))}<div style="margin-top:8px"><a href="#/queue">All ${(D.queue || []).length} queued cases →</a></div></div>
+  </div>
+  <div class="grid g3" style="margin-top:14px">${controlHealthCard()}${confidenceCard()}${apTile()}</div>`;
+};
+
+function funnel(rows) {
+  const m = rows[0].n || 1;
+  return rows.map(r => `<div style="margin:8px 0"><div class="row small"><span>${esc(r.label)}</span><span class="sp"></span><b>${fmt(r.n)}</b></div><div class="bar"><i style="width:${Math.max(1.5, 100 * r.n / m)}%"></i></div>${r.note ? `<div class="small muted">${esc(r.note)}</div>` : ''}</div>`).join('');
+}
+function riskScatter(w, h) {
+  const pts = (D.scatter || []).map(p => ({id: p.case_id, value: Math.max(p.value, 1), risk: p.risk, tip: `${p.case_id} · ${money(p.value)} · score ${p.risk}`}));
+  const sorted = [...pts].sort((a, b) => a.risk - b.risk), n = sorted.length;
+  const q90 = sorted[Math.floor(n * .9)]?.risk ?? 1;
+  return scatter(pts, {xKey: 'value', yKey: 'risk', xLabel: 'Order value (log scale)', yLabel: 'Model risk score', w, h, logX: true, onClickFn: 'openPo',
+    colorFn: p => p.risk >= q90 ? 'var(--bad)' : 'var(--accent)'});
+}
+function queueTable(rows) {
+  if (!rows.length) return '<p class="muted">No scored cases (model unavailable).</p>';
+  return `<table><thead><tr><th>Case</th><th>Supplier</th><th>Priority</th><th>Value</th><th>Main driver</th></tr></thead><tbody>${rows.map(r =>
+    `<tr class="click" onclick="openPo(${esc(JSON.stringify(JSON.stringify(r.case_id)))})"><td>${esc(r.case_id)}</td><td>${esc(r.supplier_id)}</td><td>${tierTag(r.level)}</td><td>${money(r.value)}</td><td>${esc(r.top_reason || '—')}</td></tr>`).join('')}</tbody></table>`;
+}
+function controlHealthCard() {
+  const c = D.finance.control_health || [];
+  return `<div class="card"><h2>Control health</h2>${c.map(x => `<div class="row small" style="margin:4px 0"><span>${x.status === 'not_valid' ? '<span class="tag t-bad">not valid</span>' : '<span class="tag t-good">ok</span>'}</span><span>${esc(x.id.replace(/_/g, ' '))}</span><span class="sp"></span><span class="muted">${x.recall != null ? 'recall ' + fmt(100 * x.recall, 1) + '%' : ''}</span></div>`).join('')}<div class="small muted" style="margin-top:6px">Recall is against planted synthetic anomalies only. <a href="#/finance">Details →</a></div></div>`;
+}
+function confidenceCard() {
+  return `<div class="card"><h2>Northstar confidence</h2>
+    <div class="row small"><span class="tag t-good">good</span> Data lineage & tests</div>
+    <div class="row small" style="margin-top:4px"><span class="tag t-good">good</span> Model validation (PO-isolated, held-out calibration)</div>
+    <div class="row small" style="margin-top:4px"><span class="tag t-warn">partial</span> SLA coverage (${fmt(D.data_quality.explicit_sla_share_pct, 0)}% explicit)</div>
+    <div class="row small" style="margin-top:4px"><span class="tag t-bad">none</span> Real intervention outcomes</div>
+    <div class="small muted" style="margin-top:6px">Overall: <b>moderate</b>. Interventions are simulated. <a href="#/evidence">Evidence →</a></div></div>`;
+}
+function apTile() {
+  const a = D.finance.ap;
+  if (!a || !a.available) return `<div class="card"><h2>AP exceptions</h2><p class="muted small">${esc(a?.reason || 'unavailable')}</p></div>`;
+  return `<div class="card"><h2>AP exceptions</h2><div class="kpi"><div class="v">${fmt(a.total_exceptions)}</div><div class="n">flagged by six rule-based controls (anomaly triage, not fraud)</div></div>${a.controls.slice(0, 3).map(c => `<div class="row small"><span>${esc(c.control_id.replace(/_/g, ' '))}</span><span class="sp"></span><b>${fmt(c.count)}</b></div>`).join('')}<div class="small" style="margin-top:6px"><a href="#/finance">Open Finance →</a></div></div>`;
+}
+
+V.queue = () => {
+  const lv = (location.hash.match(/level=(\w+)/) || [])[1];
+  const rows = (D.queue || []).filter(r => !lv || r.level === lv);
+  return `<h1>Action Center</h1><p class="sub">Cases ranked by model score. Tiers are <b>relative</b> (score percentile), not a probability of breach — the deployed model is trained on targets under which ~95% of cases breach.</p>
+  <div class="row" style="margin-bottom:10px"><span class="muted small">Filter:</span>${['', 'CRITICAL', 'HIGH', 'ELEVATED'].map(l => `<a class="pill" href="#/queue${l ? '?level=' + l : ''}">${l || 'All'}</a>`).join('')}<span class="sp"></span>${askButton('What should we do about the highest-priority purchase orders?', 'Ask what to do')}</div>
+  <div class="card scroll"><table><thead><tr><th>Case</th><th>Supplier</th><th>Category</th><th>Priority</th><th>Score</th><th>Value</th><th>Main driver</th><th></th></tr></thead><tbody>${rows.map(r =>
+    `<tr class="click" onclick="openPo(${esc(JSON.stringify(JSON.stringify(r.case_id)))})"><td>${esc(r.case_id)}</td><td>${esc(r.supplier_id)}</td><td>${esc(r.category)}</td><td>${tierTag(r.level)}</td><td>${fmt(r.risk, 3)}</td><td>${money(r.value)}</td><td>${esc(r.top_reason || '—')}</td><td><a href="#/po/${encodeURIComponent(r.case_id)}">Open →</a></td></tr>`).join('')}</tbody></table></div>`;
+};
+
+function openPo(id) { location.hash = '#/po/' + encodeURIComponent(id); }
+function openSupplier(id) { location.hash = '#/supplier/' + encodeURIComponent(id); }
+
+V.po = id => {
+  const p = D.po[id];
+  if (!p) return `<div class="crumb"><a href="#/queue">Action Center</a> / ${esc(id)}</div><div class="card"><h1>${esc(id)}</h1><p class="muted">Detail pages are generated for the ${Object.keys(D.po).length} highest-priority cases. This case is not in that set.</p></div>`;
+  const maxShap = Math.max(...p.shap.map(s => Math.abs(s.shap)), 1e-9);
+  const q = `Why is purchase order case ${p.case_id} (supplier ${p.supplier_id}) high risk, and what should we do about it?`;
+  return `<div class="crumb"><a href="#/queue">Action Center</a> / ${esc(p.case_id)}</div>
+  <div class="row"><h1>Case ${esc(p.case_id)}</h1>${tierTag(p.level)}<span class="sp"></span>${askButton(q)}<button class="btn" onclick="proposeIntervention(${esc(JSON.stringify(JSON.stringify(p.case_id)))})">Propose intervention</button></div>
+  <p class="sub">Supplier <a href="#/supplier/${encodeURIComponent(p.supplier_id)}">${esc(p.supplier_id)}</a> · category ${esc(p.category)} · ${p.breached ? '<span class="tag t-bad">breached SLA</span>' : '<span class="tag t-good">within SLA</span>'}</p>
+  <div class="grid g4">
+    <div class="card kpi"><div class="l">Model score</div><div class="v">${fmt(p.risk, 3)}</div><div class="n">relative priority, not a probability</div></div>
+    <div class="card kpi"><div class="l">Order value</div><div class="v">${money(p.value)}</div></div>
+    <div class="card kpi"><div class="l">Cycle time</div><div class="v">${fmt(p.cycle_days, 1)} d</div><div class="n">SLA target ${fmt(p.sla_target_days, 1)} d${p.category_median_days != null ? ' · category median ' + fmt(p.category_median_days, 1) + ' d' : ''}</div></div>
+    <div class="card kpi"><div class="l">Process</div><div class="v">${p.events} events</div><div class="n">${p.rework} rework steps</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><h2>Why is this case ranked high?</h2>${p.shap.map(s => `<div style="margin:6px 0"><div class="row small"><span>${esc(s.label)}</span><span class="sp"></span><b>${s.shap > 0 ? '+' : ''}${fmt(s.shap, 3)}</b></div><div class="bar"><i style="width:${100 * Math.abs(s.shap) / maxShap}%;background:${s.shap > 0 ? 'var(--bad)' : 'var(--good)'}"></i></div></div>`).join('')}
+      <div class="legend">SHAP values: each feature's contribution to the model score. They explain the model, not causes in the real world.</div></div>
+    <div class="card"><h2>Process timeline</h2>${p.longest_wait ? `<div class="small" style="margin-bottom:6px">Longest wait: <b>${fmt(p.longest_wait.gap_hours, 0)} h</b> before “${esc(p.longest_wait.activity)}”.</div>` : ''}<div class="tl scroll" style="max-height:340px">${p.timeline.map(t => `<div class="${t.gap_hours > 240 ? 'slow' : ''}"><b>${esc(t.activity)}</b> <span class="muted small">day ${t.day}${t.gap_hours > 0 ? ' · +' + fmt(t.gap_hours, 0) + 'h' : ''} · ${esc(t.at)}</span></div>`).join('')}</div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h2>Evidence & next steps</h2><div class="row small"><span class="tag t-info">P1 model</span> score and SHAP above · <span class="tag t-info">P1 events</span> timeline above · <span class="tag t-info">P2</span> policy evidence is retrieved when you ask Northstar</div>
+    <div class="row" style="margin-top:10px">${askButton(q)}${askButton('Which procurement policy sections apply to a delayed purchase order like case ' + p.case_id + '?', 'Find the relevant policy', 'btn')}</div></div>`;
+};
+
+V.suppliers = () => {
+  const rows = D.suppliers || [];
+  const pts = rows.slice(0, 80).map(r => ({id: r.supplier_id, breach: r.breach_rate, value: Math.max(r.total_value, 1), cases: r.cases,
+    tip: `${r.supplier_id}: ${r.cases} cases, ${r.breach_rate}% breach, ${money(r.total_value)}`, hi: r.high_risk_cases}));
+  return `<h1>Suppliers</h1><p class="sub">${rows.length} suppliers with at least 5 closed cases. Sorted by high-priority case count, then value.</p>
+  <div class="card"><h2>Supplier quadrant</h2>${scatter(pts, {xKey: 'value', yKey: 'breach', xLabel: 'Total order value (log scale)', yLabel: 'Breach rate % (configured SLA)', logX: true, rKey: 'cases', onClickFn: 'openSupplier', colorFn: p => p.hi > 0 ? 'var(--bad)' : 'var(--accent)'})}<div class="legend">Bubble size = number of cases. Red = has at least one high-priority case. Click a bubble for Supplier 360.</div></div>
+  <div class="card scroll" style="margin-top:14px"><table><thead><tr><th>Supplier</th><th>Cases</th><th>Breach %</th><th>Median cycle</th><th>Value</th><th>High-priority</th><th>Avg rework</th></tr></thead><tbody>${rows.slice(0, 120).map(r =>
+    `<tr class="click" onclick="openSupplier(${esc(JSON.stringify(JSON.stringify(r.supplier_id)))})"><td>${esc(r.supplier_id)}</td><td>${r.cases}</td><td>${fmt(r.breach_rate, 1)}</td><td>${fmt(r.median_cycle_days, 1)} d</td><td>${money(r.total_value)}</td><td>${r.high_risk_cases ?? '—'}</td><td>${fmt(r.rework_avg, 2)}</td></tr>`).join('')}</tbody></table></div>`;
+};
+
+V.supplier = id => {
+  const s = D.supplier_detail[id];
+  if (!s) return `<div class="crumb"><a href="#/suppliers">Suppliers</a> / ${esc(id)}</div><div class="card"><h1>${esc(id)}</h1><p class="muted">Supplier 360 pages are generated for the ${Object.keys(D.supplier_detail).length} suppliers with the most high-priority cases.</p></div>`;
+  const q = `Why might supplier ${s.supplier_id} be underperforming on SLA, and what does our policy say about escalation?`;
+  return `<div class="crumb"><a href="#/suppliers">Suppliers</a> / ${esc(s.supplier_id)}</div>
+  <div class="row"><h1>Supplier ${esc(s.supplier_id)}</h1><span class="sp"></span>${askButton(q)}</div>
+  <div class="grid g4" style="margin-top:10px">
+    <div class="card kpi"><div class="l">Closed cases</div><div class="v">${s.cases}</div></div>
+    <div class="card kpi"><div class="l">Breach rate (configured SLA)</div><div class="v">${fmt(s.breach_rate, 1)}%</div></div>
+    <div class="card kpi"><div class="l">Median cycle vs peers</div><div class="v">${fmt(s.median_cycle_days, 1)} d</div><div class="n">peer median ${fmt(s.peer_median_cycle_days, 1)} d${s.cycle_vs_peer ? ' · ' + fmt(s.cycle_vs_peer, 2) + '×' : ''}</div></div>
+    <div class="card kpi"><div class="l">Order value</div><div class="v">${money(s.total_value)}</div><div class="n">${s.high_risk_cases} high-priority cases</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><h2>Breach rate by completion month</h2>${lineChart(s.trend.map(t => ({...t})), 'breach_rate')}<div class="legend">Months with ≥2 cases.</div></div>
+    <div class="card"><h2>Cycle time vs peer median</h2>${barRows([{label: 'This supplier (median)', value: s.median_cycle_days, text: fmt(s.median_cycle_days, 1) + ' d', color: 'var(--bad)'}, {label: 'All suppliers (median)', value: s.peer_median_cycle_days, text: fmt(s.peer_median_cycle_days, 1) + ' d'}], {max: Math.max(s.median_cycle_days, s.peer_median_cycle_days)})}
+      <h3 style="margin-top:14px">Highest-priority cases</h3>${queueTable(s.top_cases.map(c => ({case_id: c.case_id, supplier_id: s.supplier_id, level: c.level, value: c.value, top_reason: D.po[c.case_id]?.shap?.[0]?.label})))}</div>
+  </div>`;
+};
+
+V.riskmap = () => `<h1>Risk Map</h1><p class="sub">Which risky cases matter financially? Click a dot to open the case.</p>
+  <div class="card">${riskScatter(900, 440)}<div class="legend">Red = top decile of model score. Dashed lines mark the centre of each axis. Sample of ${(D.scatter || []).length} cases.</div></div>
+  <div class="card" style="margin-top:14px"><h2>Risk portfolio</h2>${portfolio()}</div>`;
+function portfolio() {
+  const pts = D.scatter || [];
+  if (!pts.length) return '<p class="muted">No data.</p>';
+  const vs = pts.map(p => p.value).sort((a, b) => a - b), rs = pts.map(p => p.risk).sort((a, b) => a - b);
+  const v1 = vs[Math.floor(vs.length / 3)], v2 = vs[Math.floor(2 * vs.length / 3)], r1 = rs[Math.floor(rs.length * .75)], r2 = rs[Math.floor(rs.length * .9)];
+  const cell = (rl, vl) => pts.filter(p => (rl === 0 ? p.risk < r1 : rl === 1 ? p.risk >= r1 && p.risk < r2 : p.risk >= r2) && (vl === 0 ? p.value < v1 : vl === 1 ? p.value >= v1 && p.value < v2 : p.value >= v2)).length;
+  return `<table><thead><tr><th></th><th>Low value</th><th>Mid value</th><th>High value</th></tr></thead><tbody>${[['High priority (top decile)', 2], ['Elevated', 1], ['Standard', 0]].map(([l, r]) => `<tr><td><b>${l}</b></td>${[0, 1, 2].map(v => `<td>${cell(r, v)}</td>`).join('')}</tr>`).join('')}</tbody></table><div class="legend">Counts within the plotted sample (terciles of value; score cut at the 75th/90th percentile).</div>`;
+}
+
+V.process = () => {
+  const m = (location.hash.match(/metric=(\w+)/) || [])[1] || 'median_hours';
+  const {nodes, edges} = D.process;
+  const labels = {median_hours: 'Median wait', p75_hours: 'P75 wait', p90_hours: 'P90 wait', breach_rate: 'Case breach rate'};
+  const vals = edges.map(e => e[m] ?? 0), maxv = Math.max(...vals, 1e-9);
+  const order = {}; // layer by earliest typical position: BFS from most common start
+  const indeg = {}; edges.forEach(e => indeg[e.to] = (indeg[e.to] || 0) + 1);
+  const start = nodes.map(n => n.id).filter(n => !indeg[n]);
+  (start.length ? start : [nodes[0].id]).forEach(s => order[s] = 0);
+  for (let it = 0; it < 12; it++) edges.forEach(e => { if (order[e.from] != null && (order[e.to] == null || order[e.to] < order[e.from] + 1) && order[e.from] + 1 < 9 && e.from !== e.to) order[e.to] = order[e.from] + 1; });
+  nodes.forEach(n => { if (order[n.id] == null) order[n.id] = 0; });
+  const layers = {}; nodes.forEach(n => (layers[order[n.id]] ||= []).push(n));
+  const W = 1000, colW = W / (Object.keys(layers).length || 1), pos = {};
+  Object.entries(layers).forEach(([l, ns]) => ns.forEach((n, i) => pos[n.id] = {x: 20 + l * colW, y: 24 + i * 50}));
+  const H = Math.max(...Object.values(layers).map(a => a.length), 4) * 50 + 40;
+  const col = v => v / maxv > .66 ? 'var(--bad)' : v / maxv > .33 ? 'var(--warn)' : 'var(--good)';
+  let svg = `<svg viewBox="0 0 ${W + 120} ${H}" width="100%" role="img">`;
+  edges.forEach((e, i) => { const a = pos[e.from], b = pos[e.to]; if (!a || !b || e.from === e.to) return; const v = e[m] ?? 0;
+    svg += `<path d="M${a.x + 150},${a.y + 14} C${a.x + 190},${a.y + 14} ${b.x - 40},${b.y + 14} ${b.x},${b.y + 14}" fill="none" stroke="${col(v)}" stroke-opacity=".7" stroke-width="${1 + 6 * Math.sqrt(e.transitions / edges[0].transitions)}" style="cursor:pointer" onclick="showEdge(${i})"><title>${esc(e.from)} → ${esc(e.to)}: ${m === 'breach_rate' ? fmt(v, 1) + '%' : fmt(v, 0) + ' h'} (${e.transitions} transitions)</title></path>`; });
+  nodes.forEach(n => { const p = pos[n.id]; svg += `<g><rect x="${p.x}" y="${p.y}" width="150" height="28" rx="6" fill="var(--panel2)" stroke="var(--border)"/><text x="${p.x + 6}" y="${p.y + 12}" style="fill:var(--text);font-size:10.5px">${esc(n.id.length > 24 ? n.id.slice(0, 23) + '…' : n.id)}</text><text x="${p.x + 6}" y="${p.y + 24}" style="font-size:9.5px">${fmt(n.events)} events</text></g>`; });
+  svg += '</svg>';
+  window.__edges = edges;
+  return `<h1>Process Mining</h1><p class="sub">Directly-follows graph of the ${nodes.length} most frequent activities (${edges.length} most frequent transitions). Edge colour = ${labels[m].toLowerCase()}; thickness = frequency.</p>
+  <div class="row" style="margin-bottom:10px">${Object.entries(labels).map(([k, l]) => `<a class="pill ${k === m ? 'active' : ''}" style="${k === m ? 'border-color:var(--accent)' : ''}" href="#/process?metric=${k}">${l}</a>`).join('')}<span class="sp"></span>${askButton('Which process transitions are the biggest bottlenecks and why?', 'Ask about bottlenecks')}</div>
+  <div class="card" style="overflow:auto">${svg}</div><div class="card" id="edge-detail" style="margin-top:14px"><p class="muted small">Click an edge to see its details.</p></div>
+  <div class="card" style="margin-top:14px"><h2>Largest stage delays</h2><table><thead><tr><th>Stage</th><th>Cases</th><th>Median</th><th>P90</th><th>% of total delay</th></tr></thead><tbody>${D.where_time.map(s => `<tr><td>${esc(s.stage)}</td><td>${s.case_count}</td><td>${fmt(s.median_hours, 0)} h</td><td>${fmt(s.p90_hours, 0)} h</td><td>${fmt(s.pct_of_total_delay, 1)}%</td></tr>`).join('')}</tbody></table></div>`;
+};
+function showEdge(i) { const e = window.__edges[i]; $('#edge-detail').innerHTML = `<h2>${esc(e.from)} → ${esc(e.to)}</h2><div class="grid g4"><div class="kpi"><div class="l">Transitions</div><div class="v">${fmt(e.transitions)}</div><div class="n">${fmt(e.cases)} cases</div></div><div class="kpi"><div class="l">Median / P75 / P90</div><div class="v">${fmt(e.median_hours, 0)} / ${fmt(e.p75_hours, 0)} / ${fmt(e.p90_hours, 0)} h</div></div><div class="kpi"><div class="l">Cases breaching SLA through this edge</div><div class="v">${e.breach_rate == null ? '—' : fmt(e.breach_rate, 1) + '%'}</div></div></div><div style="margin-top:8px">${askButton('Why is the transition from "' + e.from + '" to "' + e.to + '" slow, and what should we do?', 'Investigate this transition')}</div>`; }
+
+V.finance = () => {
+  const a = D.finance.ap, w = D.finance.working_capital, c = D.finance.control_health, e4 = D.finance.external_c4;
+  const wcHtml = (w && w.available) ? `<div class="grid g3"><div class="card kpi"><div class="l">Late-payment exposure</div><div class="v">${money(w.late_payment.exposure_eur)}</div><div class="n">value of ${fmt(w.late_payment.n_late)} of ${fmt(w.late_payment.n_cases)} invoices paid after ${w.late_payment.payment_terms_days} days (net-30 assumed; the data has no payment terms)</div></div>
+    <div class="card kpi"><div class="l">Invoices paid late</div><div class="v">${fmt(w.late_payment.late_rate_pct, 1)}%</div><div class="n">high because terms are an assumption</div></div>
+    <div class="card kpi"><div class="l">Early-discount scenario</div><div class="v">${money(w.early_discount_scenario.missed_discount_eur)}</div><div class="n">missed at ${fmt(100 * w.early_discount_scenario.discount_pct, 0)}% for payment within ${w.early_discount_scenario.discount_window_days} days; ${fmt(w.early_discount_scenario.n_captured)} invoices captured. What-if, assumption-driven.</div></div></div>
+    <div class="card" style="margin-top:14px"><h2>Days to pay by spend area (median)</h2>${barRows((w.dpo_by_spend_area || []).map(r => ({label: r.sub_spend_area + ' (' + r.case_count + ')', value: r.median_days, text: fmt(r.median_days, 0) + ' d'})))}</div>` : `<p class="muted">${esc(w?.reason || 'Working-capital data unavailable.')}</p>`;
+  return `<h1>Finance — AP Controls & Working Capital</h1><p class="sub">Six rule-based controls over the real event log. They flag anomalies for triage; they are not fraud findings.</p>
+  <div class="grid g2"><div class="card"><h2>Control health</h2><table><thead><tr><th>Control</th><th>Status</th><th>Recall vs planted</th><th>FPR ≤</th></tr></thead><tbody>${c.map(x => `<tr><td>${esc(x.id.replace(/_/g, ' '))}</td><td>${x.status === 'not_valid' ? '<span class="tag t-bad">not operationally valid</span>' : '<span class="tag t-good">operational</span>'}</td><td>${x.recall != null ? fmt(100 * x.recall, 1) + '% <span class="muted small">[' + (x.recall_ci95 || []).map(v => fmt(100 * v, 0)).join('–') + ']</span>' : '—'}</td><td>${x.false_positive_rate_upper_bound != null ? fmt(100 * x.false_positive_rate_upper_bound, 1) + '%' : ''}</td></tr>${x.note ? `<tr><td colspan="4" class="small muted">${esc(x.note)}</td></tr>` : ''}`).join('')}</tbody></table>
+      <div class="legend">Recall is measured against synthetic injections only; false-positive rates are upper bounds on real data (no ground truth).</div></div>
+    <div class="card"><h2>Exceptions on the real log</h2>${a && a.available ? `<div class="kpi"><div class="v">${fmt(a.total_exceptions)}</div><div class="n">total exceptions</div></div><table><thead><tr><th>Control</th><th>Count</th><th>Exposure</th><th>High</th><th>Med</th><th>Low</th></tr></thead><tbody>${a.controls.map(x => `<tr><td>${esc(x.control_id.replace(/_/g, ' '))}</td><td>${fmt(x.count)}</td><td>${money(x.total_exposure_eur)}</td><td>${x.high}</td><td>${x.medium}</td><td>${x.low}</td></tr>`).join('')}</tbody></table>` : `<p class="muted">${esc(a?.reason || 'unavailable')}</p>`}
+      <div class="row" style="margin-top:10px">${askButton('Which AP controls generate the most exceptions and which need review first?', 'Ask about AP exceptions')}</div></div></div>
+  <div class="card" style="margin-top:14px"><h2>External validation</h2>${e4 ? `<p>On UCI Online Retail II (a sales ledger standing in for payables), the duplicate-invoice control flagged <b>${fmt(e4.flagged_invoices)}</b> invoices; <b>${fmt(100 * e4.precision_vs_reversal_proxy, 1)}%</b> were later reversed by a credit note, a <b>${fmt(e4.lift_over_base, 0)}×</b> lift over the base reversal rate (reversal is a proxy, not a duplicate label). The Benford screen flagged ~55% of ordinary customers and SEC filings and is marked not valid.</p><a href="https://github.com/HerschCode/operations-performance/blob/main/docs/external-validation.md" target="_blank" rel="noreferrer">External-validation write-up ↗</a>` : '<p class="muted">Not run.</p>'}</div>
+  <h2 style="margin-top:18px">Working capital</h2>${wcHtml}`;
+};
+
+/* ── interventions (demo workflow; the approval gate of record is P3) ── */
+function proposeIntervention(id) {
+  const p = D.po[id], cfg = D.intervention_config;
+  if (!cfg.available) { alert('Intervention assumptions unavailable'); return; }
+  const types = Object.keys(cfg.types);
+  $('#modal-root').innerHTML = `<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">
+    <h2>Intervention review — case ${esc(id)}</h2><span class="tag t-warn">SIMULATION — assumptions, not measured effects</span>
+    <label>Intervention type</label><select id="iv-type" onchange="updateIv('${esc(id)}')">${types.map(t => `<option>${esc(t)}</option>`).join('')}</select>
+    <div class="grid g2"><div><label>Cost per case (assumed)</label><input type="number" id="iv-cost"></div><div><label>Relative cut in breach probability (assumed)</label><input type="number" step="0.01" id="iv-eff"></div></div>
+    <label>Value of one avoided breach (assumed)</label><input type="number" id="iv-bc" value="${cfg.breach_cost}">
+    <div class="card" style="margin-top:12px" id="iv-out"></div>
+    <p class="small muted" style="margin-top:8px">Evidence: model score ${fmt(p.risk, 3)} (${esc(p.level)}), order value ${money(p.value)}, top driver “${esc(p.shap[0]?.label || '')}”. Approval below is a <b>demo</b>: it is recorded in this browser's audit log only. In the full platform the gate of record is the P3 action firewall (policy → taint → human approval, requester cannot self-approve).</p>
+    <div class="row" style="margin-top:12px"><button class="btn danger" onclick="decideIv('${esc(id)}','rejected')">Reject</button><span class="sp"></span><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="decideIv('${esc(id)}','approved')">Approve (demo)</button></div></div></div>`;
+  updateIv(id);
+  ['iv-cost', 'iv-eff', 'iv-bc'].forEach(i => $('#' + i).addEventListener('input', () => calcIv()));
+}
+function updateIv(id) { const cfg = D.intervention_config, t = cfg.types[$('#iv-type').value]; $('#iv-cost').value = t.cost; $('#iv-eff').value = t.effect; calcIv(); }
+function calcIv() {
+  const cost = +$('#iv-cost').value, eff = +$('#iv-eff').value, bc = +$('#iv-bc').value;
+  // Breakeven: the effect (relative cut in breach probability) at which expected saving equals cost, given a breach
+  // probability of 1 (the configured-SLA breach rate is ~95%, so this is the optimistic bound).
+  const saving = eff * bc, net = saving - cost, be = cost / bc;
+  $('#iv-out').innerHTML = `<div class="grid g3"><div class="kpi"><div class="l">Expected saving</div><div class="v">${money(saving)}</div></div><div class="kpi"><div class="l">Cost</div><div class="v">${money(cost)}</div></div><div class="kpi"><div class="l">Net (simulated)</div><div class="v" style="color:${net >= 0 ? 'var(--good)' : 'var(--bad)'}">${money(net)}</div></div></div><div class="small muted">Break-even effect: ${fmt(100 * be, 1)}% cut in breach probability (upper-bound: assumes the case would otherwise breach).</div>`;
+}
+function decideIv(id, status) {
+  const list = store.get('ns-interventions', []);
+  list.unshift({id, status, type: $('#iv-type').value, cost: +$('#iv-cost').value, effect: +$('#iv-eff').value, breach_cost: +$('#iv-bc').value, at: new Date().toISOString()});
+  store.set('ns-interventions', list.slice(0, 100)); audit('intervention_' + status, `case ${id} (${$('#iv-type').value}) — demo, local only`);
+  closeModal(); location.hash = '#/interventions';
+}
+function closeModal() { $('#modal-root').innerHTML = ''; }
+
+V.interventions = () => {
+  const list = store.get('ns-interventions', []), cfg = D.intervention_config;
+  const counts = s => list.filter(x => x.status === s).length;
+  return `<h1>Intervention Center</h1><p class="sub">Proposal → review → approval → (outcome → ROI). Effects are assumptions from <code>config/interventions.yaml</code>; no real intervention outcomes exist yet.</p>
+  <div class="banner">${esc(cfg.label || '')}. Decisions on this page are stored in <b>this browser only</b> (demo). The server-side ledger (<code>POST /interventions</code>, admin key, randomized holdout) and the P3 approval gate are the systems of record.</div>
+  <div class="grid g4"><div class="card kpi"><div class="l">Approved (demo)</div><div class="v">${counts('approved')}</div></div><div class="card kpi"><div class="l">Rejected (demo)</div><div class="v">${counts('rejected')}</div></div><div class="card kpi"><div class="l">Capacity assumption</div><div class="v">${fmt(100 * cfg.capacity_pct, 0)}%</div><div class="n">share of cases the team can act on</div></div><div class="card kpi"><div class="l">Real outcomes</div><div class="v">0</div><div class="n">effectiveness cannot be reported</div></div></div>
+  <div class="grid g2" style="margin-top:14px"><div class="card"><h2>Assumed intervention types</h2><table><thead><tr><th>Type</th><th>Cost</th><th>Assumed effect</th></tr></thead><tbody>${Object.entries(cfg.types).map(([k, t]) => `<tr><td>${esc(k)}</td><td>${money(t.cost)}</td><td>${fmt(100 * t.effect, 0)}%</td></tr>`).join('')}</tbody></table><div class="legend">Value of one avoided breach: ${money(cfg.breach_cost)} (assumed).</div></div>
+    <div class="card"><h2>Decisions in this browser</h2>${list.length ? `<table><thead><tr><th>Case</th><th>Type</th><th>Status</th><th>Simulated net</th></tr></thead><tbody>${list.map(x => `<tr><td><a href="#/po/${encodeURIComponent(x.id)}">${esc(x.id)}</a></td><td>${esc(x.type)}</td><td>${x.status === 'approved' ? '<span class="tag t-good">approved</span>' : '<span class="tag t-bad">rejected</span>'}</td><td>${money(x.effect * x.breach_cost - x.cost)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">None yet. Open a case from the <a href="#/queue">Action Center</a> and choose “Propose intervention”.</p>'}</div></div>
+  <div class="card" style="margin-top:14px"><h2>How measurement would work</h2><p class="small">Proposals are randomized into treat vs holdout (SHA-256 of experiment id + case id). Comparing holdout and treated outcomes turns the assumed effects into measured uplift (T/X-learner, Qini/AUUC — see <a href="https://github.com/HerschCode/operations-performance/blob/main/docs/uplift-method.md" target="_blank" rel="noreferrer">uplift-method.md ↗</a>). Until real outcomes exist, every ROI figure is a simulation.</p></div>`;
+};
+
+V.investigate = () => {
+  const qs = [
+    ['Why do SLA breaches happen?', 'Why do so many cases breach their SLA, and which stages and suppliers drive it?'],
+    ['Which suppliers need escalation?', 'Which suppliers should we escalate first, based on risk and our escalation policy?'],
+    ['What do policies say about delays?', 'What does our procurement policy say about delayed purchase orders and escalation thresholds?'],
+    ['AP exceptions to review', 'Which AP control exceptions should be reviewed first and why?'],
+    ['Is the model trustworthy?', 'How reliable is the SLA risk model, and where does it fall short compared with simple rules?'],
+  ];
+  return `<h1>Investigations</h1><p class="sub">Investigations run in Northstar's agent (P2): it combines live analytics (P1) with policy retrieval and cites both. Start one from any page via the “Ask Northstar” buttons, or use a starter below.</p>
+  <div class="grid g2">${qs.map(([t, q]) => `<div class="card"><h2>${esc(t)}</h2><p class="small muted">${esc(q)}</p>${askButton(q, 'Start investigation')}</div>`).join('')}</div>
+  <div class="card" style="margin-top:14px"><h2>What an investigation returns</h2><ol class="small" style="padding-left:18px"><li><b>Exception summary</b> and <b>data evidence</b> — always taken from P1, never model-written</li><li><b>Policy clauses</b> — kept only if the claim-support gate finds them in the retrieved policy text</li><li><b>Risk assessment</b>, <b>recommended action</b> (as a proposal) and <b>limitations</b></li></ol>
+  <p class="small muted">The agent runs on a free-tier host and may need ~30 s to wake. Its demo has been intermittently unavailable; see its README for current status.</p></div>`;
+};
+
+V.governance = () => {
+  const g = D.governance;
+  if (!g || g.available === false) return '<h1>AI Security</h1><p class="muted">Governance summary not exported. Run scripts/export_governance_summary.py.</p>';
+  const f = g.firewall, he = f.harmful_excluding_known_evasions;
+  const stopped = (he.stopped_taint || 0) + (he.stopped_policy || 0) + (he.stopped_approval_gate || 0), held = he.held_for_approval || 0;
+  const evasion = f.known_evasion_scenarios.held_for_approval || 0;
+  return `<h1>AI Security & Attack Lab</h1><p class="sub">${esc(g.source)}. Nothing here is live traffic: Northstar has no running gateway, so this page shows committed evaluation results and lets you replay them.</p>
+  <div class="grid g4"><div class="card kpi"><div class="l">Scenarios</div><div class="v">${f.scenarios}</div><div class="n">${f.harmful} harmful · ${f.benign} benign</div></div>
+    <div class="card kpi"><div class="l">Harmful stopped outright</div><div class="v">${stopped}</div><div class="n">of ${he.stopped_taint + he.stopped_policy + he.stopped_approval_gate + held} non-evasion harmful scenarios</div></div>
+    <div class="card kpi"><div class="l">Held for human approval</div><div class="v">${held}</div><div class="n">+ ${evasion} known-evasion scenarios held (not stopped)</div></div>
+    <div class="card kpi"><div class="l">Agreement with ground truth</div><div class="v">${f.ground_truth_agreement.match}/${f.ground_truth_agreement.calls}</div><div class="n">${f.ground_truth_agreement.mismatches.length} calls differ — see below</div></div></div>
+  <div class="grid g2" style="margin-top:14px"><div class="card"><h2>Attack Lab — replay a scenario</h2><label>Scenario</label><select id="lab-sel" onchange="runLab()">${g.scenarios.map((s, i) => `<option value="${i}">${esc(s.id)} · ${esc(s.category)}${s.calls.some(c => c.harmful) ? '' : ' (benign)'}</option>`).join('')}</select><div id="lab-out" style="margin-top:12px"></div></div>
+    <div class="card"><h2>Text-layer detection (internal corpus)</h2><table><thead><tr><th>Layer</th><th>Detects</th><th>False pos.</th></tr></thead><tbody>${g.text_layers.map(l => `<tr><td>${esc(l.layer)}</td><td>${fmt(l.detection.pct)}% <span class="muted small">(${l.detection.numerator}/${l.detection.denominator})</span></td><td>${fmt(l.false_positive.pct)}%</td></tr>`).join('')}</tbody></table>
+      <div class="legend">Text detectors alone miss most agentic attacks; the action firewall is the second control point. ${g.corpus_size}-case adversarial corpus, ${g.benign_controls} benign controls.</div></div></div>
+  <div class="card" style="margin-top:14px"><h2>Outcome by scenario category</h2><table><thead><tr><th>Category</th><th>Taint</th><th>Policy</th><th>Approval gate</th><th>Held</th><th>Benign allowed</th></tr></thead><tbody>${Object.entries(f.by_category).map(([c, v]) => `<tr><td>${esc(c.replace(/_/g, ' '))}</td><td>${v.stopped_taint || ''}</td><td>${v.stopped_policy || ''}</td><td>${v.stopped_approval_gate || ''}</td><td>${v.held_for_approval || ''}</td><td>${v.benign_calls || ''}</td></tr>`).join('')}</tbody></table></div>
+  <div class="card" style="margin-top:14px"><h2>Where the firewall disagreed with the corpus</h2><p class="small muted">Calls expected to be denied that were instead held for human approval (not executed).</p><table><thead><tr><th>Scenario</th><th>Tool</th><th>Expected</th><th>Got</th></tr></thead><tbody>${f.ground_truth_agreement.mismatches.map(m => `<tr><td>${esc(m.scenario)}</td><td>${esc(m.tool)}</td><td>${esc(m.expect)}</td><td>${esc(m.got)}</td></tr>`).join('')}</tbody></table></div>
+  <p class="small muted" style="margin-top:10px">The agent in these scenarios is scripted: the numbers show what the firewall does once an agent is hijacked, not how often real models are. The taint check is heuristic, and it has no independent security review.</p>`;
+};
+function runLab() {
+  const g = D.governance, s = g.scenarios[+$('#lab-sel').value];
+  const steps = s.calls.map(c => {
+    const verdict = c.effect === 'deny' ? ['DENIED', 't-good'] : c.effect === 'require_approval' ? ['HELD FOR APPROVAL', 't-warn'] : ['ALLOWED', c.harmful ? 't-bad' : 't-good'];
+    return `<div style="margin:8px 0"><div class="row"><b>${esc(c.tool)}</b><span class="tag ${verdict[1]}">${verdict[0]}</span>${c.stage ? `<span class="muted small">stage: ${esc(c.stage)}</span>` : ''}${c.harmful ? '<span class="tag t-bad">harmful call</span>' : '<span class="tag t-info">benign call</span>'}</div>${(c.reasons || []).map(r => `<div class="small muted">• ${esc(r)}</div>`).join('')}</div>`;
+  }).join('');
+  $('#lab-out').innerHTML = `<div class="small"><b>${esc(s.title)}</b></div><div class="grid g2" style="margin-top:8px"><div class="card"><h3>Without the firewall</h3><p class="small">${s.calls.some(c => c.harmful) ? 'A hijacked agent’s harmful calls execute: ' + s.calls.filter(c => c.harmful).map(c => '<code>' + esc(c.tool) + '</code>').join(', ') : 'Benign calls execute normally.'}</p></div><div class="card"><h3>With the firewall</h3>${steps}</div></div>${s.evasion ? '<div class="banner" style="margin-top:8px">Known-evasion scenario: the taint check can be bypassed here; the call is held for human approval, not stopped.</div>' : ''}<div class="small muted">Text-layer detector in the deployed config: ${s.text_layer_detects ? 'flags this attack' : 'does not flag this attack'}.</div>`;
+  audit('attack_lab', s.id);
+}
+
+V.audit = () => {
+  const log = store.get('ns-audit', []);
+  return `<h1>Audit Log</h1><p class="sub">Actions taken in this browser (asks, proposals, demo approvals, lab replays). It is local to this browser and not tamper-evident. The server-side audit trails live in the P3 gateway (PII-redacted) and P2 (traces, cost).</p>
+  <div class="card scroll">${log.length ? `<table><thead><tr><th>Time</th><th>Action</th><th>Detail</th></tr></thead><tbody>${log.map(l => `<tr><td>${esc(l.at.replace('T', ' ').slice(0, 19))}</td><td>${esc(l.action)}</td><td>${esc(l.detail)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Nothing recorded yet.</p>'}</div>
+  <div class="row" style="margin-top:10px"><button class="btn danger" onclick="store.set('ns-audit', []); render()">Clear local log</button></div>`;
+};
+
+V.models = () => {
+  const m = D.models;
+  if (!m.available) return `<h1>Model Health</h1><p class="muted">${esc(m.reason)}</p>`;
+  const mv = m.model_vs_rules;
+  return `<h1>Model Health</h1><p class="sub">SLA risk model — ${esc(m.name)}, trained ${esc((m.trained_at || '').slice(0, 10))}, calibration ${esc(m.calibration)}, scikit-learn ${esc(m.sklearn_version)}, feature-code hash ${esc(m.feature_code_sha256)}.</p>
+  <div class="banner info">The headline ROC-AUC (${fmt(m.served.roc_auc, 3)}) is on the configured SLA target, where ~95% of cases breach, so it is inflated. On realistic per-category p75 targets it is 0.72–0.93 depending on feature set and split (see model-vs-rules).</div>
+  <div class="grid g2"><div class="card"><h2>Validation checklist</h2>${m.validation.map(v => `<div class="row small" style="margin:4px 0"><span class="tag t-good">✓</span> ${esc(v)}</div>`).join('')}<div class="small muted" style="margin-top:8px">Drift: PSI per feature against the training baseline is served at <code>/health/drift/features</code>${m.has_baselines ? '' : ' (no baselines in metadata)'}.</div></div>
+    <div class="card"><h2>Served-model metrics (configured target)</h2>${barRows(Object.entries(m.served).map(([k, v]) => ({label: k.replace(/_/g, ' '), value: v, text: fmt(v, 3)})), {max: 1})}</div></div>
+  ${mv ? `<div class="card" style="margin-top:14px"><h2>Model vs simple rules <span class="tag t-warn">${esc('not established')}</span></h2><p class="small">${esc(mv.verdict)}</p><table><thead><tr><th>Strategy</th><th>Precision@5%</th><th>@10%</th><th>@20%</th><th>@30%</th></tr></thead><tbody>${mv.rows.map(r => `<tr><td>${esc(r.strategy)}</td><td>${fmt(r['5%'], 3)}</td><td>${fmt(r['10%'], 3)}</td><td>${fmt(r['20%'], 3)}</td><td>${fmt(r['30%'], 3)}</td></tr>`).join('')}</tbody></table><div class="legend">${fmt(mv.n_test)} held-out cases, base rate ${fmt(100 * mv.base_rate, 1)}%, purchase-order-clustered bootstrap. Intervals are in <code>reports/model_vs_rules.json</code>.</div></div>` : ''}`;
+};
+
+V.data = () => {
+  const q = D.data_quality;
+  const icon = s => ({pass: '<span class="tag t-good">pass</span>', warn: '<span class="tag t-warn">warn</span>', fail: '<span class="tag t-bad">fail</span>', info: '<span class="tag t-info">info</span>'})[s];
+  return `<h1>Data Quality</h1><p class="sub">${fmt(q.cases)} cases · ${fmt(q.events)} events · ${fmt(q.suppliers)} suppliers.</p>
+  <div class="card"><table><thead><tr><th>Check</th><th>Status</th><th>Detail</th></tr></thead><tbody>${q.checks.map(c => `<tr><td>${esc(c.check)}</td><td>${icon(c.status)}</td><td class="muted">${esc(c.detail || '')}</td></tr>`).join('')}</tbody></table></div>
+  <div class="card" style="margin-top:14px"><h2>SLA coverage</h2>${barRows([{label: 'Cases with an explicit category SLA', value: q.explicit_sla_share_pct, text: fmt(q.explicit_sla_share_pct, 0) + '%', color: 'var(--good)'}, {label: 'Cases using the fallback SLA', value: 100 - q.explicit_sla_share_pct, text: fmt(100 - q.explicit_sla_share_pct, 0) + '%', color: 'var(--warn)'}], {max: 100})}<div class="legend">Most cases use the fallback target, which is why configured-SLA breach rates are near 95% and why realistic-target evaluations are used for model claims.</div></div>`;
+};
+
+V.lineage = () => {
+  const {nodes, edges} = D.lineage, layers = {};
+  nodes.forEach(n => (layers[n.layer] ||= []).push(n));
+  const pos = {}, W = 1100, cw = W / 6;
+  Object.entries(layers).forEach(([l, ns]) => ns.forEach((n, i) => pos[n.id] = {x: 10 + l * cw, y: 20 + i * 70}));
+  let svg = `<svg viewBox="0 0 ${W} 260" width="100%">`;
+  edges.forEach(([a, b]) => { svg += `<path d="M${pos[a].x + 160},${pos[a].y + 20} C${pos[a].x + 190},${pos[a].y + 20} ${pos[b].x - 30},${pos[b].y + 20} ${pos[b].x},${pos[b].y + 20}" fill="none" stroke="var(--border)" stroke-width="2"/>`; });
+  nodes.forEach(n => { const p = pos[n.id]; svg += `<rect x="${p.x}" y="${p.y}" width="160" height="40" rx="8" fill="var(--panel2)" stroke="var(--accent)"/><text x="${p.x + 8}" y="${p.y + 24}" style="fill:var(--text);font-size:11px">${esc(n.label)}</text>`; });
+  return `<h1>Data Lineage</h1><p class="sub">From the raw event log to every number on these pages. dbt models and tests cover staging → intermediate → marts; the Python analytics read the same tables.</p><div class="card" style="overflow:auto">${svg}</svg></div>
+  <div class="card" style="margin-top:14px"><h2>Example: “SLA breach rate”</h2><p class="small">Raw event log → <code>staging.events</code> (cleaning, de-duplication, zero-duration cases dropped) → <code>analytics.process_cases</code> (cycle time, supplier, variant) → SLA evaluation against <code>config/sla.yaml</code> → this dashboard. Every step is reproducible with <code>python -m scripts.run_pipeline</code>.</p></div>`;
+};
+
+V.architecture = () => {
+  const nodes = [
+    ['P1 — operations-performance', 'Analytics & ML', 'Event-log cleaning, dbt marts, process mining, SLA risk model (calibrated, drift-monitored), AP controls, working capital, uplift/ROI simulation. This page is served by it.'],
+    ['P2 — operations-assistant', 'Evidence-grounded agent', 'RAG over procurement policy + tools over P1’s live API; investigation mode with a claim-support gate; evaluation harness.'],
+    ['P3 — llm-security-gateway', 'AI security', 'Text-layer detectors, PII redaction, and an action firewall (policy → taint → human approval) in front of agent tools; red-team harness.'],
+    ['P4 — northstar-infra', 'Infrastructure', 'CI and infrastructure code for deploying the services.'],
+  ];
+  return `<h1>Architecture</h1><p class="sub">Detect → Investigate → Explain → Recommend → Authorize → Approve → Audit.</p>
+  <div class="grid g2">${nodes.map(n => `<div class="card"><h2>${esc(n[0])}</h2><span class="tag t-info">${esc(n[1])}</span><p class="small" style="margin-top:8px">${esc(n[2])}</p></div>`).join('')}</div>
+  <div class="card" style="margin-top:14px"><h2>Request path</h2><pre class="small" style="overflow:auto">user / dashboard
+   │  “Ask Northstar”
+   ▼
+ P3 gateway ── text layers (PII, injection) ──┐
+   │                                          │
+   ▼                                          ▼
+ P2 agent ── retrieval (policy) ── P1 API ── Postgres / dbt marts ── SLA model
+   │
+   ▼  proposed action (e.g. propose_intervention)
+ P3 action firewall: policy → taint → human approval → audit
+   │
+   ▼
+ intervention ledger (randomized holdout) → outcome → ROI</pre><p class="small muted">The shell you are viewing implements the P1 side directly. P2 is reached through the “Ask Northstar” links; P3’s results are shown as committed evaluations. They are not yet wired together as one deployed request path.</p></div>`;
+};
+
+V.evidence = () => {
+  const e = D.evidence;
+  const st = {established: ['t-good', 'established'], found_and_fixed: ['t-good', 'found and fixed'], not_established: ['t-warn', 'not established'], simulation_only: ['t-warn', 'simulation only'], refuted: ['t-bad', 'refuted'], inflated: ['t-warn', 'inflated'], not_supported: ['t-bad', 'not supported']};
+  const rs = {failed: ['t-bad', 'failed'], no_gain: ['t-warn', 'no gain'], resolved: ['t-good', 'resolved'], promising: ['t-good', 'promising']};
+  return `<h1>Evidence & Limitations</h1><p class="sub">Every headline claim with its status. Negative results are listed, not hidden.</p>
+  <div class="card"><h2>Claims</h2><table><thead><tr><th>Claim</th><th>Status</th><th>Evidence</th></tr></thead><tbody>${e.claims.map(c => `<tr><td>${esc(c.claim)}</td><td><span class="tag ${st[c.status][0]}">${st[c.status][1]}</span></td><td class="muted">${esc(c.evidence)}</td></tr>`).join('')}</tbody></table></div>
+  <div class="card" style="margin-top:14px"><h2>Experiments</h2><table><thead><tr><th>Experiment</th><th>Result</th><th>Note</th></tr></thead><tbody>${e.experiments.map(x => `<tr><td>${esc(x.name)}</td><td><span class="tag ${rs[x.result][0]}">${rs[x.result][1]}</span></td><td class="muted">${esc(x.note)}</td></tr>`).join('')}</tbody></table></div>
+  <div class="card" style="margin-top:14px"><h2>Known limitations</h2><ul class="small" style="padding-left:18px">${e.limitations.map(l => `<li>${esc(l)}</li>`).join('')}</ul></div>`;
+};
+
+V.alerts = () => {
+  const items = computeAlerts();
+  return `<h1>Alerts</h1><p class="sub">Derived from the data on these pages; this static replay has no live alert feed.</p><div class="card">${items.map(a => `<div class="row" style="padding:8px 0;border-bottom:1px solid var(--grid)"><span class="tag ${a.sev === 'critical' ? 't-bad' : a.sev === 'warning' ? 't-warn' : 't-info'}">${a.sev}</span><span>${esc(a.text)}</span><span class="sp"></span>${a.href ? `<a href="${a.href}">View →</a>` : ''}</div>`).join('') || '<p class="muted">No alerts.</p>'}</div>`;
+};
+function computeAlerts() {
+  const a = [];
+  if (D.snapshot && D.snapshot.live === false) a.push({sev: 'warning', text: 'Showing a saved snapshot — the live database is unavailable.', href: '#/data'});
+  (D.finance.control_health || []).filter(c => c.status === 'not_valid').forEach(c => a.push({sev: 'warning', text: `${c.id.replace(/_/g, ' ')} is not operationally valid (flags ordinary data).`, href: '#/finance'}));
+  const crit = (D.queue || []).filter(q => q.level === 'CRITICAL').length;
+  if (crit) a.push({sev: 'critical', text: `${crit} critical-priority cases in the Action Center.`, href: '#/queue?level=CRITICAL'});
+  if (D.data_quality.explicit_sla_share_pct < 50) a.push({sev: 'warning', text: `Only ${fmt(D.data_quality.explicit_sla_share_pct, 0)}% of cases have an explicit SLA target.`, href: '#/data'});
+  a.push({sev: 'info', text: 'No real intervention outcomes recorded; ROI figures are simulated.', href: '#/interventions'});
+  return a;
+}
+
+/* ── router, nav, search, theme ── */
+function route() {
+  const h = location.hash.replace(/^#\/?/, '') || 'overview', [path] = h.split('?'), [name, ...rest] = path.split('/');
+  return {name, arg: decodeURIComponent(rest.join('/'))};
+}
+function render() {
+  if (!D) return;
+  const {name, arg} = route(), fn = V[name] || V.overview;
+  $('#view').innerHTML = (D.snapshot && D.snapshot.live === false ? `<div class="banner">Showing a saved snapshot from ${esc(D.snapshot.as_of || 'an earlier build')}${D.snapshot.reason ? ' — the live database is unavailable' : ''}. Numbers are real but not current.</div>` : '') + fn(arg);
+  $('#nav').innerHTML = NAV.map(([g, items]) => (g ? `<div class="nav-group">${g}</div>` : '') + items.map(([k, l]) => `<a href="#/${k}" class="${k === name || (k === 'queue' && name === 'po') || (k === 'suppliers' && name === 'supplier') ? 'active' : ''}">${l}</a>`).join('')).join('');
+  window.scrollTo(0, 0);
+  if (name === 'governance') runLab();
+}
+function searchIndex() {
+  const idx = [];
+  NAV.forEach(([, items]) => items.forEach(([k, l]) => idx.push({t: l, s: 'page', h: '#/' + k})));
+  Object.keys(D.po || {}).forEach(id => idx.push({t: id, s: 'case', h: '#/po/' + encodeURIComponent(id)}));
+  (D.suppliers || []).forEach(r => idx.push({t: r.supplier_id, s: 'supplier', h: '#/supplier/' + encodeURIComponent(r.supplier_id)}));
+  return idx;
+}
+function setupSearch() {
+  const input = $('#search'), box = $('#results'), idx = searchIndex();
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q) { box.hidden = true; return; }
+    const m = idx.filter(x => x.t.toLowerCase().includes(q)).slice(0, 12);
+    box.innerHTML = m.map(x => `<a href="${x.h}" onclick="document.getElementById('results').hidden=true">${esc(x.t)}<small>${x.s}</small></a>`).join('') || '<a>No matches</a>';
+    box.hidden = false;
+  });
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { const a = box.querySelector('a[href]'); if (a) { location.hash = a.getAttribute('href'); box.hidden = true; input.blur(); } } if (e.key === 'Escape') { box.hidden = true; input.blur(); } });
+  document.addEventListener('keydown', e => { if ((e.key === '/' && document.activeElement.tagName !== 'INPUT') || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')) { e.preventDefault(); input.focus(); input.select(); } });
+  document.addEventListener('click', e => { if (!e.target.closest('.search')) box.hidden = true; });
+}
+function setTheme(t) { document.documentElement.setAttribute('data-theme', t); $('#theme').textContent = t === 'dark' ? 'Light' : 'Dark'; store.set('ns-theme', t); }
+$('#theme').addEventListener('click', () => setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
+setTheme(store.get('ns-theme', 'light'));
+
+async function boot() {
+  try {
+    const res = await fetch('/app/data');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    D = await res.json();
+    if (D.available === false) throw new Error(D.reason || 'unavailable');
+  } catch (err) {
+    $('#view').innerHTML = `<div class="banner">Could not load data: ${esc(err.message)}. The API may be waking from a free-tier sleep — retrying in 15 s.</div>`;
+    setTimeout(boot, 15000); return;
+  }
+  const live = D.snapshot && D.snapshot.live !== false;
+  $('#fresh').innerHTML = `<span class="dot ${live ? '' : 'snap'}"></span><span>${live ? 'LIVE' : 'SNAPSHOT ' + esc((D.snapshot.as_of || '').slice(0, 10))} · replay data</span>`;
+  const n = computeAlerts().filter(a => a.sev !== 'info').length;
+  $('#alerts-pill').textContent = n ? `Alerts · ${n}` : 'Alerts';
+  setupSearch(); render();
+}
+window.addEventListener('hashchange', render);
+boot();
+</script>
+</body>
+</html>
