@@ -107,27 +107,48 @@ def _read_recent_records():
     return [r for r in all_records if r.get("timestamp", 0) >= cutoff]
 
 
+def request_key(r: dict) -> str:
+    """Identity of one REQUEST. A request writes one record per phase (pre_flight, and post_flight when it got that far), so
+    counting records double-counted every request that was forwarded to a backend: 8 prompts of which 4 were blocked at
+    pre-flight showed as 12 "requests" and a 33% block rate instead of 8 and 50%. Fixed 2026-10-04 (round 10)."""
+    return str(r.get("request_id") or f"{r.get('session_id')}:{r.get('timestamp')}")
+
+
+def summarize_requests(records: list[dict]) -> dict:
+    """Request-level counts from phase-level records: a request is blocked if ANY of its records blocked."""
+    reqs: dict[str, dict] = {}
+    for r in sorted(records, key=lambda x: x["timestamp"]):
+        q = reqs.setdefault(request_key(r), {"blocked": False, "layer": None, "phases": set(), "latency_ms": 0.0})
+        q["phases"].add(r["phase"])
+        q["latency_ms"] += float(r.get("latency_ms", 0) or 0)
+        if r["decision"] == "block" and not q["blocked"]:
+            q["blocked"], q["layer"] = True, r.get("detection_layer_used") or "none"
+    blocked = [q for q in reqs.values() if q["blocked"]]
+    return {"requests": len(reqs), "blocked": len(blocked), "allowed": len(reqs) - len(blocked),
+            "by_layer": Counter(q["layer"] for q in blocked), "latencies": [q["latency_ms"] for q in reqs.values()]}
+
+
 def compute_stats():
     records = _read_recent_records()
-
-    total = len(records)
-    decisions = Counter(r["decision"] for r in records)
+    summary = summarize_requests(records)
+    total = summary["requests"]
+    decisions = {"allow": summary["allowed"], "block": summary["blocked"]}
     by_phase = Counter(r["phase"] for r in records)
-    by_layer = Counter(r.get("detection_layer_used") or "none" for r in records if r["decision"] == "block")
-    latencies = [r["latency_ms"] for r in records if "latency_ms" in r]
+    latencies = summary["latencies"]
 
     avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
-    block_rate = decisions.get("block", 0) / total if total else 0.0
+    block_rate = summary["blocked"] / total if total else 0.0
 
     recent = sorted(records, key=lambda r: r["timestamp"], reverse=True)[:20]
 
     return {
         "window_seconds": STATS_WINDOW_SECONDS,
         "total_requests_in_window": total,
+        "total_decision_records_in_window": len(records),
         "block_rate": round(block_rate, 3),
-        "decisions": dict(decisions),
+        "decisions": decisions,
         "by_phase": dict(by_phase),
-        "blocks_by_layer": dict(by_layer),
+        "blocks_by_layer": dict(summary["by_layer"]),
         "avg_latency_ms": round(avg_latency, 3),
         "recent_events": [
             {

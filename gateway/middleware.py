@@ -221,9 +221,12 @@ class GatewayMiddleware:
         role: str = "employee",
         system_prompt: str = "",
         user_id: str = "unknown",
+        trace_id: str | None = None,
+        route: str | None = None,
     ) -> GatewayResponse:
         request_id = self.logger.new_request_id()
         overall_start = time.perf_counter()
+        ctx_extra = {k: v for k, v in (("trace_id", trace_id), ("route", route)) if v}      # correlation fields on every record
 
         # ---------- PRE-FLIGHT ----------
         pre_start = time.perf_counter()
@@ -239,7 +242,7 @@ class GatewayMiddleware:
                 phase="pre_flight", decision="block", detection_layer_used="session_check",
                 latency_ms=(time.perf_counter() - pre_start) * 1000,
                 matched_pattern_id=session_check.reason,
-                extra={"pii_found": pii_result.found, "session_details": session_check.details},
+                extra={"pii_found": pii_result.found, "session_details": session_check.details, **ctx_extra},
             ))
             return GatewayResponse(
                 allowed=False, response_text=None, block_reason=session_check.reason,
@@ -265,7 +268,7 @@ class GatewayMiddleware:
             phase="pre_flight", decision="block" if blocked else "allow",
             detection_layer_used=layer_used, latency_ms=pre_latency_ms,
             matched_pattern_id=pattern_id,
-            extra={"pii_found": pii_result.found, "per_layer": per_layer_trace},
+            extra={"pii_found": pii_result.found, "per_layer": per_layer_trace, **ctx_extra},
         ))
 
         # A blocked message doesn't get added to this session's context -- an
@@ -312,6 +315,7 @@ class GatewayMiddleware:
                 "role_exposure_tags": role_result.matched_tags,
                 "compliance_markers": compliance_result.matched_markers,
                 "system_leak": leak_result.leaked,
+                **ctx_extra,
             },
         ))
 

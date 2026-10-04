@@ -1225,3 +1225,13 @@ re-created three branches Dependabot had already deleted (`dependabot/pip/ruff-g
 **Memory.** With the student, the gateway peaks at about 138 MB committed / 162 MB resident (numpy alone: 63 / 76 MB). It survived every cap down to 144 MB and failed at 128 MB, so the cap does bite. This is a Windows job-object substitute, not `docker run -m 512m`.
 
 **Not done.** A real 512 MB container run (no Docker daemon). AgentDojo with and without the gateway and the two adaptive red-team runs (they need a model-provider key that the account owner sets; none is in this environment). A matched-FPR comparison against Llama Prompt Guard 2. The student has not faced the adaptive attacker. The teacher's training data was not checked for overlap with the public test sets, so its numbers on jackhhao and jailbreak_llms may be flattered.
+
+## 2026-10-04: round 10 -- the gateway becomes the console's front door
+
+**Decisions.** (1) A versioned `/v1` surface (`gateway/v1/`): demo identity tokens, AI routes that wrap the assistant in the existing
+pre/post-flight lifecycle and return a `gateway` object, governance APIs backed by a SQLite store ingested from the JSONL audit
+logs, a generated policy matrix, a rules catalog with OWASP mapping, and a live Attack Lab. (2) Fixed the request double-count
+(per request id, regression test 8 prompts / 4 blocked). (3) Added `finance` and `analyst` roles to the `propose_intervention`
+rules (approval still required; release still needs a different role); no existing scenario outcome changes. (4) Measured, did
+not fix, 3 of 40 console filter phrasings blocked by the classifier (docs/v1-console-api.md). **Not done:** prometheus-client is
+not in the hash-locked requirements, so `/metrics` returns 501 until the locks are regenerated; OpenTelemetry is API-only.

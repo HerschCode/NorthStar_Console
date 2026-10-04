@@ -30,10 +30,10 @@ def log(tmp_path, monkeypatch):
     return path
 
 
-def _rec(sid, decision="allow"):
+def _rec(sid, decision="allow", request_id=None, phase="pre_flight"):
     return json.dumps({
-        "timestamp": time.time(), "session_id": sid, "request_id": "r",
-        "phase": "pre_flight", "decision": decision, "detection_layer_used": None,
+        "timestamp": time.time(), "session_id": sid, "request_id": request_id or sid,
+        "phase": phase, "decision": decision, "detection_layer_used": "rule_based" if decision == "block" else None,
         "latency_ms": 1.0, "matched_pattern_id": None, "extra": {},
     })
 
@@ -171,3 +171,26 @@ def test_appending_does_not_look_like_rotation(log):
         tail.read_all()
     assert [r["session_id"] for r in tail.read_all()] == ["a", "b0", "b1", "b2"]
     assert tail._resets == 0
+
+
+def test_requests_are_counted_once_not_once_per_phase(log):
+    """Regression (2026-10-04): 8 prompts, 4 blocked at pre-flight, 4 forwarded and logged again at post-flight used to read as
+    12 requests / 33% block rate. It is 8 requests and a 50% block rate."""
+    with open(log, "w") as f:
+        for i in range(4):                                         # blocked at pre-flight: one record each
+            f.write(_rec(f"s{i}", "block", request_id=f"r{i}") + "\n")
+        for i in range(4, 8):                                      # allowed: pre-flight + post-flight records
+            f.write(_rec(f"s{i}", "allow", request_id=f"r{i}") + "\n")
+            f.write(_rec(f"s{i}", "allow", request_id=f"r{i}", phase="post_flight") + "\n")
+    stats = compute_stats()
+    assert stats["total_requests_in_window"] == 8 and stats["total_decision_records_in_window"] == 12
+    assert stats["block_rate"] == 0.5 and stats["decisions"] == {"allow": 4, "block": 4}
+    assert stats["blocks_by_layer"] == {"rule_based": 4}
+
+
+def test_a_request_blocked_at_post_flight_counts_once_as_blocked(log):
+    with open(log, "w") as f:
+        f.write(_rec("s", "allow", request_id="r1") + "\n")
+        f.write(_rec("s", "block", request_id="r1", phase="post_flight") + "\n")
+    stats = compute_stats()
+    assert stats["total_requests_in_window"] == 1 and stats["decisions"] == {"allow": 0, "block": 1}

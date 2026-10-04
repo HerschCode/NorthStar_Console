@@ -1,0 +1,81 @@
+# Human-readable catalog of every rule / control id the gateway can log (served by GET /v1/rules).
+# OWASP ids refer to the OWASP Top 10 for LLM Applications (2025 numbering). MITRE ATLAS technique ids are given as a
+# pointer only and are UNVERIFIED against the live ATLAS matrix (same caveat as the red-team report). A test fails if a
+# rule id in gateway/detectors/rule_based.PATTERNS is missing here.
+detectors:
+  rule_based:
+    layer: rule_based
+    description: Regex phrases over the normalised text. Cheapest layer; misses paraphrase and encodings by design.
+    rules:
+      RB-001: {name: Instruction override ("ignore previous instructions")}
+      RB-002: {name: Instruction override ("disregard previous instructions")}
+      RB-003: {name: Role reassignment ("you are now a ...")}
+      RB-004: {name: Fake system-message marker ("system:")}
+      RB-005: {name: "Fake override banner ([SYSTEM OVERRIDE])"}
+      RB-006: {name: Developer-mode jailbreak}
+      RB-007: {name: Explicit "jailbreak" request}
+      RB-008: {name: "Persona with no restrictions (\"pretend you have no rules\")"}
+      RB-009: {name: System-prompt disclosure request, owasp: LLM07, atlas: AML.T0051}
+      RB-010: {name: Request to disable content filters}
+      RB-011: {name: False administrator-clearance claim}
+      RB-012: {name: Request to skip safety or role checks}
+      RB-013: {name: Base64-decode instruction (encoding evasion)}
+      RB-014: {name: '"No longer bound by" rules'}
+      RB-015: {name: Request to avoid audit logging, owasp: LLM06}
+      RB-016: {name: Audit-trail suppression, owasp: LLM06}
+      RB-017: {name: Admin command / reset / purge request, owasp: LLM06}
+      RB-018: {name: Admin database-query request, owasp: LLM06}
+      RB-019: {name: Enumerate all database tables, owasp: LLM02}
+      RB-020: {name: System file path access (/etc/passwd, System32), owasp: LLM02}
+      RB-021: {name: Privilege-escalation request, owasp: LLM06}
+      RB-022: {name: Impersonating another user or role, owasp: LLM06}
+      RB-023: {name: Bypass rate limit / access control / auth, owasp: LLM06}
+      RB-024: {name: Bulk export of employee, user or customer records, owasp: LLM02}
+      RB-025: {name: '"For this test only" authorisation pretext'}
+      RB-026: {name: Social-engineering via a manager's alleged request}
+      RB-027: {name: Scheduled bulk export, owasp: LLM02}
+      RB-028: {name: Requester-id substitution (cross-user access), owasp: LLM02}
+      RB-029: {name: Cross-tenant "all records for every team" request, owasp: LLM02}
+      RB-030: {name: Another department's data request, owasp: LLM02}
+  scratch_classifier:
+    layer: scratch_classifier
+    description: Small mean-pooled MLP (numpy). Catches paraphrase the rules miss at a measured false-positive cost.
+    rules:
+      SC-CLASSIFIER: {name: Classifier score above threshold}
+  student_guard:
+    layer: student_guard
+    description: Distilled MiniLM student served as ONNX int8 (opt-in via CLASSIFIER_BACKEND).
+    rules:
+      STUDENT-GUARD: {name: Student guard score above threshold}
+  input_hygiene:
+    layer: input_hygiene
+    description: Structural checks that need no model.
+    rules:
+      IH-TAG-CHARS: {name: Invisible Unicode tag characters (smuggled instructions), redteam: RT-03}
+  session_check:
+    layer: session_check
+    description: Per-session rate and burst anomalies.
+    rules:
+      rate_limit_exceeded: {name: Session rate limit exceeded, owasp: LLM10, redteam: RT-01}
+      session_anomaly_burst_at_start: {name: Burst of requests at session start, owasp: LLM10}
+      session_anomaly_spike: {name: Sudden request spike, owasp: LLM10}
+  post_flight_checks:
+    layer: post_flight_checks
+    description: Checks on the backend's response before it is returned.
+    rules:
+      jailbreak_compliance: {name: Response complies with a jailbreak, owasp: LLM01}
+      system_prompt_leak: {name: Response leaks the system prompt, owasp: LLM07}
+      role_exposure: {name: Response exposes content above the caller's role, owasp: LLM02}
+action_firewall:
+  stages:
+    policy: {name: Tool policy (default-deny, role x tool x argument constraints), owasp: LLM06}
+    taint: {name: Taint check (argument copied from untrusted content), owasp: LLM01, redteam: "RT-10, RT-11"}
+    budget: {name: Per-session write budget, owasp: LLM06}
+    approval: {name: Human approval gate with separation of duties, owasp: LLM06}
+default_atlas_for_owasp:
+  LLM01: AML.T0051
+  LLM02: AML.T0057
+  LLM06: AML.T0053
+  LLM07: AML.T0051
+  LLM10: AML.T0029
+redteam_report: reports/redteam-2026-09.md

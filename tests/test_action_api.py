@@ -85,7 +85,7 @@ def test_input_validation(client):
 
 def test_policy_summary_lists_tools_and_roles(client):
     p = client.get("/gateway/actions/policy").json()
-    assert p["propose_intervention"]["approval"] is True and p["propose_intervention"]["roles"] == ["admin", "manager"]
+    assert p["propose_intervention"]["approval"] is True and p["propose_intervention"]["roles"] == ["admin", "analyst", "finance", "manager"]
     assert p["search_policy_documents"]["output_trust"] == "untrusted"
 
 

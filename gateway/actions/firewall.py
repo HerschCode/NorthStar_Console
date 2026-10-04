@@ -83,12 +83,13 @@ class ActionFirewall:
 
     # ---- decision -----------------------------------------------------------------------------------
 
-    def authorize(self, session_id: str, principal: Principal, tool: str, args: dict, source: str = "http") -> Decision:
+    def authorize(self, session_id: str, principal: Principal, tool: str, args: dict, source: str = "http",
+                  trace_id: str | None = None) -> Decision:
         if not isinstance(args, dict):
             decision = Decision("deny", tool, ["arguments must be an object"], risk="high", stage="policy")
         else:
             decision = self._decide(session_id, principal, tool, args, source)
-        self._audit(session_id, principal, tool, args, decision)
+        self._audit(session_id, principal, tool, args, decision, trace_id)
         return decision
 
     def _decide(self, session_id, principal, tool, args, source) -> Decision:
@@ -146,13 +147,13 @@ class ActionFirewall:
             return [ActionFirewall._redact(v) for v in value[:20]]
         return value
 
-    def _audit(self, session_id, principal, tool, args, d: Decision):
+    def _audit(self, session_id, principal, tool, args, d: Decision, trace_id: str | None = None):
         if not self.audit_path:
             return
         record = {"timestamp": time.time(), "session_id": session_id, "user_id": principal.user_id, "role": principal.role,
                   "tool": tool, "effect": d.effect, "stage": d.stage, "rule": d.rule, "risk": d.risk, "reasons": d.reasons,
                   "tainted": [{k: t[k] for k in ("field", "reaction", "source")} for t in d.tainted],
-                  "approval_id": d.approval_id, "args": self._redact(args if isinstance(args, dict) else {})}
+                  "approval_id": d.approval_id, "trace_id": trace_id, "args": self._redact(args if isinstance(args, dict) else {})}
         self.audit_path.parent.mkdir(parents=True, exist_ok=True)
         with self._lock, open(self.audit_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(record, default=str) + "\n")

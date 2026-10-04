@@ -40,6 +40,8 @@ app.include_router(demo_router)
 app.include_router(actions_router)
 
 middleware = GatewayMiddleware()
+from gateway.v1.routes import install as _install_v1  # noqa: E402
+_install_v1(app, middleware)
 
 BACKENDS = {
     "stub_ops_agent": (StubOpsAgentAdapter(), FAKE_SYSTEM_PROMPT),

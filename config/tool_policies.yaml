@@ -137,7 +137,7 @@ tools:
       # different person, per the auditor definition of segregation of duties; hold_payment does not,
       # since placing a hold is the conservative direction (see docs/finance-controls-mapping.md).
       - name: finance-hold
-        roles: [manager, admin]
+        roles: [finance, manager, admin]
         approval: required
         args:
           action: {required: true, in: [hold_payment]}
@@ -145,7 +145,7 @@ tools:
           reason: {required: true, type: string, max_length: 500, not_pattern: '(?i)(https?://|www\.|@[a-z0-9-]+\.|password|api[_ -]?key|secret|\bssn\b|salary|\b[a-z]{2}\d{2}(?=(?: ?[a-z]{0,4} ?\d){8})(?: ?[a-z0-9]{4}){2,7}(?: ?[a-z0-9]{1,3})?\b)'}
           priority: {in: [high]}
       - name: finance-release
-        roles: [manager, admin]
+        roles: [finance, manager, admin]
         approval: required
         require_role_separation: true
         args:
@@ -154,7 +154,7 @@ tools:
           reason: {required: true, type: string, max_length: 500, not_pattern: '(?i)(https?://|www\.|@[a-z0-9-]+\.|password|api[_ -]?key|secret|\bssn\b|salary|\b[a-z]{2}\d{2}(?=(?: ?[a-z]{0,4} ?\d){8})(?: ?[a-z0-9]{4}){2,7}(?: ?[a-z0-9]{1,3})?\b)'}
           priority: {in: [normal]}
       - name: manager-standard
-        roles: [manager, admin]
+        roles: [analyst, manager, admin]
         approval: required
         args:
           action: {required: true, in: [escalate_case, flag_supplier, notify_manager, request_approval, mark_exception]}
