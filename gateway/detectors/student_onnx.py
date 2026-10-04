@@ -8,8 +8,9 @@ What it needs: `onnxruntime` (imported lazily, so a deployment that never enable
 `vocab.txt` or a supported `tokenizer.json` under models/guard_student/. Each artifact is checked against models/MANIFEST.sha256 before it is parsed:
 an ONNX file is a protobuf, and a parser fed an unchecked file is attack surface.
 
-The operating point comes from meta.json: the threshold that gave at most 1% false positives on the validation rows, fixed before any held-out set was looked at (docs/guard-student.md). `detect`
-takes a probability threshold like the other detectors, so the adaptive multiplier (a suspicious session gets an easier threshold) applies unchanged.
+The operating point comes from meta.json: probability 0.5, chosen on the leave-one-source-out folds (docs/guard-student.md says in what order the evidence was seen). The stricter threshold fixed
+at at most 1% validation false positives is recorded beside it, not used. `detect` takes a probability threshold like the other detectors, so the adaptive multiplier (a suspicious session gets
+an easier threshold) applies unchanged.
 
 Inputs longer than `max_length` tokens are cut: the model sees the start of a long prompt only. That is measured, not hidden (docs/guard-student.md, the jailbreak_llms rows).
 """

@@ -202,7 +202,7 @@ def test_empty_and_odd_input_do_not_raise(detector):
 @pytest.fixture
 def student_mw(monkeypatch, tmp_path):
     if not (HAVE_MODEL and HAVE_RUNTIME):
-        pytest.skip("models/guard_student or onnxruntime/tokenizers not available")
+        pytest.skip("models/guard_student or onnxruntime not available")
     monkeypatch.setattr(middleware, "CLASSIFIER_BACKEND", "student")
     monkeypatch.setattr(middleware, "LITE_MODE", False)
     mw = middleware.GatewayMiddleware()

@@ -41,6 +41,8 @@ def main() -> int:
                     if enc.ids != mine.encode(s, 4096):
                         bad[code].append(repr(s))
             chunk = []
+    # The category tables come from the running Python: a Python whose Unicode is older than the Rust tokenizer's produces differences that are not real, so say which one this was.
+    print(f"python {sys.version.split()[0]}, unicodedata {unicodedata.unidata_version}")
     print(f"codepoints checked: {0x110000 - 0x800}; codepoints with a difference: {len(bad)}")
     by_cat = defaultdict(list)
     for cp in bad:

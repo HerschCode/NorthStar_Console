@@ -33,7 +33,7 @@ def test_every_golden_case_matches_the_reference_ids(tok):
 def test_the_fixture_is_not_trivially_easy():
     texts = [c["text"] for c in GOLDEN]
     assert len(texts) >= 400
-    assert any("​" in t for t in texts) and any("" in t for t in texts) and any(len(t) > 1000 for t in texts) and any(ord(ch) > 0xFFFF for t in texts for ch in t)
+    assert any("\u200b" in t for t in texts) and any("\ue000" in t for t in texts) and any(len(t) > 1000 for t in texts) and any(ord(ch) > 0xFFFF for t in texts for ch in t)
 
 
 @needs_tokenizer
