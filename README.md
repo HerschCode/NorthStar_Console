@@ -82,15 +82,19 @@ Aadhaar (Verhoeff checksum), PAN and Indian phone numbers are gated so order num
 
 ### Experimental distilled detector (P3)
 
-An optional MiniLM ONNX student is packaged and can be enabled with
+An optional 22 MB MiniLM ONNX student, distilled from ProtectAI's deberta-v3-base
+guard and chosen by leave-one-source-out, can be enabled with
 `CLASSIFIER_BACKEND=student` after installing `.[student]`. In the gateway
-harness, rules + student at probability 0.5 scored **79.8% macro attack
-detection / 2.9% macro benign FPR** (29.43 ms p50), versus **79.1% / 6.5%**
-for the shipped rules + NumPy classifier (1.80 ms p50). This is a different
-operating point from the student's validation-selected threshold, adds
-latency, and is not evidence of a 512 MB full-container fit; see
-[`docs/guard-student.md`](docs/guard-student.md) for methodology, limits,
-reproduction, and the sampled/capped AgentDojo runner.
+harness, rules + student scored **75.6% macro attack detection / 4.1% macro
+benign FPR** (4.2 ms p50), versus **79.1% / 6.5%** (0.4 ms) for the shipped
+rules + NumPy classifier and **83.7% / 7.4%** when both run. It does not beat the
+default on detection, and on the project's own held-out attacks it trails the
+700 MB teacher (74.4% vs 85.9%), so it stays opt-in. The whole gateway with the
+student peaks at about 160 MB resident and ran under a 144 MB commit cap
+(Windows job-object substitute; a real `docker run -m 512m` has not been done).
+See [`docs/guard-student.md`](docs/guard-student.md) for the method, the order
+in which the evidence was seen, limits, reproduction, and the sampled/capped
+AgentDojo runner (built, not yet run).
 
 ## Quickstart
 

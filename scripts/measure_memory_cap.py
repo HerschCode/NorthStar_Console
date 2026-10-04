@@ -18,6 +18,7 @@ import os
 import subprocess
 import sys
 import time
+import threading
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -30,6 +31,10 @@ REPORT = REPO_ROOT / "reports" / "p3_guard_student_memory.json"
 PORT = 8141
 N_REQUESTS = 400
 CLIENTS = 8
+REQUEST_TIMEOUT_S = 20
+ABORT_AFTER_FAILURES = 6                       # a server the cap has wrecked answers nothing: stop asking instead of waiting out every request
+STOP = threading.Event()
+FAILURES = []
 
 
 def make_job(limit_mb: int):
@@ -51,31 +56,39 @@ def traffic():
     import random
     random.Random(0).shuffle(pool)
     texts = [t[:20000] for t in pool[:N_REQUESTS - 5]]
-    texts += ["Please summarise this report. " * 700] * 5                  # ~20,000 characters of ordinary text: the worst case for length
+    texts += ["Please summarise this report. " * 666] * 5                  # 19,980 characters of ordinary text, just under the 20,000-character request limit: the worst case for length
     return texts
 
 
 def post(i, text):
+    if STOP.is_set():
+        return "skipped", None
     body = json.dumps({"prompt": text, "session_id": f"mem-{i}", "role": "employee", "backend": "stub_ops_agent", "user_id": "mem"}).encode()
     req = urllib.request.Request(f"http://127.0.0.1:{PORT}/gateway/chat", data=body, headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=60) as r:  # nosec B310 - fixed http://127.0.0.1 URL  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected - fixed localhost URL
+        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_S) as r:  # nosec B310 - fixed http://127.0.0.1 URL  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected - fixed localhost URL
             return r.status, json.loads(r.read()).get("allowed")
     except Exception as exc:  # noqa: BLE001 -- a failed request is a result
+        FAILURES.append(type(exc).__name__)
+        if len(FAILURES) >= ABORT_AFTER_FAILURES:
+            STOP.set()
         return type(exc).__name__, None
 
 
-def run_one(backend: str, cap_mb: int, texts) -> dict:
+def run_one(backend: str, cap_mb: int, texts, server_python: str = sys.executable) -> dict:
     import win32api
     import win32con
     import win32job
     env = {**os.environ, "CLASSIFIER_BACKEND": backend, "MODEL_INTEGRITY": "enforce", "GATEWAY_LITE": "0", "EMBEDDING_BACKEND": "none",
-           "GATEWAY_IP_RATE_LIMIT": "0", "GATEWAY_LOG_STDOUT": "0", "PYTHONUNBUFFERED": "1"}
+           "GATEWAY_IP_RATE_LIMIT": "0", "GATEWAY_LOG_STDOUT": "0", "PYTHONUNBUFFERED": "1",
+           # A 512 MB host has a core or two; this machine has 20, and OpenBLAS reserves a buffer per thread. A Windows commit cap counts that reservation, a Linux cgroup counts only touched pages.
+           "OPENBLAS_NUM_THREADS": "1", "OMP_NUM_THREADS": "1", "MKL_NUM_THREADS": "1"}
     job = make_job(cap_mb)
-    proc = subprocess.Popen([sys.executable, "-m", "uvicorn", "gateway.app:app", "--host", "127.0.0.1", "--port", str(PORT)], cwd=REPO_ROOT, env=env,  # nosec B603 - fixed argv, no shell
+    proc = subprocess.Popen([server_python, "-m", "uvicorn", "gateway.app:app", "--host", "127.0.0.1", "--port", str(PORT)], cwd=REPO_ROOT, env=env,  # nosec B603 - fixed argv, no shell
                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     win32job.AssignProcessToJobObject(job, win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, False, proc.pid))
-    ps = psutil.Process(proc.pid)
+    launcher = psutil.Process(proc.pid)                 # a venv's python.exe is a stub that starts the real interpreter as a child: measure the biggest process in the tree
+    ps = launcher
     result = {"backend": backend, "cap_mb": cap_mb, "started": False, "survived": False}
     try:
         t0 = time.time()
@@ -94,20 +107,38 @@ def run_one(backend: str, cap_mb: int, texts) -> dict:
             return result
         result["started"] = True
         result["startup_s"] = round(time.time() - t0, 1)
-        mi = ps.memory_info()
+        try:
+            ps = max([launcher, *launcher.children(recursive=True)], key=lambda p: p.memory_info().rss)
+            mi = ps.memory_info()
+        except psutil.NoSuchProcess:
+            result["exit"] = f"server process died right after start-up (exit code {proc.poll()})"
+            result["stderr_tail"] = proc.stderr.read().decode("utf-8", "replace")[-600:]
+            return result
         result["idle"] = {"working_set_mb": round(mi.rss / 2**20, 1), "commit_mb": round(mi.private / 2**20, 1)}
+        STOP.clear()
+        FAILURES.clear()
         t1 = time.time()
         with ThreadPoolExecutor(CLIENTS) as pool:
             outcomes = list(pool.map(lambda a: post(*a), enumerate(texts)))
         elapsed = time.time() - t1
-        mi = ps.memory_info()
         result["requests"] = {"n": len(outcomes), "ok_200": sum(s == 200 for s, _ in outcomes), "blocked": sum(a is False for _, a in outcomes),
-                              "errors": sorted({str(s) for s, _ in outcomes if s != 200}), "seconds": round(elapsed, 1), "req_per_s": round(len(outcomes) / elapsed, 1)}
+                              "errors": sorted({str(s) for s, _ in outcomes if s != 200}), "aborted_early": STOP.is_set(), "seconds": round(elapsed, 1), "req_per_s": round(len(outcomes) / elapsed, 1)}
+        try:
+            mi = ps.memory_info()
+        except psutil.NoSuchProcess:                                        # the cap killed the server mid-run: that is the result, not a crash of this script
+            result["exit"] = f"server process died during the traffic run (exit code {proc.poll()})"
+            result["stderr_tail"] = proc.stderr.read().decode("utf-8", "replace")[-600:]
+            return result
         result["peak"] = {"working_set_mb": round(mi.peak_wset / 2**20, 1), "commit_mb": round(mi.peak_pagefile / 2**20, 1)}
         result["after"] = {"working_set_mb": round(mi.rss / 2**20, 1), "commit_mb": round(mi.private / 2**20, 1)}
         result["survived"] = proc.poll() is None and result["requests"]["ok_200"] == len(outcomes)
         return result
     finally:
+        try:
+            for child in launcher.children(recursive=True):
+                child.kill()
+        except psutil.Error:
+            pass
         proc.kill()
         proc.wait(timeout=15)
 
@@ -117,20 +148,21 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--caps", nargs="+", type=int, default=[512, 384, 320, 256])
     ap.add_argument("--backends", nargs="+", default=["numpy", "student", "both"])
+    ap.add_argument("--server-python", default=sys.executable, help="interpreter that runs the gateway under the cap (e.g. .venv-ci312/Scripts/python.exe, the locked serving set); this script itself needs psutil and pywin32")
     args = ap.parse_args()
     texts = traffic()
-    out = {"method": __doc__.strip().split("\n\n")[0], "n_requests": N_REQUESTS, "clients": CLIENTS, "runs": []}
+    out = {"method": __doc__.strip().split("\n\n")[0], "n_requests": N_REQUESTS, "clients": CLIENTS, "server_python": args.server_python, "runs": []}
     for backend in args.backends:
         for cap in args.caps:
-            r = run_one(backend, cap, texts)
+            r = run_one(backend, cap, texts, args.server_python)
             out["runs"].append(r)
             line = f"{backend:<8} cap {cap:>4} MB: " + ("survived" if r["survived"] else f"FAILED ({r.get('exit') or r.get('requests', {}).get('errors')})")
             if "peak" in r:
                 line += f" | peak commit {r['peak']['commit_mb']} MB, peak working set {r['peak']['working_set_mb']} MB | {r['requests']['req_per_s']} req/s"
             print(line, flush=True)
+            REPORT.write_text(json.dumps(out, indent=2), encoding="utf-8")        # after every run: a hung run must not lose the ones before it
             if not r["survived"]:
                 break                                                       # a lower cap cannot do better for this backend
-    REPORT.write_text(json.dumps(out, indent=2), encoding="utf-8")
     print(f"\nWrote {REPORT.relative_to(REPO_ROOT)}")
 
 

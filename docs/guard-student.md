@@ -1,9 +1,10 @@
 # Distilled ONNX prompt-injection guard
 
-The student guard is an **experimental, opt-in** classifier backend. It is not
-the default gateway detector and it does not replace the rules, response
-checks, or action firewall. Enable it only after measuring it on the traffic
-and latency budget relevant to your deployment.
+The student guard is an **opt-in** classifier backend. It is not the default
+gateway detector and it does not replace the rules, response checks, or action
+firewall. Enable it after measuring it on the traffic and latency budget of your
+own deployment; this page says what was measured here and, as importantly, what
+was not.
 
 ## Run it
 
@@ -18,86 +19,220 @@ CLASSIFIER_BACKEND=student uvicorn gateway.app:app --port 8000
 In PowerShell, set `$env:CLASSIFIER_BACKEND = "student"` before running
 `uvicorn gateway.app:app --port 8000`.
 
-The checked-in model, tokenizer and metadata live under
-[`models/guard_student/`](../models/guard_student/); their hashes are covered by
-[`models/MANIFEST.sha256`](../models/MANIFEST.sha256). The app's default
-backend remains unchanged. The model can also be selected as part of the
-`both` ensemble; that runs both the existing NumPy classifier and the student.
+`CLASSIFIER_BACKEND` is `numpy` (default), `student`, or `both` (the NumPy
+classifier first, then the student, block-on-any). `STUDENT_THREADS` sets the
+ONNX Runtime thread count (default 1). The checked-in model, tokenizer and
+metadata live under [`models/guard_student/`](../models/guard_student/); their
+hashes are covered by [`models/MANIFEST.sha256`](../models/MANIFEST.sha256) and
+checked before the ONNX file is parsed. CI installs the hash-locked
+[`requirements-student.lock`](../requirements-student.lock) so the student's
+tests run there; the deployed free-tier image does not include ONNX Runtime and
+keeps the default backend.
 
-The runtime uses ONNX Runtime plus a small pure-Python WordPiece implementation
-and loads the packaged Hugging Face `tokenizer.json`. The JSON loader rejects
-unsupported tokenizer configurations instead of silently approximating them.
-It expects a BERT uncased normalizer, BERT pre-tokenizer, and WordPiece model.
-As with the existing implementation, literal text resembling special tokens
-is tokenized as ordinary text rather than injected as model structure.
+The runtime is ONNX Runtime plus a pure-Python WordPiece tokenizer
+([`gateway/detectors/wordpiece.py`](../gateway/detectors/wordpiece.py)): no
+`tokenizers`, `transformers`, `huggingface-hub` or torch. It loads the packaged
+Hugging Face `tokenizer.json` and refuses any configuration other than a BERT
+uncased normalizer, BERT pre-tokenizer and WordPiece model. Literal text that
+looks like a special token (`[SEP]`) is tokenized as ordinary text, never as
+model structure.
 
-## Model and quantization
+**The tokenizer is checked against the Hugging Face one, not assumed to match.**
+`python scripts/wordpiece_fuzz.py <tokenizer.json>` compares every Unicode code
+point, in three contexts each, against the Rust tokenizer: 0 differences under
+Python 3.12 / Unicode 15.0. (A Python with older Unicode tables produces
+spurious differences; the script prints the Python and Unicode versions it ran
+under.) A 473-case
+golden file generated from the Rust tokenizer pins this in the test suite.
 
-The student is `sentence-transformers/all-MiniLM-L6-v2`, trained with hard
-teacher knowledge distillation from
-`protectai/deberta-v3-base-prompt-injection-v2`. The recorded run used 8,178
-labeled rows, 3,467 transfer rows, four epochs, batch size 32, seed 0, and a
-256-token input limit. Its validation operating point was selected before
-held-out evaluation at no more than 1% validation false positives.
+## How it was trained
 
-The shipped variant is `int8-matmul-gather-perchannel`. The recorded model-only
-comparison reports validation AUC 0.9901 for int8 versus 0.9898 for fp32,
-99.67% decision agreement at the fp32 threshold, isolated-process peak RSS of
-96.8 MB, and p50/p95 inference latency of 5/26 ms. These are **model-only**
-measurements, not full-service or container measurements. See
-[`reports/p3_guard_student_onnx.json`](../reports/p3_guard_student_onnx.json)
-and the run metadata in [`models/guard_student/meta.json`](../models/guard_student/meta.json).
+- **Student:** `sentence-transformers/all-MiniLM-L6-v2` (22M parameters).
+  **Teacher:** `protectai/deberta-v3-base-prompt-injection-v2` (about 700 MB).
+- **Labelled rows:** 8,178 prompts from the project's public training sources,
+  with every row that also appears in any held-out set removed first.
+- **Transfer set:** 3,467 unlabelled benign texts, labelled **only** by the
+  teacher's soft labels. Teacher knowledge on text the labelled data never
+  covered is the point: it is what carries over to sources the student did not
+  train on.
+- **Loss (`hardkd_tkd`, alpha 0.3):** on labelled rows, 0.3 x cross-entropy plus
+  0.7 x match to the teacher's temperature-2 distribution; on transfer rows, the
+  teacher match alone. Four epochs, batch 32, learning rate 5e-5, three seeds.
+
+### Why this recipe: leave-one-source-out
+
+Choosing a recipe on the held-out table you then report is how a number gets
+flattered, so the recipe was chosen on **development data**: leave-one-source-out
+(LOSO). For each of the four training sources (deepset, safeguard, jackhhao,
+gandalf) the student is trained without that source and tested on that source's
+test split, and the selection rule, fixed in advance, was the **best mean LOSO
+AUC**. Two seeds per variant; mean over the sources:
+
+| Variant | Mean LOSO AUC | Benign FPR at 0.5 (unseen source) | Attack detection at 0.5 (unseen source) |
+|---|---:|---:|---:|
+| `hard` (labels only, no teacher) | 0.838 | 10.8% | 62.9% |
+| `hard_tkd` | 0.838 | 8.2% | 58.3% |
+| `hardkd` (alpha 0.5) | 0.878 | 1.4% | 59.0% |
+| `hardkd_tkd` (alpha 0.5) | 0.907 | 1.1% | 57.6% |
+| **`hardkd_tkd`, alpha 0.3 (shipped)** | **0.913** | **0.4%** | **58.2%** |
+
+[`reports/p3_guard_student_loso.json`](../reports/p3_guard_student_loso.json)
+has every variant and fold. Read it for what it says: distillation roughly
+**halves the false-alarm rate on unseen sources and raises ranking quality**
+(AUC +0.075 over labels-only), but on an unseen source it does **not** detect
+more at 0.5. It detects slightly fewer (58% vs 63%) while raising almost no
+false alarms. It is a more cautious detector, not a more sensitive one.
+
+**Order of evidence (disclosure).** The operating point, probability 0.5, was
+chosen from these LOSO folds, but I had already seen the held-out table for an
+earlier interim model when I chose it. The stricter alternative (the threshold
+that gives at most 1% false positives on in-distribution validation rows,
+margin 7.06) is recorded in `meta.json` beside the shipped one and not used: on
+unseen sources 0.5 already gives about 1% false positives, and the stricter
+threshold costs about nine points of detection.
+
+## Model, quantization and footprint
+
+The shipped file is `int8-matmul-gather-perchannel` (dynamic int8), the smallest
+variant whose validation AUC is within 0.003 of fp32 and whose decisions agree
+on at least 99% of validation rows. Parity gates in the export script: ONNX fp32
+against the torch model, maximum margin difference 0.0000; the tokenizer
+against Hugging Face on 16,755 project texts.
+
+| | fp32 | shipped int8 |
+|---|---:|---:|
+| File size | 86.8 MB | 22.1 MB |
+| Validation ROC-AUC | 0.9865 | 0.9863 |
+| Decision agreement with fp32 at its threshold | n/a | 99.6% |
+| Process RSS (1 thread, peak, model-only process) | n/a | 92 MB |
+| p50 / p95 latency, 1 thread, one request at a time | n/a | 4.7 / 26 ms |
+| p50 / p95 latency, 4 threads | n/a | 2.7 / 10 ms |
+
+These are **model-only** measurements in an isolated process (see
+[`reports/p3_guard_student_onnx.json`](../reports/p3_guard_student_onnx.json)).
+The gateway-level latency and the memory-cap result are below.
 
 ## Gateway evaluation
 
-The gateway evaluation runs each detector through the gateway's pre-flight
-path on the held-out sets listed in
+Each configuration runs through the gateway's real pre-flight path (PII
+redaction, normalisation, rules with cipher readings, then the classifier layer,
+block-on-any) on the held-out sets in
 [`reports/p3_guard_student_gateway.json`](../reports/p3_guard_student_gateway.json).
-Detection and false-positive rates are macro-averaged over the sets with
-attacks and benign examples respectively; this gives each set equal weight,
-not each row. It is not a single pooled accuracy score. Per-set counts and
-Wilson 95% intervals are in the report. Several source-provided test splits
-are in-distribution for the shipped classifier and the student, so the macro
-results should not be read as performance on wholly independent deployments.
+Detection and false-positive rates are **macro-averaged** over the sets that have
+attacks and benign examples respectively, so every set weighs the same, not every
+row. Per-set counts and Wilson 95% intervals are in the report; with sets of 17
+to 244 rows, **differences of a few points between configurations are inside the
+intervals**.
 
-Recorded results:
-
-| Gateway configuration | Macro attack detection | Macro benign FPR | p50 ensemble latency |
+| Gateway configuration | Macro attack detection | Macro benign FPR | p50 detection latency |
 |---|---:|---:|---:|
-| Shipped rules + NumPy classifier | 79.1% | 6.5% | 1.801 ms |
-| Rules + student at metadata-selected threshold | 71.5% | 2.2% | 29.813 ms |
-| Rules + student at probability 0.5 | 79.8% | 2.9% | 29.433 ms |
-| Rules + NumPy + student | 81.6% | 6.6% | 14.766 ms |
+| Rules only | 16.2% | 0.7% | 0.34 ms |
+| Shipped default: rules + NumPy classifier | 79.1% | 6.5% | 0.41 ms |
+| **Rules + student at 0.5 (the shipped operating point)** | **75.6%** | **4.1%** | 4.2 ms |
+| Rules + student at the stricter validation threshold | 59.0% | 2.1% | 4.4 ms |
+| Rules + NumPy + student (`both`) | 83.7% | 7.4% | 3.3 ms |
+| Rules OR ProtectAI teacher (700 MB, cached scores) | 79.3% | 4.4% | n/a |
 
-The 0.5 result is an alternate operating point, **not** the validation-selected
-threshold. The student does not dominate the default: at the metadata-selected
-threshold it detects fewer attacks, and it adds latency. The combined
-configuration increases detection modestly while also increasing false
-positives. Treat these as directional evidence from this project's fixed
-evaluation harness, not a claim of general superiority. The older comparison
-in the README uses a different baseline/evaluation path; consult
-[`scripts/guard_student_ensemble.py`](../scripts/guard_student_ensemble.py)
-and the report when comparing numbers.
+Latency is the median over 300 single requests, one at a time, one thread, with
+no other job running; it is the whole detection ensemble, not the model alone,
+and it is not comparable across machines. (An earlier version of this page
+reported 29.8 ms: that was taken while a training job shared the CPU.)
+
+What the table says, and does not:
+
+- **The student does not beat the default on detection.** Alone it finds 3.5
+  points fewer attacks (75.6% vs 79.1%) with 2.4 points fewer false alarms
+  (4.1% vs 6.5%). It is a different point on the same trade-off, not a
+  dominating one.
+- **Next to the 700 MB teacher** it is close: about the same macro false-alarm
+  rate (4.1% vs 4.4%) and 3.7 points lower detection (75.6% vs 79.3%), at 22 MB.
+  The rates are not matched, so this is not a matched-FPR comparison.
+- **On attacks it never trained on, the teacher is clearly ahead.** On the
+  project's own corpus (78 attacks written for this project and held out of
+  every training set) the student detects 74.4%, ten points more than the NumPy
+  classifier (64.1%) and eleven and a half points fewer than the teacher
+  (85.9%). That corpus was written by the same author as the rules, so the rules'
+  own 35.9% on it is flattered, not the classifiers'.
+- **`both` has the best detection (83.7%)** because the two classifiers miss
+  different things, at the cost of the NumPy classifier's false alarms
+  (7.4% macro).
+- **Where each set comes from.** The deepset, safeguard, jackhhao and gandalf
+  test splits are in-distribution for the NumPy classifier and the student (their
+  training splits were used); `own_corpus`, `jbb_benign`, `jbllms_clean` and the
+  short, in-domain, OASST and persona benign sets were never trained on. I did not
+  check the teacher's training data for overlap with these public sets
+  (jackhhao and jailbreak_llms in particular), so its numbers on them may be
+  flattered.
+- **`deepset_test`** is the student's weakest set (26.7% detection against
+  48.3% for the NumPy classifier and 36.7% for the teacher). It has only 60
+  attacks (a wide interval) and is partly non-English; I did not investigate why
+  the student is weaker there.
+- **Long prompts are cut.** The student reads the first 256 tokens only.
+  `jbllms_clean`, long jailbreak prompts, is a set where it trails the NumPy
+  classifier (82.0% vs 87.7%), which is consistent with that limit; I have not
+  isolated it.
+
+Reproduce with:
+
+```bash
+python -X utf8 -m scripts.guard_student_ensemble
+```
+
+## Does it fit in 512 MB?
+
+A real `docker run -m 512m` has not been possible (no Docker daemon on the
+development machine), so this is a **substitute with different accounting**:
+[`scripts/measure_memory_cap.py`](../scripts/measure_memory_cap.py) starts the
+real app (`uvicorn gateway.app:app`, full mode, the locked torch-free serving set
+on Python 3.12, `MODEL_INTEGRITY=enforce`) inside a Windows job object that caps
+its **committed** memory, and drives it with 400 requests (held-out benign and
+attack texts, five 19,980-character prompts just under the request limit, eight
+concurrent clients). The cap is then lowered until the server fails, which is the
+control that shows the cap actually bites. Results
+([`reports/p3_guard_student_memory.json`](../reports/p3_guard_student_memory.json)):
+
+| `CLASSIFIER_BACKEND` | Peak committed | Peak working set | Survived every cap down to | Failed at |
+|---|---:|---:|---:|---:|
+| `numpy` (default) | 63 MB | 76 MB | 64 MB (marginal) | none tried below |
+| `student` | 138 MB | 162 MB | 144 MB | 128 MB |
+| `both` | 140 MB | 155 MB | 144 MB | 128 MB |
+
+With the student enabled the whole gateway needs about 140 MB committed and
+160 MB resident, roughly a third of 512 MB. The numpy figure sits right at its
+cap: it passed at 64 MB in one sweep and failed there in an earlier one, so read
+it as "about 63 MB", not as a margin.
+
+What this does **not** show:
+
+- A Linux cgroup counts resident memory plus page cache and kills the process; a
+  Windows commit limit fails allocations. Commit is usually at least the working
+  set, so passing is a reasonable sign, not proof. `docker run -m 512m` on the
+  Render image remains the real test.
+- BLAS is pinned to one thread (`OPENBLAS_NUM_THREADS=1`) to model a small host.
+  This machine has 20 cores, and unpinned OpenBLAS reserves a buffer per thread,
+  which a Windows commit cap counts: the unpinned default interpreter showed
+  about 660 MB committed right after importing the app, for 64 MB resident.
+- 400 requests is a short run, and requests per second on this machine say
+  nothing about a small host.
+
 
 ## Not yet established
 
-- No full-service run in a **512 MB-capped container** has been completed.
-  The isolated model RSS result does not establish that the complete gateway
-  fits that limit.
-- An optional AgentDojo 0.1.35 pipeline adapter and runner are now available
-  (`gateway/agentdojo.py`, `scripts/run_agentdojo_gateway.py`), but no AgentDojo
-  results are claimed until it has been run with a configured model provider.
-  It screens tool outputs with the gateway's detector and can optionally run
-  the action firewall when supplied an explicit policy and tool-name mapping.
-- The gateway evaluation is not a substitute for an independently authored
-  external test set or a matched-false-positive comparison against every
-  current commercial/open detector.
+- **A real `docker run -m 512m` of the deployed image.** There is no Docker
+  daemon on the development machine; the Windows job-object test above is a
+  substitute with different accounting.
+- **A matched-false-positive comparison** against Llama Prompt Guard 2 and other
+  current detectors on an independently authored set. The comparison above is
+  against the teacher only, at one operating point each.
+- **AgentDojo and the adaptive red-team numbers with the student enabled.** The
+  AgentDojo runner below is built, but no AgentDojo result is claimed: running it
+  needs a model provider key, which the account owner sets. The
+  default backend stays `numpy` for that reason as well: switching it would
+  change what the published red-team numbers measured.
+- **The student has not been through the adaptive attacker.** A stronger-than-
+  public attacker who knows the model is ONNX MiniLM can optimise against it; the
+  rules and the action firewall are the layers that do not depend on it.
 
-Reproduce the gateway comparison with:
-
-```bash
-python -m scripts.guard_student_ensemble
-```
 
 ## AgentDojo integration
 
