@@ -54,6 +54,8 @@ app.add_middleware(
 )
 
 app.include_router(health_router)
+from src.v1.router import install as _install_v1  # noqa: E402
+_install_v1(app)
 app.include_router(router, dependencies=[Depends(require_api_key)])
 
 

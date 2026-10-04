@@ -60,10 +60,12 @@ def _get_client(client: httpx.Client | None) -> tuple[httpx.Client, bool]:
     return httpx.Client(timeout=REQUEST_TIMEOUT_SECONDS), True
 
 
-def get(path: str, params: dict | None = None, client: httpx.Client | None = None) -> dict | list:
+def get(path: str, params: dict | None = None, client: httpx.Client | None = None,
+        extra_headers: dict | None = None) -> dict | list:
+    """extra_headers: e.g. {"traceparent": ...} so one trace id spans the console, gateway, this service and P1."""
     http_client, should_close = _get_client(client)
     try:
-        response = http_client.get(f"{_base_url()}{path}", params=params, headers=_auth_headers())
+        response = http_client.get(f"{_base_url()}{path}", params=params, headers={**_auth_headers(), **(extra_headers or {})})
         response.raise_for_status()
         try:
             return response.json()
@@ -114,6 +116,32 @@ def get_text(path: str, client: httpx.Client | None = None) -> str:
         raise OpsPerformanceUnavailable(
             f"Could not reach operations-performance API at {_base_url()}{path}: {exc}"
         ) from exc
+    finally:
+        if should_close:
+            http_client.close()
+
+
+def send(method: str, path: str, json_body: dict | None = None, client: httpx.Client | None = None,
+         extra_headers: dict | None = None) -> dict:
+    """POST/PATCH to operations-performance. Used ONLY by the intervention ledger (src/v1/interventions.py) to record an
+    approved action and its outcome; every analytics tool stays read-only (get())."""
+    if method not in ("POST", "PATCH"):
+        raise ValueError("send() supports POST and PATCH only")
+    http_client, should_close = _get_client(client)
+    try:
+        response = http_client.request(method, f"{_base_url()}{path}", json=json_body,
+                                       headers={**_auth_headers(), **(extra_headers or {})})
+        response.raise_for_status()
+        return response.json()
+    except httpx.HTTPStatusError as exc:
+        detail = ""
+        try:
+            detail = str(exc.response.json().get("detail", ""))[:200]
+        except Exception:
+            pass
+        raise OpsPerformanceUnavailable(f"operations-performance returned {exc.response.status_code} for {method} {path}: {detail}") from exc
+    except (httpx.RequestError, json.JSONDecodeError) as exc:
+        raise OpsPerformanceUnavailable(f"Could not complete {method} {path}: {exc}") from exc
     finally:
         if should_close:
             http_client.close()

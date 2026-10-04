@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Round 10: `/v1` copilot API** (`src/v1/`, `docs/v1-copilot-api.md`): context-aware `/v1/ask` with claim-level
+  verification against numbered evidence, persisted investigations (Markdown/PDF export), executive briefing with fact-id
+  checks, schema-validated natural-language filters, an intervention ledger routed through P3's action firewall with
+  separation of duties and write-back to P1, per-request traces, and a persisted spend guard (429 on exhaustion).
+  The new-surface evals (`scripts/eval_v1_ask.py`, `scripts/eval_v1_nl_filter.py`) are written; the model-backed runs are pending a key.
+
 - Added Gemini as an injectable LLM-gate evaluation provider and tightened parsing so
   truncated or malformed labels are retried/fail closed, not counted as successful blocks.
 - Excluded API/parse failures from judge classification metrics and report them separately.

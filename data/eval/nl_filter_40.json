@@ -1,0 +1,271 @@
+[
+ {
+  "q": "Show me orders above 50k",
+  "target": "queue",
+  "filter": {
+   "min_value": 50000
+  }
+ },
+ {
+  "q": "cases worth more than 10,000 euros",
+  "target": "queue",
+  "filter": {
+   "min_value": 10000
+  }
+ },
+ {
+  "q": "high value orders over \u20ac250k",
+  "target": "queue",
+  "filter": {
+   "min_value": 250000
+  }
+ },
+ {
+  "q": "anything over 1.5 million",
+  "target": "queue",
+  "filter": {
+   "min_value": 1500000
+  }
+ },
+ {
+  "q": "orders for supplier vendorID_0108",
+  "target": "queue",
+  "filter": {
+   "supplier": "vendorID_0108"
+  }
+ },
+ {
+  "q": "what is open for vendorID_0472 above 5000",
+  "target": "queue",
+  "filter": {
+   "supplier": "vendorID_0472",
+   "min_value": 5000
+  }
+ },
+ {
+  "q": "cases stuck in invoicing",
+  "target": "queue",
+  "filter": {
+   "stage": "invoicing"
+  }
+ },
+ {
+  "q": "orders waiting at goods receipt",
+  "target": "queue",
+  "filter": {
+   "stage": "receipt"
+  }
+ },
+ {
+  "q": "open cases in approval",
+  "target": "queue",
+  "filter": {
+   "stage": "approval"
+  }
+ },
+ {
+  "q": "cases with a payment block",
+  "target": "queue",
+  "filter": {
+   "stage": "block"
+  }
+ },
+ {
+  "q": "top 10 cases",
+  "target": "queue",
+  "filter": {
+   "limit": 10
+  }
+ },
+ {
+  "q": "show the 25 worst orders",
+  "target": "queue",
+  "filter": {
+   "limit": 25
+  }
+ },
+ {
+  "q": "top 5 invoicing cases above 20k",
+  "target": "queue",
+  "filter": {
+   "stage": "invoicing",
+   "min_value": 20000,
+   "limit": 5
+  }
+ },
+ {
+  "q": "show me the first 50 cases at goods receipt",
+  "target": "queue",
+  "filter": {
+   "stage": "receipt",
+   "limit": 50
+  }
+ },
+ {
+  "q": "orders over 100000 in the approval stage",
+  "target": "queue",
+  "filter": {
+   "stage": "approval",
+   "min_value": 100000
+  }
+ },
+ {
+  "q": "what's at risk for supplier vendorID_0364",
+  "target": "queue",
+  "filter": {
+   "supplier": "vendorID_0364"
+  }
+ },
+ {
+  "q": "orders in order creation stage",
+  "target": "queue",
+  "filter": {
+   "stage": "order"
+  }
+ },
+ {
+  "q": "cases being changed or renegotiated",
+  "target": "queue",
+  "filter": {
+   "stage": "changes"
+  }
+ },
+ {
+  "q": "clearing and payment stage orders",
+  "target": "queue",
+  "filter": {
+   "stage": "payment"
+  }
+ },
+ {
+  "q": "orders worth at least 75k",
+  "target": "queue",
+  "filter": {
+   "min_value": 75000
+  }
+ },
+ {
+  "q": "rank suppliers by breach rate",
+  "target": "suppliers",
+  "filter": {
+   "sort": "breach_rate"
+  }
+ },
+ {
+  "q": "suppliers with the worst breach rates",
+  "target": "suppliers",
+  "filter": {
+   "sort": "breach_rate"
+  }
+ },
+ {
+  "q": "which suppliers have the most expected loss",
+  "target": "suppliers",
+  "filter": {
+   "sort": "expected_loss"
+  }
+ },
+ {
+  "q": "busiest suppliers by volume",
+  "target": "suppliers",
+  "filter": {
+   "sort": "volume"
+  }
+ },
+ {
+  "q": "suppliers with at least 50 cases",
+  "target": "suppliers",
+  "filter": {
+   "min_n": 50
+  }
+ },
+ {
+  "q": "suppliers with more than 30 closed cases ranked by volume",
+  "target": "suppliers",
+  "filter": {
+   "min_n": 30,
+   "sort": "volume"
+  }
+ },
+ {
+  "q": "list suppliers",
+  "target": "suppliers",
+  "filter": {}
+ },
+ {
+  "q": "suppliers sorted by exposure with at least 10 cases",
+  "target": "suppliers",
+  "filter": {
+   "sort": "expected_loss",
+   "min_n": 10
+  }
+ },
+ {
+  "q": "how do suppliers rank statistically",
+  "target": "suppliers",
+  "filter": {
+   "sort": "ci_lower"
+  }
+ },
+ {
+  "q": "all open cases",
+  "target": "queue",
+  "filter": {}
+ },
+ {
+  "q": "orders above fifty thousand euros",
+  "target": "queue",
+  "filter": {
+   "min_value": 50000
+  }
+ },
+ {
+  "q": "the twenty biggest cases",
+  "target": "queue",
+  "filter": {
+   "limit": 20
+  }
+ },
+ {
+  "q": "cases over 2 million euros",
+  "target": "queue",
+  "filter": {
+   "min_value": 2000000
+  }
+ },
+ {
+  "q": "orders for vendorID_0001 stuck at receipt",
+  "target": "queue",
+  "filter": {
+   "supplier": "vendorID_0001",
+   "stage": "receipt"
+  }
+ },
+ {
+  "q": "show orders due next week",
+  "rejected": true
+ },
+ {
+  "q": "only cases assigned to Maria",
+  "rejected": true
+ },
+ {
+  "q": "orders from German suppliers",
+  "rejected": true
+ },
+ {
+  "q": "cases created in March",
+  "rejected": true
+ },
+ {
+  "q": "orders above 10k from suppliers in Europe",
+  "rejected": true
+ },
+ {
+  "q": "suppliers ranked by exposure",
+  "target": "suppliers",
+  "filter": {
+   "sort": "expected_loss"
+  }
+ }
+]

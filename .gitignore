@@ -12,3 +12,4 @@ logs/*.jsonl
 # Model weights — store on HF Hub, not in git
 models/
 chroma_db/
+data/*.db
