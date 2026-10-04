@@ -187,19 +187,63 @@ def _call_judge(question: str, answer: str, category: str, expected_tools: list[
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--n", type=int, default=101, metavar="N")
-    ap.add_argument("--provider", choices=["groq", "anthropic"], default="groq")
+    ap.add_argument("--n", type=int, default=None, metavar="N",
+                    help="Override number of questions (default: all 101 with --full, 20 with --sample)")
+    grp = ap.add_mutually_exclusive_group()
+    grp.add_argument("--sample", type=int, metavar="N", default=None,
+                     help="Smoke test: run N questions (default 20) without --full")
+    grp.add_argument("--full", action="store_true",
+                     help="Full 101-question run (required for real eval)")
+    ap.add_argument("--provider", choices=["groq", "anthropic"], default="anthropic",
+                    help="Agent provider (default: anthropic/sonnet-5.5 for v2 eval)")
+    ap.add_argument("--model", default=None,
+                    help="Override model ID (default: claude-sonnet-5-5 for anthropic, "
+                         "openai/gpt-oss-120b for groq)")
+    ap.add_argument("--max-cost-usd", type=float, default=10.0,
+                    help="Stop if cumulative Anthropic API spend exceeds this (default 10)")
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--judge", action="store_true",
                     help="Run LLM-as-judge scoring on completed rows that lack a score.")
     ap.add_argument("--judge-provider", choices=["groq", "anthropic"], default="anthropic",
-                    help="Provider for LLM judge (default: anthropic/haiku for cost).")
-    ap.add_argument("--inter-question-delay", type=float, default=8.0)
+                    help="Provider for LLM judge (default: anthropic/haiku-4.5 for cost).")
+    ap.add_argument("--inter-question-delay", type=float, default=2.0,
+                    help="Seconds between questions (default 2.0 for anthropic; was 8.0 for groq)")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="Estimate cost without running the agent")
     args = ap.parse_args()
+
+    # Determine number of questions
+    if args.n:
+        n_questions = args.n
+    elif args.full:
+        n_questions = 101
+    elif args.sample is not None:
+        n_questions = args.sample
+    else:
+        n_questions = 20   # safe default: smoke test
+        if not args.judge:
+            print("Running 20 questions (smoke test). Use --full for 101 or --sample N for N questions.")
+
+    args._n_questions = n_questions
 
     sys.stdout.reconfigure(encoding="utf-8")
 
-    questions = _load_questions(Q_FILE)[: args.n]
+    questions = _load_questions(Q_FILE)[: args._n_questions]
+
+    # Cost estimate for --dry-run
+    if args.dry_run:
+        from src.evaluation.claude_client import ClaudeClient
+        model = args.model or ("claude-sonnet-5-5" if args.provider == "anthropic" else "openai/gpt-oss-120b")
+        if args.provider == "anthropic":
+            est = ClaudeClient.estimate_cost(model, 3000, 600, len(questions))
+            judge_est = ClaudeClient.estimate_cost("claude-haiku-4-5", 800, 80, len(questions))
+            print(f"Dry run estimate for {len(questions)} questions:")
+            print(f"  Agent ({model}): ${est:.2f}")
+            print(f"  Haiku judge:     ${judge_est:.2f}")
+            print(f"  Total:           ${est + judge_est:.2f}")
+        else:
+            print(f"Dry run: {len(questions)} questions via Groq (cost ~$0 on free tier)")
+        return
 
     rows: list[dict] = []
     completed: set[str] = set()
@@ -221,6 +265,10 @@ def main():
     from src.agent.agent import run_agent, load_agent_config
 
     base_config = load_agent_config()
+    if args.model:
+        base_config["model"] = args.model
+    elif args.provider == "anthropic" and "model" not in base_config:
+        base_config["model"] = "claude-sonnet-5-5"
     base_config["provider"] = args.provider
 
     # Track conversation history per sequence
