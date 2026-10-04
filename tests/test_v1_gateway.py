@@ -372,3 +372,8 @@ def test_lab_scenario_timelines_are_stable():
     b = client.post("/v1/lab/run", json={"scenario_id": "AG-FIN18", "defenses": "on"}, headers=h).json()
     strip = lambda r: [(s["step"], s["decision"], s.get("stage")) for s in r["timeline"]]
     assert strip(a) == strip(b) and a["outcome"] == b["outcome"]
+
+
+def test_services_reports_assistant_reachability(env):
+    out = client.get("/v1/services").json()
+    assert out["gateway"]["status"] == "ok" and out["assistant"]["configured"] is True

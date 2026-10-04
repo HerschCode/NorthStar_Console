@@ -2608,6 +2608,26 @@
     ]
    }
   },
+  "/v1/services": {
+   "get": {
+    "description": "Reachability of what this gateway fronts, for the console's health page.",
+    "operationId": "services_v1_services_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Services",
+    "tags": [
+     "v1"
+    ]
+   }
+  },
   "/v1/traces/{trace_id}": {
    "get": {
     "description": "Gateway decisions for this trace plus the assistant's own spans (P1 calls, retrieval, model, claim gate).",

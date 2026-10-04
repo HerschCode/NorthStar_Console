@@ -394,6 +394,22 @@ def config():
             "demo_mode": ident.demo_mode(), "assistant_configured": deps.p2_client().configured}
 
 
+@router.get("/services")
+def services():
+    """Reachability of what this gateway fronts, for the console's health page."""
+    out = {"gateway": {"status": "ok", "demo_mode": ident.demo_mode()}}
+    p2 = deps.p2_client()
+    if not p2.configured:
+        out["assistant"] = {"configured": False, "reachable": False, "detail": "P2_URL is not set"}
+    else:
+        try:
+            r = p2.http.get(p2.base + "/health", timeout=5)
+            out["assistant"] = {"configured": True, "reachable": r.status_code == 200, "detail": f"HTTP {r.status_code}"}
+        except Exception as exc:
+            out["assistant"] = {"configured": True, "reachable": False, "detail": type(exc).__name__}
+    return out
+
+
 # ── attack lab ──
 _LAB_HITS: dict[str, list[float]] = {}
 
@@ -465,6 +481,11 @@ def metrics_endpoint() -> Response:
 
 def install(app, middleware) -> None:
     deps.middleware = middleware
+    origins = [o.strip() for o in os.environ.get("GATEWAY_CORS_ORIGINS", "").split(",") if o.strip()]
+    if origins:                                    # browsers call /v1 directly in production; in dev the console proxies instead
+        from fastapi.middleware.cors import CORSMiddleware
+        app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"],
+                           allow_headers=["Authorization", "Content-Type", "traceparent"], expose_headers=["X-Trace-ID"])
 
     @app.middleware("http")
     async def _trace_header(request: Request, call_next):
