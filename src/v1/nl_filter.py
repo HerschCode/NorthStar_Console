@@ -17,7 +17,7 @@ from src.v1.llm import LLM, LLMUnavailable
 STAGES = ["order", "approval", "changes", "receipt", "invoicing", "block", "payment"]
 SCHEMAS = {
     "queue": {"type": "object", "additionalProperties": False, "properties": {
-        "min_value": {"type": "number", "minimum": 0}, "supplier": {"type": "string", "pattern": r"^[\w.\-]{1,40}$"},
+        "min_value": {"type": "number", "minimum": 0}, "supplier": {"type": "string", "pattern": r"^vendorID_\d{1,6}$"},      # P1's supplier id shape: any other word is not a supplier
         "stage": {"enum": STAGES}, "limit": {"type": "integer", "minimum": 1, "maximum": 500}}},
     "suppliers": {"type": "object", "additionalProperties": False, "properties": {
         "sort": {"enum": ["ci_lower", "breach_rate", "expected_loss", "volume"]}, "min_n": {"type": "integer", "minimum": 1, "maximum": 1000}}},
@@ -134,6 +134,8 @@ def restate(target: str, flt: dict) -> str:
 
 def nl_filter(question: str, llm: LLM | None = None) -> dict:
     source, out = "rules", None
+    if UNSUPPORTED.search(question):                      # dates, owners, regions: refused before any model sees them, so a model cannot turn "German" into a supplier name
+        return {"rejected": True, "reason": "the request needs a filter the API does not support (dates, owners, regions)", "source": "rules"}
     if llm is not None:
         try:
             res = llm.complete(SYSTEM, question, max_tokens=300, label="nl-filter")

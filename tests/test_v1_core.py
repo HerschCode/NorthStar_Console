@@ -208,6 +208,22 @@ def test_briefing_template_and_model_validation_and_cache():
 
 
 # ── nl filter ──
+def test_a_request_the_api_cannot_serve_is_refused_before_a_model_sees_it():
+    never = FakeLLM(lambda s, u: json.dumps({"target": "queue", "filter": {"supplier": "German", "stage": "order"}}))
+    for q in ("orders from German suppliers", "open cases due next week", "cases assigned to Maria", "orders created in March"):
+        out = nl_filter(q, never)
+        assert out["rejected"] and out["source"] == "rules", q
+    assert never.calls == []                                   # the model was not even asked
+
+
+def test_a_model_cannot_invent_a_supplier_name():
+    assert validate("queue", {"supplier": "German"}) and validate("queue", {"supplier": "ACME Corp"}) and validate("queue", {"supplier": "vendorID_"})
+    assert not validate("queue", {"supplier": "vendorID_0108"})
+    invented = FakeLLM(lambda s, u: json.dumps({"target": "queue", "filter": {"supplier": "Contoso"}}))
+    out = nl_filter("everything for Contoso", invented)
+    assert out["rejected"] and "schema" in out["reason"]
+
+
 def test_nl_filter_validates_against_the_schema_and_rejects_the_rest():
     assert nl_filter("orders above 50k in invoicing")["filter"] == {"min_value": 50000.0, "stage": "invoicing"}
     assert nl_filter("show orders due next week")["rejected"]
