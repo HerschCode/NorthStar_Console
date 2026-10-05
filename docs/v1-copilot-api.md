@@ -17,8 +17,17 @@ identity is a read-only viewer. `traceparent` is accepted and propagated to P1 a
 ## Spend guard
 Every model call is checked **before** it is made against a per-request, per-day and per-month cap (defaults $0.05 / $2 /
 $20, env `P2_SPEND_PER_REQUEST_USD`, `_PER_DAY_USD`, `_PER_MONTH_USD`), persisted in SQLite; a call that would cross a cap
-returns HTTP 429. The provider is `P2_LLM_PROVIDER` (`anthropic` when `ANTHROPIC_API_KEY` is set, otherwise `none`); the
-static system prompt is marked for prompt caching. The key is read from the environment by the SDK and never logged.
+returns HTTP 429. The provider is `P2_LLM_PROVIDER` (`anthropic` when `ANTHROPIC_API_KEY` is set, otherwise `none`; `ollama` only when asked
+for); the static system prompt is marked for prompt caching. The key is read from the environment by the SDK and never logged.
+
+## Running without a key: a local model
+`P2_LLM_PROVIDER=ollama` uses a local [Ollama](https://ollama.com) (`OLLAMA_MODEL`, default `qwen2.5:7b-instruct`; `OLLAMA_BASE_URL`, default
+`http://localhost:11434`; `OLLAMA_NUM_CTX`, default 8192; `OLLAMA_TIMEOUT_S`, default 180). It is free, offline and **much weaker than Claude**; every
+result carries `model: "ollama:<name>"` and cost 0 (so the money caps never refuse it; each call is still recorded). It is never auto-detected, so a
+deployed instance does not probe localhost. Ollama truncates a prompt longer than its context window without saying so, so the provider sets the window and
+refuses a prompt that would not fit (the caller then returns the labelled template) instead of letting the model answer from part of the evidence. When the
+prompt asks for JSON the server is asked for valid JSON. If Ollama is not running or the model is not pulled, the answer is the template, with the reason in
+`notes`. Whether the whole platform works with it is checked by `scripts/local_chain_check.py` in the P3 repo.
 
 ## Evaluation of the new surfaces
 - `python -m scripts.eval_v1_ask --dry-run` estimates the cost of 130 questions (30 per page type: case, supplier, overview,
@@ -32,5 +41,6 @@ static system prompt is marked for prompt caching. The key is read from the envi
 
 ## Honest limits
 Claim verification checks figures and key terms against cited evidence; it cannot tell whether a sentence's *reasoning* is
-sound. Descriptive drivers come from P1, not model attributions. The ledger and traces are SQLite on the service's disk
+sound. In particular **a claim with no figure that cites real evidence passes the live-data check, whatever it says**: "supported" means "its numbers match what
+it cites", not "true". That matters more for a small local model than for Claude, so any local-model evaluation must be labelled as such. Descriptive drivers come from P1, not model attributions. The ledger and traces are SQLite on the service's disk
 (ephemeral on free hosting). Without a model the copilot is a template over the same evidence.

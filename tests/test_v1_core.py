@@ -154,8 +154,37 @@ def test_ask_context_prefetches_the_case_the_user_is_looking_at():
     assert out["actions_suggested"][0]["tool"] == "propose_intervention" and out["actions_suggested"][0]["intervention_type"] == "supplier_escalation"
 
 
+def test_ask_with_the_local_model_is_labelled_free_and_still_goes_through_the_claim_gate(tmp_path):
+    import httpx
+    from src.v1.llm import OllamaLLM
+
+    def handler(request):
+        user = json.loads(request.content)["messages"][1]["content"]
+        content = json.dumps({"answer": "544 are late; about 900 are at risk.",
+                              "claims": [{"text": "544 open cases are already late.", "evidence_ids": [_id_for(user, "kpis.already_late")]},
+                                         {"text": "About 900 cases are at risk.", "evidence_ids": [_id_for(user, "kpis.at_risk_open")]},
+                                         {"text": "Everything is fine.", "evidence_ids": []}]})
+        return httpx.Response(200, json={"message": {"content": content}, "prompt_eval_count": 900, "eval_count": 60})
+
+    llm = OllamaLLM(guard=SpendGuard(tmp_path / "s.db"), client=httpx.Client(transport=httpx.MockTransport(handler)))
+    out = _run("How many cases are late and at risk?", llm)
+    assert out["model"] == "ollama:qwen2.5:7b-instruct" and out["cost_usd"] == 0.0
+    assert [c["supported"] for c in out["claims"]] == [True, False, False]       # a weak local model gets no free pass: a wrong figure and an uncited claim are both caught
+
+
+def test_ask_falls_back_to_the_template_when_the_local_model_is_not_running(tmp_path):
+    import httpx
+    from src.v1.llm import OllamaLLM
+
+    def handler(request):
+        raise httpx.ConnectError("refused")
+
+    out = _run("How many cases are late?", OllamaLLM(guard=SpendGuard(tmp_path / "s.db"), client=httpx.Client(transport=httpx.MockTransport(handler))))
+    assert out["model"] == "template-fallback" and any("is Ollama running" in n for n in out["notes"]) and out["claims"] and all(c["supported"] for c in out["claims"])
+
+
 # ── briefing ──
-FACTS = {"as_of": "2018-04-16", "facts": [{"id": "late", "fact": "544 open cases are already past their realistic target."},
+FACTS ={"as_of": "2018-04-16", "facts": [{"id": "late", "fact": "544 open cases are already past their realistic target."},
                                            {"id": "open", "fact": "3089 cases are open at 2018-04-16."},
                                            {"id": "loss", "fact": "Simulated expected loss: EUR 1157673."}]}
 
