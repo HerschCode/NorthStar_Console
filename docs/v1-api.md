@@ -41,6 +41,17 @@ If the database is unreachable each endpoint serves `reports/v1_snapshot/<name>.
 `as_of` returns 503) with `snapshot: {live: false, reason}`. `traceparent` is accepted and its trace id is logged and
 echoed as `X-Trace-ID`.
 
+## Front door
+`GET /` serves the single-file Northstar shell (`src/api/app.html`, also kept at `/app`; the original dashboard stays at `/dashboard`). With
+`CONSOLE_URL` set to an http(s) address, `/` instead redirects (302) to the Northstar console, which is its own repository. Anything that is
+not an http(s) address is ignored, so a bad value cannot turn `/` into an arbitrary redirect.
+
+## Contract safety
+`openapi/p1.json` is what the console generates its typed client from. `python -m scripts.export_openapi` rebuilds it without running the
+snapshot; a test fails if the committed file differs from what the app publishes, and the `openapi-contract` CI job fails on a breaking
+change since the previous push (a removed route or response field, a newly required request field) unless the commit message says
+`openapi-break-ok`.
+
 ## Honest limits
 The early-warning model is a weak signal (see `/v1/models`); expected loss rests on an assumed cost share; interventions
 are simulated until real outcomes are recorded; AP controls are anomaly triage; the sample's start-date concentration
