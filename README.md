@@ -45,7 +45,8 @@ needs a database — the story accepts that in live mode and says so).
   snapshot state, replay clock, loading/empty/error states, command palette, **axe: no serious/critical violations on 15 pages**,
   **no horizontal scroll at 375 px**) plus the same story on the live stack.
 - Lighthouse on the production build (`npm run lighthouse`), Edge: **accessibility 100 and best-practices 100 on all five pages
-  tested; performance 73–90**, below the 90 bar on the overview (73) and AP controls (75) — the cost is ECharts' script evaluation
+  tested; performance 73–90**, so the 90 bar is met only on Process Mining (90) and missed on Action Center (89), AI Security (86),
+  AP controls (75) and the overview (73) — the cost is ECharts' script evaluation
   under Lighthouse's 4× CPU throttle. Charts are lazy-loaded and the graph series is its own chunk; layout shift is 0. Not hidden:
   `lighthouse-reports/summary.json`.
 - Every API number renders a provenance badge (measured / simulated / experimental / pending) with source and n in the tooltip.
