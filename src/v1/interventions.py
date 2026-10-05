@@ -68,9 +68,9 @@ class GatewayClient:
     def authorize(self, session_id: str, role: str, user_id: str, tool: str, args: dict, trace_header=None) -> dict:
         return self._post("/gateway/actions/authorize", {"session_id": session_id, "role": role, "user_id": user_id, "tool": tool, "args": args}, trace_header)
 
-    def decide(self, approval_id: str, approve: bool, approver_id: str, approver_role: str, note: str = "") -> dict:
+    def decide(self, approval_id: str, approve: bool, approver_id: str, approver_role: str, note: str = "", trace_header: str | None = None) -> dict:
         path = f"/gateway/actions/approvals/{approval_id}/{'approve' if approve else 'deny'}"
-        return self._post(path, {"approver_id": approver_id, "approver_role": approver_role, "note": note}, approver=True)
+        return self._post(path, {"approver_id": approver_id, "approver_role": approver_role, "note": note}, trace_header, approver=True)
 
 
 class Ledger:
@@ -145,7 +145,7 @@ class Ledger:
                 self._log(c, iid, "gateway_denied", "gateway", {"note": "unrecognised gateway decision; failing closed", **decision})
         return self.get(iid)
 
-    def decide(self, iid: int, approve: bool, identity: dict, gateway: GatewayClient, note: str = "") -> dict:
+    def decide(self, iid: int, approve: bool, identity: dict, gateway: GatewayClient, note: str = "", trace_header: str | None = None) -> dict:
         row = self.get(iid)
         if row is None:
             raise LedgerError("no such intervention", 404)
@@ -157,7 +157,7 @@ class Ledger:
             raise LedgerError("separation of duties: the proposer cannot decide their own intervention", 403)
         if not row["approval_id"]:
             raise LedgerError("no gateway approval id recorded; failing closed", 409)
-        res = gateway.decide(row["approval_id"], approve, identity["user"], identity["role"], note)
+        res = gateway.decide(row["approval_id"], approve, identity["user"], identity["role"], note, trace_header=trace_header)       # the gateway audits the decision under this trace
         with self._c() as c:
             self._log(c, iid, "approved" if approve else "rejected", identity["user"], {"note": note, "gateway": res})
         return self.get(iid)

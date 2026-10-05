@@ -215,13 +215,13 @@ class DecideRequest(BaseModel):
 
 @router.post("/interventions/{iid}/approve")
 def v1_approve(iid: int, body: DecideRequest, request: Request, who: dict = Depends(identity)):
-    row = _ledger_call(lambda: _ledger().decide(iid, True, who, deps.gw(), body.note))
+    row = _ledger_call(lambda: _ledger().decide(iid, True, who, deps.gw(), body.note, trace_header=request.headers.get("traceparent")))
     return _ledger_call(lambda: _ledger().execute(iid, trace_header=request.headers.get("traceparent"))) if row["status"] == "approved" else row
 
 
 @router.post("/interventions/{iid}/reject")
-def v1_reject(iid: int, body: DecideRequest, who: dict = Depends(identity)):
-    return _ledger_call(lambda: _ledger().decide(iid, False, who, deps.gw(), body.note))
+def v1_reject(iid: int, body: DecideRequest, request: Request, who: dict = Depends(identity)):
+    return _ledger_call(lambda: _ledger().decide(iid, False, who, deps.gw(), body.note, trace_header=request.headers.get("traceparent")))
 
 
 class OutcomeRequest(BaseModel):

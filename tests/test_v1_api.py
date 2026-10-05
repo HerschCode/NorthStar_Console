@@ -38,8 +38,9 @@ class FakeGateway(GatewayClient):
         return {"effect": self.effect, "tool": tool, "approval_id": "ap-1" if self.effect == "require_approval" else None,
                 "stage": "approval" if self.effect == "require_approval" else "policy", "reasons": ["test"]}
 
-    def decide(self, approval_id, approve, approver_id, approver_role, note=""):
+    def decide(self, approval_id, approve, approver_id, approver_role, note="", trace_header=None):
         self.calls.append(("decide", approval_id, approve, approver_id))
+        self.decide_traces = [*getattr(self, "decide_traces", []), trace_header]
         return {"status": "approved" if approve else "denied"}
 
 
@@ -146,6 +147,15 @@ def test_held_then_approved_by_another_manager_executes_in_p1(wired, monkeypatch
     assert done["status"] == "executed" and done["p1_intervention_id"] == 77 and posted[0]["case_id"] == "C1"
     assert [h["status"] for h in done["history"]] == ["proposed", "gateway_held", "approved", "executed"]
     assert client.post(f"/v1/interventions/{iid}/approve", json={}, headers=hdr("bob", "manager")).status_code == 409           # not twice
+
+
+def test_the_callers_trace_id_travels_with_an_approval_and_a_rejection_to_the_gateway(wired, monkeypatch):
+    monkeypatch.setattr(r.Ledger, "execute", lambda self, iid, p1_post=None, trace_header=None: self.get(iid))
+    tp = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+    first, second = _propose().json(), _propose().json()
+    assert client.post(f"/v1/interventions/{first['id']}/approve", json={}, headers=hdr("bob", "manager", traceparent=tp)).status_code == 200
+    assert client.post(f"/v1/interventions/{second['id']}/reject", json={}, headers=hdr("bob", "manager", traceparent=tp)).status_code == 200
+    assert wired.gateway.decide_traces == [tp, tp]
 
 
 def test_reject_and_unknown_and_outcome_flow(wired, monkeypatch):
