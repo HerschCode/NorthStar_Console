@@ -253,7 +253,7 @@ def get_trace(trace_id: str, request: Request, identity: Identity = Depends(requ
     deps.store.ingest()
     with deps.store._c() as c:
         gw = [dict(r) for r in c.execute("SELECT ts, request_id, phase, decision, layer, rule_id, latency_ms FROM decisions WHERE trace_id = ? ORDER BY ts", (trace_id,))]
-        acts = [dict(r) for r in c.execute("SELECT ts, tool, effect, stage, rule FROM actions WHERE trace_id = ? ORDER BY ts", (trace_id,))]
+        acts = [dict(r) for r in c.execute("SELECT ts, tool, effect, stage, rule, role, approval_id FROM actions WHERE trace_id = ? ORDER BY ts", (trace_id,))]
     p2 = None
     try:
         p2 = deps.p2_client().request("GET", f"/v1/traces/{trace_id}", identity, None).json()
@@ -286,9 +286,9 @@ class DecideBody(BaseModel):
     note: str = Field(default="", max_length=300)
 
 
-def _decide(approval_id: str, approve: bool, body: DecideBody, identity: Identity):
+def _decide(approval_id: str, approve: bool, body: DecideBody, identity: Identity, trace_id: str | None = None):
     try:
-        return get_firewall().approvals.decide(approval_id, approve, Principal(identity.role, identity.user_id), body.note)
+        return get_firewall().decide_approval(approval_id, approve, Principal(identity.role, identity.user_id), body.note, trace_id=trace_id)
     except ApprovalNotFound as exc:
         raise HTTPException(404, str(exc))
     except ApprovalForbidden as exc:
@@ -300,13 +300,44 @@ def _decide(approval_id: str, approve: bool, body: DecideBody, identity: Identit
 
 
 @router.post("/approvals/{approval_id}/approve")
-def approve(approval_id: str, body: DecideBody, identity: Identity = Depends(require_roles("manager", "admin"))):
-    return _decide(approval_id, True, body, identity)
+def approve(approval_id: str, body: DecideBody, request: Request, identity: Identity = Depends(require_roles("manager", "admin"))):
+    return _decide(approval_id, True, body, identity, trace_context(request)[0])
 
 
 @router.post("/approvals/{approval_id}/reject")
-def reject(approval_id: str, body: DecideBody, identity: Identity = Depends(require_roles("manager", "admin"))):
-    return _decide(approval_id, False, body, identity)
+def reject(approval_id: str, body: DecideBody, request: Request, identity: Identity = Depends(require_roles("manager", "admin"))):
+    return _decide(approval_id, False, body, identity, trace_context(request)[0])
+
+
+# ── read-only data passthrough to P1 (one public API in the cloud deployment) ──
+class _P1Data:
+    http = None
+
+
+def p1_client():
+    import httpx
+    return _P1Data.http or httpx.Client(timeout=float(os.environ.get("P1_TIMEOUT_SECONDS", "30")))
+
+
+@router.get("/data/{path:path}", dependencies=[Depends(ip_rate_limit)])
+def p1_data(path: str, request: Request):
+    """GET-only, allow-listed (`v1/...`) passthrough to P1's read-only API, so that in the cloud the gateway is the ONLY public
+    service: the console reads analytics through here instead of reaching P1 directly. Carries the caller's trace id."""
+    base = (os.environ.get("P1_URL") or "").rstrip("/")
+    if not base:
+        raise HTTPException(503, "analytics (P1) is not configured on this gateway (set P1_URL)")
+    if not path.startswith("v1/") or ".." in path:
+        raise HTTPException(404, "only P1's read-only /v1 endpoints are exposed here")
+    _, tp = trace_context(request)
+    headers = {"traceparent": tp}
+    if os.environ.get("P1_API_KEY"):
+        headers["X-API-Key"] = os.environ["P1_API_KEY"]
+    try:
+        r = p1_client().get(f"{base}/{path}", params=dict(request.query_params), headers=headers)
+    except Exception as exc:
+        raise HTTPException(502, f"analytics (P1) is unreachable ({type(exc).__name__})")
+    return Response(r.content, status_code=r.status_code, media_type=r.headers.get("content-type", "application/json"),
+                    headers={"Cache-Control": "private, max-age=30"})
 
 
 # ── governance ──

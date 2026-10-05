@@ -27,6 +27,7 @@ from gateway.actions.taint import TaintTracker
 from gateway.pii import scan_and_redact
 
 DEFAULT_AUDIT_PATH = Path(__file__).resolve().parents[2] / "logs" / "actions.jsonl"
+APPROVAL_DECISION_STAGE = "approval_decision"          # audit records of a human deciding a held action; they are not authorisation decisions and are counted apart
 MAX_SESSIONS = 200
 
 
@@ -154,6 +155,20 @@ class ActionFirewall:
                   "tool": tool, "effect": d.effect, "stage": d.stage, "rule": d.rule, "risk": d.risk, "reasons": d.reasons,
                   "tainted": [{k: t[k] for k in ("field", "reaction", "source")} for t in d.tainted],
                   "approval_id": d.approval_id, "trace_id": trace_id, "args": self._redact(args if isinstance(args, dict) else {})}
+        self._append(record)
+
+    def _append(self, record: dict) -> None:
         self.audit_path.parent.mkdir(parents=True, exist_ok=True)
         with self._lock, open(self.audit_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(record, default=str) + "\n")
+
+    def decide_approval(self, approval_id: str, approve: bool, approver: Principal, note: str = "", trace_id: str | None = None) -> dict:
+        """Decide a held action AND put the decision in the audit trail: who decided, in what role, under which trace. The approval queue's row is mutable state
+        (pending becomes approved); this append-only record is what an audit reads. Refusals (wrong role, self-approval, already decided) raise before anything is logged."""
+        row = self.approvals.decide(approval_id, approve, approver, note)
+        if self.audit_path:
+            self._append({"timestamp": time.time(), "session_id": row.get("session_id"), "user_id": approver.user_id, "role": approver.role, "tool": row.get("tool"),
+                          "effect": "approval_granted" if approve else "approval_rejected", "stage": APPROVAL_DECISION_STAGE, "rule": None, "risk": row.get("risk"),
+                          "reasons": [f"decided by a {approver.role}; requested by a {row.get('requester_role')}"], "tainted": [], "approval_id": approval_id,
+                          "trace_id": trace_id, "args": {}, "note": self._redact(note)})
+        return row

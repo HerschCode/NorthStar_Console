@@ -23,7 +23,8 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-LOG_PATH = Path(__file__).resolve().parents[1] / "logs" / "gateway.jsonl"
+# GATEWAY_LOG_PATH moves the decision log (a test run or a second instance that must not share the default file); the governance store and dashboard read the same path.
+LOG_PATH = Path(os.environ.get("GATEWAY_LOG_PATH") or Path(__file__).resolve().parents[1] / "logs" / "gateway.jsonl")
 
 # Emit each decision record to stdout so it appears in PaaS log streams
 # (Render, Cloud Run, etc.) where the filesystem is ephemeral.

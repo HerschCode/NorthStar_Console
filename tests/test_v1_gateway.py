@@ -421,3 +421,82 @@ def test_authorize_records_the_callers_trace_id_in_the_audit_and_governance_stor
                       "args": {"action": "request_approval", "target": "C-1", "reason": "slow", "priority": "normal"}})
     out = client.get(f"/v1/traces/{tid}", headers=login("viewer")).json()
     assert out["gateway"]["actions"] and out["gateway"]["actions"][0]["effect"] == "require_approval"
+
+
+# ── approval decisions are audited ──
+def _held(trace_id=None):
+    headers = {"traceparent": f"00-{trace_id}-00f067aa0ba902b7-01"} if trace_id else {}
+    d = client.post("/gateway/actions/authorize", headers=headers,
+                    json={"session_id": "d1", "role": "analyst", "user_id": "ann", "tool": "propose_intervention",
+                          "args": {"action": "request_approval", "target": "C-9", "reason": "slow", "priority": "normal"}}).json()
+    assert d["effect"] == "require_approval"
+    return d["approval_id"]
+
+
+def _audit_lines(env):
+    return [json.loads(line) for line in (env.tmp / "actions.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def test_a_human_approval_is_in_the_audit_trail_under_the_deciding_trace_with_the_note_redacted(env):
+    approval = _held("4bf92f3577b34da6a3ce929d0e0e4736")
+    tid = "0af7651916cd43dd8448eb211c80319c"
+    r = client.post(f"/v1/approvals/{approval}/approve", json={"note": "checked with jo@example.com"},
+                    headers={**login("manager"), "traceparent": f"00-{tid}-b7ad6b7169203331-01"})
+    assert r.status_code == 200 and r.json()["status"] == "approved"
+    acts = client.get(f"/v1/traces/{tid}", headers=login("viewer")).json()["gateway"]["actions"]
+    assert [(a["tool"], a["effect"], a["stage"], a["role"]) for a in acts] == [("propose_intervention", "approval_granted", "approval_decision", "manager")]
+    rec = _audit_lines(env)[-1]
+    assert rec["approval_id"] == approval and rec["trace_id"] == tid and rec["role"] == "manager" and rec["user_id"].startswith("demo-manager")
+    assert "jo@example.com" not in rec["note"], "a personal address reached the audit trail"
+
+
+def test_a_refused_decision_leaves_nothing_in_the_audit_and_a_rejection_is_recorded(env):
+    approval = _held()
+    before = len(_audit_lines(env))
+    assert client.post(f"/v1/approvals/{approval}/approve", json={}, headers=login("analyst")).status_code == 403
+    assert len(_audit_lines(env)) == before
+    assert client.post(f"/v1/approvals/{approval}/reject", json={"note": "not now"}, headers=login("manager")).status_code == 200
+    rec = _audit_lines(env)[-1]
+    assert (rec["effect"], rec["stage"], rec["approval_id"]) == ("approval_rejected", "approval_decision", approval)
+    again = client.post(f"/v1/approvals/{approval}/approve", json={}, headers=login("admin"))
+    assert again.status_code == 409 and len(_audit_lines(env)) == before + 1       # an already-decided request is not decided, or logged, twice
+
+
+def test_the_governance_summary_counts_a_decision_apart_from_the_action_it_decided(env):
+    approval = _held()
+    held = client.get("/v1/governance/summary", params={"window": "1h"}).json()["actions"]
+    assert held["total"] == 1 and held["held"] == 1 and held["approvals_decided"] == {"approved": 0, "rejected": 0}
+    client.post(f"/v1/approvals/{approval}/approve", json={}, headers=login("manager"))
+    after = client.get("/v1/governance/summary", params={"window": "1h"}).json()["actions"]
+    assert after["total"] == 1 and after["held"] == 1, "a decision was counted as another action"
+    assert after["approvals_decided"] == {"approved": 1, "rejected": 0}
+
+
+def test_the_assistants_service_approval_call_carries_its_trace_id_into_the_audit(env, monkeypatch):
+    monkeypatch.setenv("GATEWAY_APPROVER_TOKEN", "approver-secret")
+    approval = _held()
+    tid = "5b8aa5a2d2c872e8321cf37308d69df2"
+    r = client.post(f"/gateway/actions/approvals/{approval}/approve", json={"approver_id": "mia", "approver_role": "manager", "note": "ok"},
+                    headers={"X-Approver-Token": "approver-secret", "traceparent": f"00-{tid}-051581bf3cb55c13-01"})
+    assert r.status_code == 200
+    rec = _audit_lines(env)[-1]
+    assert (rec["effect"], rec["trace_id"], rec["user_id"], rec["role"]) == ("approval_granted", tid, "mia", "manager")
+
+
+def test_p1_data_passthrough_is_get_only_allow_listed_and_carries_the_trace(monkeypatch):
+    seen = []
+
+    def handler(request):
+        seen.append((request.url.path, dict(request.url.params), request.headers.get("traceparent")))
+        return httpx.Response(200, json={"ok": True})
+    monkeypatch.setattr(routes._P1Data, "http", httpx.Client(transport=httpx.MockTransport(handler)))
+    monkeypatch.setenv("P1_URL", "http://p1")
+    tid = "4bf92f3577b34da6a3ce929d0e0e4736"
+    r = client.get("/v1/data/v1/overview?as_of=2018-04-16", headers={"traceparent": f"00-{tid}-00f067aa0ba902b7-01"})
+    assert r.status_code == 200 and r.json() == {"ok": True}
+    assert seen[0][0] == "/v1/overview" and seen[0][1] == {"as_of": "2018-04-16"} and tid in seen[0][2]
+    assert client.get("/v1/data/orders/123").status_code == 404                 # only /v1/... is exposed
+    assert client.get("/v1/data/v1/../admin").status_code in (404, 422)
+    assert client.post("/v1/data/v1/overview", json={}).status_code == 405       # read-only
+    monkeypatch.delenv("P1_URL")
+    assert client.get("/v1/data/v1/overview").status_code == 503

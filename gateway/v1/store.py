@@ -18,6 +18,8 @@ import threading
 import time
 from pathlib import Path
 
+from gateway.actions.firewall import APPROVAL_DECISION_STAGE
+
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB = ROOT / "logs" / "governance.db"
 WINDOWS = {"5m": 300, "1h": 3600, "24h": 86400, "7d": 7 * 86400}
@@ -34,7 +36,7 @@ def short_hash(value: str | None) -> str:
 class GovernanceStore:
     def __init__(self, db_path: str | Path | None = None, gateway_log: Path | None = None, actions_log: Path | None = None):
         self.db_path = Path(db_path or os.environ.get("GATEWAY_GOVERNANCE_DB", DEFAULT_DB))
-        self.gateway_log = gateway_log or ROOT / "logs" / "gateway.jsonl"
+        self.gateway_log = gateway_log or Path(os.environ.get("GATEWAY_LOG_PATH") or ROOT / "logs" / "gateway.jsonl")
         self.actions_log = actions_log or Path(os.environ.get("GATEWAY_ACTIONS_AUDIT", ROOT / "logs" / "actions.jsonl"))
         self._lock = threading.Lock()
         with self._c() as c:
@@ -122,6 +124,9 @@ class GovernanceStore:
             dec = [dict(r) for r in c.execute("SELECT * FROM decisions WHERE ts >= ? AND ts <= ? ORDER BY ts", (t0, t1))]
             act = [dict(r) for r in c.execute("SELECT * FROM actions WHERE ts >= ? AND ts <= ? ORDER BY ts", (t0, t1))]
             pending = c.execute("SELECT COUNT(*) FROM actions WHERE effect = 'require_approval'").fetchone()[0]
+        # a human deciding a held action is audited too, but it is not another authorisation decision: count it apart so held/allowed/denied stay per action
+        decided = [a for a in act if a["stage"] == APPROVAL_DECISION_STAGE]
+        act = [a for a in act if a["stage"] != APPROVAL_DECISION_STAGE]
         reqs: dict[str, dict] = {}
         for i, d in enumerate(dec):
             key = d["request_id"] or f"row{i}"
@@ -160,7 +165,8 @@ class GovernanceStore:
                 "blocks_by_layer": blocks_by_layer, "blocks_by_rule": dict(sorted(blocks_by_rule.items(), key=lambda kv: -kv[1])[:15]),
                 "pii_requests": sum(1 for q in reqs.values() if q["pii"]),
                 "latency_ms": {"p50": pct(0.5), "p95": pct(0.95)},
-                "actions": {"total": len(act), **effects, "pending_approvals_logged": pending},
+                "actions": {"total": len(act), **effects, "pending_approvals_logged": pending,
+                            "approvals_decided": {"approved": sum(a["effect"] == "approval_granted" for a in decided), "rejected": sum(a["effect"] == "approval_rejected" for a in decided)}},
                 "series": [series[k] for k in sorted(series)]}
 
     def events(self, limit: int = 100, admin: bool = False) -> list[dict]:

@@ -1181,6 +1181,47 @@
     ]
    }
   },
+  "/v1/data/{path}": {
+   "get": {
+    "description": "GET-only, allow-listed (`v1/...`) passthrough to P1's read-only API, so that in the cloud the gateway is the ONLY public\nservice: the console reads analytics through here instead of reaching P1 directly. Carries the caller's trace id.",
+    "operationId": "p1_data_v1_data__path__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "path",
+      "required": true,
+      "schema": {
+       "title": "Path",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "P1 Data",
+    "tags": [
+     "v1"
+    ]
+   }
+  },
   "/v1/demo/login": {
    "post": {
     "operationId": "demo_login_v1_demo_login_post",

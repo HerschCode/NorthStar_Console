@@ -81,6 +81,12 @@ class DecideRequest(BaseModel):
     note: str = ""
 
 
+def _trace_id(request: Request) -> str | None:
+    """The id out of a W3C traceparent header: one id across console, gateway, assistant and P1."""
+    parts = request.headers.get("traceparent", "").strip().split("-")
+    return parts[1] if len(parts) == 4 and len(parts[1]) == 32 else None
+
+
 def _require_token(token: str | None):
     expected = os.environ.get("GATEWAY_APPROVER_TOKEN")
     if not expected:
@@ -110,9 +116,7 @@ def observe(req: ObserveRequest, identity: TrustedIdentity | None = Depends(requ
 def authorize(req: AuthorizeRequest, request: Request, identity: TrustedIdentity | None = Depends(require_trusted_identity)):
     session_id = scope_session_id(req.session_id, identity)
     principal = Principal(identity.role, identity.user_id) if identity else Principal(req.role, req.user_id)
-    parts = request.headers.get("traceparent", "").strip().split("-")       # W3C traceparent: one id across console, gateway, assistant, P1
-    trace_id = parts[1] if len(parts) == 4 and len(parts[1]) == 32 else None
-    return get_firewall().authorize(session_id, principal, req.tool, req.args, trace_id=trace_id).to_dict()
+    return get_firewall().authorize(session_id, principal, req.tool, req.args, trace_id=_trace_id(request)).to_dict()
 
 
 @router.get("/gateway/actions/approvals")
@@ -142,6 +146,7 @@ def _decide(
     req: DecideRequest,
     token: str | None,
     identity: TrustedIdentity | None,
+    trace_id: str | None = None,
 ):
     if identity is None:
         _require_token(token)
@@ -151,7 +156,7 @@ def _decide(
     else:
         approver = Principal(identity.role, identity.user_id)
     try:
-        return get_firewall().approvals.decide(approval_id, approve, approver, req.note)
+        return get_firewall().decide_approval(approval_id, approve, approver, req.note, trace_id=trace_id)
     except ApprovalNotFound as e:
         raise HTTPException(404, str(e))
     except ApprovalForbidden as e:
@@ -166,22 +171,24 @@ def _decide(
 def approve(
     approval_id: str,
     req: DecideRequest,
+    request: Request,
     x_approver_token: str | None = Header(default=None),
     identity: TrustedIdentity | None = Depends(require_trusted_identity),
 ):
     _require_approval_reader(identity)
-    return _decide(approval_id, True, req, x_approver_token, identity)
+    return _decide(approval_id, True, req, x_approver_token, identity, _trace_id(request))
 
 
 @router.post("/gateway/actions/approvals/{approval_id}/deny")
 def deny(
     approval_id: str,
     req: DecideRequest,
+    request: Request,
     x_approver_token: str | None = Header(default=None),
     identity: TrustedIdentity | None = Depends(require_trusted_identity),
 ):
     _require_approval_reader(identity)
-    return _decide(approval_id, False, req, x_approver_token, identity)
+    return _decide(approval_id, False, req, x_approver_token, identity, _trace_id(request))
 
 
 @router.get("/gateway/actions/policy")
