@@ -32,6 +32,12 @@ APPROVE_ROLES = {"manager", "admin"}
 OUTCOME_ROLES = {"manager", "admin"}
 
 
+def trace_id_of(header: str | None) -> str | None:
+    """The trace id out of a W3C traceparent (version-traceid-spanid-flags), or None."""
+    parts = (header or "").strip().split("-")
+    return parts[1] if len(parts) == 4 and len(parts[1]) == 32 else None
+
+
 class LedgerError(Exception):
     def __init__(self, message: str, status: int = 400):
         super().__init__(message)
@@ -90,7 +96,10 @@ class Ledger:
         c.row_factory = sqlite3.Row
         return c
 
-    def _log(self, c, iid: int, status: str, actor: str, detail: dict | None = None):
+    def _log(self, c, iid: int, status: str, actor: str, detail: dict | None = None, trace_header: str | None = None):
+        tid = trace_id_of(trace_header)
+        if tid:                                           # the id the gateway, the assistant's spans and P1 share, so an audit can follow one request across all of them
+            detail = {**(detail or {}), "trace_id": tid}
         c.execute("INSERT INTO history (intervention_id, ts, status, actor, detail) VALUES (?,?,?,?,?)", (iid, time.time(), status, actor, json.dumps(detail or {})))
         c.execute("UPDATE interventions SET status = ?, updated = ? WHERE id = ?", (status, time.time(), iid))
 
@@ -121,14 +130,14 @@ class Ledger:
             cur = c.execute("INSERT INTO interventions (case_id, intervention_type, rationale, risk, proposer, proposer_role, status, created, updated) "
                             "VALUES (?,?,?,?,?,?,?,?,?)", (case_id, intervention_type, rationale, risk, user, role, "proposed", time.time(), time.time()))
             iid = cur.lastrowid
-            self._log(c, iid, "proposed", user, {"rationale": rationale})
+            self._log(c, iid, "proposed", user, {"rationale": rationale}, trace_header)
         session = f"p2-int-{iid}"
         for s in sources or []:
             gateway.register_source(session, s["kind"], s["text"], s["trust"], trace_header)
         action = ACTION_FOR_TYPE.get(intervention_type)
         if action is None:
             with self._c() as c:
-                self._log(c, iid, "gateway_denied", "p2", {"note": f"intervention type {intervention_type!r} has no mapped gateway action"})
+                self._log(c, iid, "gateway_denied", "p2", {"note": f"intervention type {intervention_type!r} has no mapped gateway action"}, trace_header)
             return self.get(iid)
         args = {"action": action, "target": case_id, "reason": rationale[:300], "priority": "high" if action == "hold_payment" else "normal"}
         decision = gateway.authorize(session, role, user, "propose_intervention", args, trace_header)
@@ -136,13 +145,13 @@ class Ledger:
             c.execute("UPDATE interventions SET gateway_decision = ?, approval_id = ? WHERE id = ?", (json.dumps(decision), decision.get("approval_id"), iid))
             effect = decision.get("effect")
             if effect == "deny":
-                self._log(c, iid, "gateway_denied", "gateway", decision)
+                self._log(c, iid, "gateway_denied", "gateway", decision, trace_header)
             elif effect == "require_approval":
-                self._log(c, iid, "gateway_held", "gateway", decision)
+                self._log(c, iid, "gateway_held", "gateway", decision, trace_header)
             elif effect == "allow":
-                self._log(c, iid, "approved", "gateway-policy", {"note": "allowed by policy without human approval", **decision})
+                self._log(c, iid, "approved", "gateway-policy", {"note": "allowed by policy without human approval", **decision}, trace_header)
             else:
-                self._log(c, iid, "gateway_denied", "gateway", {"note": "unrecognised gateway decision; failing closed", **decision})
+                self._log(c, iid, "gateway_denied", "gateway", {"note": "unrecognised gateway decision; failing closed", **decision}, trace_header)
         return self.get(iid)
 
     def decide(self, iid: int, approve: bool, identity: dict, gateway: GatewayClient, note: str = "", trace_header: str | None = None) -> dict:
@@ -159,7 +168,7 @@ class Ledger:
             raise LedgerError("no gateway approval id recorded; failing closed", 409)
         res = gateway.decide(row["approval_id"], approve, identity["user"], identity["role"], note, trace_header=trace_header)       # the gateway audits the decision under this trace
         with self._c() as c:
-            self._log(c, iid, "approved" if approve else "rejected", identity["user"], {"note": note, "gateway": res})
+            self._log(c, iid, "approved" if approve else "rejected", identity["user"], {"note": note, "gateway": res}, trace_header)
         return self.get(iid)
 
     def execute(self, iid: int, p1_post=None, trace_header: str | None = None) -> dict:
@@ -173,11 +182,11 @@ class Ledger:
                         "risk_at_intervention": row["risk"], "notes": f"Northstar intervention #{iid}: {row['rationale'][:200]}"})
         except OpsPerformanceUnavailable as exc:
             with self._c() as c:
-                self._log(c, iid, "execution_failed", "system", {"error": str(exc)[:200]})
+                self._log(c, iid, "execution_failed", "system", {"error": str(exc)[:200]}, trace_header)
             return self.get(iid)
         with self._c() as c:
             c.execute("UPDATE interventions SET p1_intervention_id = ?, assignment = ? WHERE id = ?", (out.get("intervention_id"), out.get("assignment"), iid))
-            self._log(c, iid, "executed", "system", {"p1": out, "note": "holdout case: logged for its outcome, no action taken" if out.get("assignment") == "holdout" else "treated"})
+            self._log(c, iid, "executed", "system", {"p1": out, "note": "holdout case: logged for its outcome, no action taken" if out.get("assignment") == "holdout" else "treated"}, trace_header)
         return self.get(iid)
 
     def record_outcome(self, iid: int, breached_after: bool, identity: dict, p1_patch=None) -> dict:

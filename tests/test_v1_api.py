@@ -158,6 +158,18 @@ def test_the_callers_trace_id_travels_with_an_approval_and_a_rejection_to_the_ga
     assert wired.gateway.decide_traces == [tp, tp]
 
 
+def test_ledger_history_rows_carry_the_trace_id_of_the_request_that_made_them(wired, monkeypatch):
+    monkeypatch.setattr(r.Ledger, "execute", lambda self, iid, p1_post=None, trace_header=None: self.get(iid))
+    propose_tid, decide_tid = "4bf92f3577b34da6a3ce929d0e0e4736", "0af7651916cd43dd8448eb211c80319c"
+    body = {"case_id": "C1", "intervention_type": "expedite_approval", "rationale": "Critical expected loss", "risk": 0.64}
+    row = client.post("/v1/interventions", json=body, headers=hdr("alice", "analyst", traceparent=f"00-{propose_tid}-00f067aa0ba902b7-01")).json()
+    done = client.post(f"/v1/interventions/{row['id']}/approve", json={}, headers=hdr("bob", "manager", traceparent=f"00-{decide_tid}-b7ad6b7169203331-01")).json()
+    by_status = {h["status"]: h["detail"].get("trace_id") for h in done["history"]}
+    assert by_status == {"proposed": propose_tid, "gateway_held": propose_tid, "approved": decide_tid}
+    untraced = client.get(f"/v1/interventions/{_propose().json()['id']}", headers=KEY).json()
+    assert all("trace_id" not in h["detail"] for h in untraced["history"])           # no header, no invented id
+
+
 def test_reject_and_unknown_and_outcome_flow(wired, monkeypatch):
     row = _propose().json()
     rej = client.post(f"/v1/interventions/{row['id']}/reject", json={"note": "no"}, headers=hdr("bob", "manager")).json()
