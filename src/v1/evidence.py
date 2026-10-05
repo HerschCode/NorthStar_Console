@@ -17,7 +17,9 @@ from datetime import datetime, timezone
 
 from src.evaluation.claim_support import sentence_support
 
-_NUM = re.compile(r"(?<![\w.])-?\d[\d,]*\.?\d*")
+# A figure is not part of an identifier: "2000000100_00001" (a case id) and "vendorID_0053" (a supplier id) contain digits that are labels, not quantities, and an answer that names
+# the case it is about would otherwise be marked unsupported for a "figure" no evidence contains. The trailing lookahead refuses a match that stops short of a digit or runs into "_x".
+_NUM = re.compile(r"(?<![\w.])-?\d[\d,]*\.?\d*(?!\d|_\w)")
 CITATION = re.compile(r"\s*\(Source:[^)]*\)\s*$")
 MAX_FACTS_PER_OBJECT = 40
 

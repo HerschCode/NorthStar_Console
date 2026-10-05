@@ -90,6 +90,25 @@ def test_verify_claim_cases():
     assert not bad["supported"]
 
 
+def test_identifiers_are_not_figures():
+    assert numbers_in("case 2000000100_00001 has 5 open days and p(breach) 0.64") == [5.0, 0.64]
+    assert numbers_in("supplier vendorID_0053 owes 1,577.00 and 12.5%") == [1577.0, 12.5]
+    assert numbers_in("4507000430_00010 and 4507000896_00010") == []
+    assert numbers_in("544. cases and 156300.26 EUR") == [544.0, 156300.26]            # ordinary figures are unchanged
+
+
+def test_a_claim_that_names_a_numeric_case_id_is_checked_on_its_figures_not_its_label():
+    """Real case ids are numeric (2000000100_00001). On the first local-model run every answer about a case was marked unsupported because the id's digits were read as a figure."""
+    book = EvidenceBook()
+    risk, loss = book.add_p1("/v1/cases/2000000100_00001", {"risk": {"p_breach": {"value": 0.64, "unit": "probability", "provenance": "experimental", "source": "m"},
+                                                                     "expected_loss": {"value": 156300.26, "unit": "EUR", "provenance": "simulated", "source": "m"}}})
+    right = verify_claim("Case 2000000100_00001 has a breach probability of 0.64.", [risk.id], book)
+    assert right["supported"], right
+    wrong = verify_claim("Case 2000000100_00001 has a breach probability of 0.91.", [risk.id], book)
+    assert not wrong["supported"] and "0.91" in wrong["reason"] and "2000000100" not in wrong["reason"]
+    assert verify_claim("The expected loss on case 2000000100_00001 is 156300.26 EUR.", [loss.id], book)["supported"]
+
+
 # ── ask ──
 def _p1(objs):
     def getter(path, params=None, **kw):
