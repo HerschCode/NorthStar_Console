@@ -7,7 +7,7 @@ Compares:
   sonnet    -- Sonnet 5.5 LLM judge (via Anthropic Batch API, optional)
 
 Datasets (sampled to ~1 000 each, fixed seed 42, documented in reports/):
-  LLM-AggreFact  -- human-labelled claim-level factuality (Laban et al., 2024)
+  LLM-AggreFact  -- human-labelled claim-level factuality (Tang, Laban and Durrett, 2024; gated, see below)
   RAGTruth       -- human-labelled hallucination in RAG answers (Niu et al., 2024)
 
 Metrics: balanced accuracy, precision, recall on "unsupported" class, per-subset,
@@ -21,7 +21,9 @@ Usage:
   python -m scripts.eval_gate_public --full --no-sonnet # skip Sonnet 5.5 (saves ~3x cost)
 
 ANTHROPIC_API_KEY must be set.
-Dataset licences: LLM-AggreFact (MIT), RAGTruth (Apache 2.0).
+Dataset licences: LLM-AggreFact is CC BY-ND 4.0 and GATED on Hugging Face (an account that accepted its terms, HF_TOKEN set by the owner; without it the AggreFact half cannot run).
+RAGTruth is MIT and is read from GitHub at a pinned commit (scripts/eval_gate_ragtruth.py).
+The no-key half of this comparison (lexical gate and NLI baseline on RAGTruth) is scripts/eval_gate_ragtruth.py and has been run; this script adds the LLM-judge columns and needs a key.
 """
 from __future__ import annotations
 
@@ -44,8 +46,7 @@ REPORT = REPO_ROOT / "docs" / "gate-public-eval.md"
 LICENCE_NOTE = REPO_ROOT / "docs" / "gate-public-eval-licences.md"
 
 # HuggingFace dataset IDs — override with env vars if needed
-HF_AGGREFACT = os.environ.get("HF_AGGREFACT", "liqiangnie/LLM-AggreFact")
-HF_RAGTRUTH  = os.environ.get("HF_RAGTRUTH",  "jinaai/RAGTruth")
+HF_AGGREFACT = os.environ.get("HF_AGGREFACT", "lytang/LLM-AggreFact")     # gated: needs HF_TOKEN from an account that accepted the dataset's terms
 
 _JUDGE_SYSTEM = (
     "You are a faithfulness judge. Decide whether a CLAIM is supported by the SOURCE.\n"
@@ -98,33 +99,12 @@ def _load_aggrefact(n: int | None) -> list[dict]:
 
 
 def _load_ragtruth(n: int | None) -> list[dict]:
-    """Load RAGTruth. Expected: question / answer / context / label (1=hallucination)."""
-    from datasets import load_dataset
-    try:
-        ds = load_dataset(HF_RAGTRUTH, split="test", trust_remote_code=True)
-    except Exception:
-        ds = load_dataset(HF_RAGTRUTH, split="train", trust_remote_code=True)
-    rows = list(ds)
-    sample = rows[0]
-    ans_col  = next((c for c in ("response", "answer", "generated_text") if c in sample), None)
-    src_col  = next((c for c in ("context", "passages", "documents", "source") if c in sample), None)
-    label_col = next((c for c in ("label", "hallucination", "has_hallucination") if c in sample), None)
-    if not all([ans_col, src_col, label_col]):
-        raise ValueError(
-            f"Cannot find answer/source/label columns in {HF_RAGTRUTH}. "
-            f"Found: {list(sample.keys())}. "
-            "Set HF_RAGTRUTH env var to the correct dataset id."
-        )
-    out = [
-        {
-            "dataset": "RAGTruth",
-            "subset": r.get("source_type", r.get("domain", "unknown")),
-            "claim": r[ans_col][:1500],           # whole answer as the "claim"
-            "source": str(r[src_col])[:3000],
-            "human_label": not bool(r[label_col]),  # RAGTruth: label=1 means hallucination
-        }
-        for r in rows
-    ]
+    """RAGTruth test split from GitHub (MIT, pinned commit, see scripts/eval_gate_ragtruth.py): the whole response is the claim, the source it was written from is the source,
+    and a response with no human-labelled hallucination span counts as supported."""
+    from scripts import eval_gate_ragtruth as rt
+
+    rt.fetch()
+    out = [{"dataset": "RAGTruth", "subset": r["task"], "claim": r["response"][:1500], "source": r["source"][:3000], "human_label": not r["hallucinated"]} for r in rt.load_rows("test")]
     if n:
         rng = random.Random(_SEED)
         rng.shuffle(out)
@@ -234,8 +214,8 @@ def _write_report(out: dict) -> None:
         "",
         "| Dataset | Licence | N sampled | Sampling |",
         "|---|---|---|---|",
-        f"| LLM-AggreFact | MIT | {out['n_aggrefact']} | random seed 42 |",
-        f"| RAGTruth | Apache 2.0 | {out['n_ragtruth']} | random seed 42 |",
+        f"| LLM-AggreFact | CC BY-ND 4.0 (gated) | {out['n_aggrefact']} | random seed 42 |",
+        f"| RAGTruth | MIT | {out['n_ragtruth']} | random seed 42 |",
         "",
         "Dataset licences recorded in `docs/gate-public-eval-licences.md`.",
         "",
@@ -434,10 +414,10 @@ def main():
     if not LICENCE_NOTE.exists():
         LICENCE_NOTE.write_text(
             "# Dataset licences\n\n"
-            "- **LLM-AggreFact** (`liqiangnie/LLM-AggreFact`): MIT Licence. "
-            "Laban et al., 2024. https://huggingface.co/datasets/liqiangnie/LLM-AggreFact\n"
-            "- **RAGTruth** (`jinaai/RAGTruth`): Apache 2.0. "
-            "Niu et al., 2024. https://huggingface.co/datasets/jinaai/RAGTruth\n",
+            "- **LLM-AggreFact** (`lytang/LLM-AggreFact`): CC BY-ND 4.0, gated on Hugging Face (an account that accepted its terms). "
+            "Tang et al., 2024. https://huggingface.co/datasets/lytang/LLM-AggreFact\n"
+            "- **RAGTruth** (`ParticleMedia/RAGTruth` on GitHub, read at a pinned commit): MIT Licence. "
+            "Niu et al., 2024. https://github.com/ParticleMedia/RAGTruth\n",
             encoding="utf-8",
         )
 

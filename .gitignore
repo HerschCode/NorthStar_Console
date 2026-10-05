@@ -13,3 +13,6 @@ logs/*.jsonl
 models/
 chroma_db/
 data/*.db
+
+# downloaded public evaluation data (pinned and checksummed by the scripts that fetch it)
+data/external/

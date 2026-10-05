@@ -3,7 +3,11 @@
 Needs: P1 reachable (OPS_PERFORMANCE_API_URL, optional OPS_PERFORMANCE_API_KEY) and ANTHROPIC_API_KEY in the environment
 (never printed). Every model call goes through the SpendGuard; the run stops at --max-cost-usd.
 
+With --provider ollama it uses the local model instead (OLLAMA_MODEL, default qwen2.5:7b-instruct; free, so no cost cap). Its results go to
+reports/eval_v1_ask_local.json and say what they are: a local 7B pipeline proof, never a headline result, never comparable with a Claude run.
+
     python -m scripts.eval_v1_ask --dry-run                 # estimate cost, no calls
+    python -m scripts.eval_v1_ask --provider ollama         # the whole set on the local model
     python -m scripts.eval_v1_ask --sample 5 --max-cost-usd 0.5
     python -m scripts.eval_v1_ask --max-cost-usd 4
 
@@ -18,7 +22,7 @@ from pathlib import Path
 
 from src.evaluation.cost_estimator import calculate_cost
 from src.v1 import ask as ask_mod
-from src.v1.llm import AnthropicLLM
+from src.v1.llm import AnthropicLLM, OllamaLLM
 from src.v1.p1 import P1
 from src.v1.spend import SpendExhausted, SpendGuard
 from src.v1.trace import Trace
@@ -81,16 +85,20 @@ def main():
     ap.add_argument("--max-cost-usd", type=float, default=1.0)
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--provider", choices=("anthropic", "ollama"), default="anthropic")
     a = ap.parse_args()
     guard = SpendGuard(Path(tempfile.gettempdir()) / "p2_eval_spend.db", per_request_usd=0.05, per_day_usd=a.max_cost_usd, per_month_usd=a.max_cost_usd)
-    llm = AnthropicLLM(guard=guard)
+    local = a.provider == "ollama"
+    llm = OllamaLLM(guard=guard) if local else AnthropicLLM(guard=guard)
     items = build_items(P1(), a.sample, random.Random(a.seed))
-    est = len(items) * calculate_cost(2500, 450, llm.model).total_cost_usd
-    print(f"{len(items)} questions on {llm.model}; estimated cost ~${est:.2f} (cap ${a.max_cost_usd:.2f})")
+    est = 0.0 if local else len(items) * calculate_cost(2500, 450, llm.model).total_cost_usd
+    print(f"{len(items)} questions on {llm.name if local else llm.model}; estimated cost ~${est:.2f}" + ("" if local else f" (cap ${a.max_cost_usd:.2f})"))
     if a.dry_run:
         return
     rows, spent = [], 0.0
-    for it in items:
+    for n, it in enumerate(items, 1):
+        if n % 10 == 0:
+            print(f"  {n}/{len(items)}", flush=True)
         t = Trace(None, "eval")
         try:
             from src.retrieval.search import hybrid_search
@@ -99,10 +107,10 @@ def main():
             print("stopped:", exc)
             break
         spent += out.get("cost_usd", 0.0)
-        rows.append({**{k: it[k] for k in ("page", "question", "kind")}, "score": score(it, out), "claims": len(out.get("claims", [])), "cost_usd": out.get("cost_usd", 0.0)})
+        rows.append({**{k: it[k] for k in ("page", "question", "kind")}, "score": score(it, out), "claims": len(out.get("claims", [])), "unsupported_reasons": [c["reason"][:90] for c in out.get("claims", []) if not c["supported"]], "cost_usd": out.get("cost_usd", 0.0)})
     ans = [r for r in rows if r["kind"] == "answer"]
     pro = [r for r in rows if r["kind"] == "probe"]
-    summary = {"model": llm.model, "n_answer": len(ans), "n_probe": len(pro), "spent_usd": round(spent, 4),
+    summary = {"model": llm.name if local else llm.model, "provider": a.provider, **({"label": "local 7B pipeline proof: a free, weak model run through the real pipeline. Not a headline result and not comparable with a Claude run."} if local else {}), "n_answer": len(ans), "n_probe": len(pro), "spent_usd": round(spent, 4),
                "grounded_rate": round(sum(r["score"]["grounded"] for r in ans) / max(len(ans), 1), 3),
                "cited_rate": round(sum(r["score"]["cited"] for r in ans) / max(len(ans), 1), 3),
                "entity_rate": round(sum(r["score"]["entity"] for r in ans) / max(len(ans), 1), 3),
@@ -111,7 +119,7 @@ def main():
                "by_page": {p: round(sum(r["score"]["ok"] for r in ans if r["page"] == p) / max(sum(1 for r in ans if r["page"] == p), 1), 3) for p in TEMPLATES}}
     print(json.dumps(summary, indent=1))
     Path("reports").mkdir(exist_ok=True)
-    Path("reports/eval_v1_ask.json").write_text(json.dumps({"summary": summary, "rows": rows}, indent=1), encoding="utf-8")
+    Path("reports/eval_v1_ask_local.json" if local else "reports/eval_v1_ask.json").write_text(json.dumps({"summary": summary, "rows": rows}, indent=1), encoding="utf-8")
 
 
 if __name__ == "__main__":
