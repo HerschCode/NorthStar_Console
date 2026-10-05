@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import secrets
 import time
@@ -30,6 +31,8 @@ from gateway.v1 import lab
 from gateway.v1.identity import Identity, current_identity, require_identity, require_roles
 from gateway.v1.proxy import CapturingAdapter, P2Client, UpstreamError
 from gateway.v1.store import WINDOWS, GovernanceStore
+
+log = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parents[2]
 router = APIRouter(prefix="/v1", tags=["v1"])
@@ -73,8 +76,8 @@ def trace_context(request: Request) -> tuple[str, str]:
     ctx = (trace_id, f"00-{trace_id}-{secrets.token_hex(8)}-01")
     try:
         request.state.trace_ctx = ctx
-    except Exception:
-        pass
+    except Exception:                               # the context is still returned: caching it only saves recomputing it
+        log.debug("could not cache the trace context on the request", exc_info=True)
     return ctx
 
 
@@ -474,8 +477,8 @@ def metrics_endpoint() -> Response:
         return PlainTextResponse("prometheus_client not installed\n", status_code=501)
     try:
         _PENDING.set(get_firewall().approvals.count_pending())
-    except Exception:
-        pass
+    except Exception:                               # a scrape must not fail because the approvals store is unavailable: the gauge keeps its last value
+        log.warning("pending-approvals gauge not updated", exc_info=True)
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 

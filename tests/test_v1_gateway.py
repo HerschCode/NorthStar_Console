@@ -315,6 +315,40 @@ def test_metrics_endpoint_exposes_gateway_counters():
     assert "gateway_v1_requests_total" in text and "gateway_approvals_pending" in text
 
 
+def test_a_metrics_scrape_survives_an_unavailable_approvals_store_and_says_why(monkeypatch, caplog):
+    class Gauge:
+        def set(self, value):
+            raise AssertionError("must not be set when the count is unavailable")
+
+    def broken_firewall():
+        raise RuntimeError("approvals database locked")
+
+    monkeypatch.setattr(routes, "_REQ", object())
+    monkeypatch.setattr(routes, "_PENDING", Gauge())
+    monkeypatch.setattr(routes, "get_firewall", broken_firewall)
+    monkeypatch.setattr(routes, "generate_latest", lambda: b"gateway_approvals_pending 0", raising=False)
+    monkeypatch.setattr(routes, "CONTENT_TYPE_LATEST", "text/plain", raising=False)
+    with caplog.at_level("WARNING", logger="gateway.v1.routes"):
+        response = routes.metrics_endpoint()
+    assert response.status_code == 200
+    assert any("pending-approvals gauge not updated" in r.getMessage() and r.exc_info for r in caplog.records)
+
+
+def test_the_trace_context_is_still_returned_when_it_cannot_be_cached_on_the_request(caplog):
+    class Frozen:
+        def __setattr__(self, name, value):
+            raise AttributeError("read-only")
+
+    class FakeRequest:
+        headers = {}
+        state = Frozen()
+
+    with caplog.at_level("DEBUG", logger="gateway.v1.routes"):
+        trace_id, traceparent = routes.trace_context(FakeRequest())
+    assert len(trace_id) == 32 and traceparent.startswith(f"00-{trace_id}-")
+    assert any("could not cache the trace context" in r.getMessage() for r in caplog.records)
+
+
 # ── contract ──
 def test_openapi_lists_the_v1_surface():
     paths = app.openapi()["paths"]
