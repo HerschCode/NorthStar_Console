@@ -44,7 +44,7 @@ needs a database — the story accepts that in live mode and says so).
 | ![](docs/demo/05-gateway-holds-proposal.png) | ![](docs/demo/07-separation-of-duties.png) |
 
 ## Quality bars, measured
-- Type-check clean; 20 unit tests (Vitest) and 22 Playwright tests on recorded data (demo story, provenance on every KPI,
+- Type-check clean; 26 unit tests (Vitest, including that every workflow action is pinned to a commit SHA) and 22 Playwright tests on recorded data (demo story, provenance on every KPI,
   snapshot state, replay clock, loading/empty/error states, command palette, **axe: no serious/critical violations on 15 pages**,
   **no horizontal scroll at 375 px**) plus the same story on the live stack. The live run (P1 snapshot, P2 on a local Ollama
   model, current P3) also checks that the audit log shows the manager's approval as the gateway recorded it.
