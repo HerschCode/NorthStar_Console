@@ -13,13 +13,15 @@ visitor viewing aggregate, non-sensitive analytics shouldn't need an API key. Ea
 section degrades independently (a missing model or empty dataset shows that section's
 own "not available" state) rather than one failure blanking the whole page.
 """
+import os
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pandas as pd
 
 from fastapi import APIRouter
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from src.api.db import load_events, load_cases
 from src.analytics.cycle_time import cycle_time_percentiles
@@ -298,9 +300,20 @@ def _dashboard_html() -> str:
     return (Path(__file__).parent / "dashboard.html").read_text(encoding="utf-8")
 
 
+def _console_url() -> str | None:
+    """CONSOLE_URL, when it is a real http(s) address. Anything else (unset, a javascript: or relative value) is ignored, so a bad value cannot turn / into an arbitrary redirect."""
+    url = (os.environ.get("CONSOLE_URL") or "").strip()
+    parsed = urlparse(url)
+    return url if parsed.scheme in ("http", "https") and parsed.netloc else None
+
+
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
 def root_page():
-    """The Northstar product shell (src/api/app.html); the original single-page dashboard stays at /dashboard."""
+    """With CONSOLE_URL set, the Northstar console (its own repository) is the front door and / redirects to it. Otherwise this is the single-file Northstar
+    shell (src/api/app.html, also kept at /app); the original single-page dashboard stays at /dashboard."""
+    console = _console_url()
+    if console:
+        return RedirectResponse(console, status_code=302)
     return (Path(__file__).parent / "app.html").read_text(encoding="utf-8")
 
 

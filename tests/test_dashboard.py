@@ -147,3 +147,18 @@ def test_root_serves_the_northstar_shell_and_dashboard_keeps_the_classic_page():
     root = client.get("/")
     assert root.status_code == 200 and "Northstar Procurement Intelligence" in root.text and 'id="nav"' in root.text
     assert "Procure-to-Pay Intelligence" in client.get("/dashboard").text
+
+
+def test_root_redirects_to_the_console_when_one_is_configured_and_the_shell_stays_at_app(monkeypatch):
+    monkeypatch.setenv("CONSOLE_URL", "https://console.example.com/")
+    moved = client.get("/", follow_redirects=False)
+    assert moved.status_code == 302 and moved.headers["location"] == "https://console.example.com/"
+    assert "Northstar Procurement Intelligence" in client.get("/app").text            # the single-file shell is still reachable
+    assert "Procure-to-Pay Intelligence" in client.get("/dashboard").text
+
+
+def test_root_ignores_a_console_url_that_is_not_an_http_address(monkeypatch):
+    for bad in ("javascript:alert(1)", "//evil.example.com", "/relative", "ftp://x.example.com", "   "):
+        monkeypatch.setenv("CONSOLE_URL", bad)
+        served = client.get("/", follow_redirects=False)
+        assert served.status_code == 200 and "Northstar Procurement Intelligence" in served.text, bad
