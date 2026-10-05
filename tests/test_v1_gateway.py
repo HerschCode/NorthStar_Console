@@ -409,6 +409,7 @@ def test_lab_scenario_timelines_are_stable():
 
 
 def test_services_reports_assistant_reachability(env):
+    routes._SERVICES.clear()
     out = client.get("/v1/services").json()
     assert out["gateway"]["status"] == "ok" and out["assistant"]["configured"] is True
 

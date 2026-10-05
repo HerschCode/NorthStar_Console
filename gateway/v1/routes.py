@@ -397,9 +397,15 @@ def config():
             "demo_mode": ident.demo_mode(), "assistant_configured": deps.p2_client().configured}
 
 
+_SERVICES: dict = {}
+
+
 @router.get("/services")
 def services():
     """Reachability of what this gateway fronts, for the console's health page."""
+    cached = _SERVICES.get("v")
+    if cached and time.time() - cached[0] < 15:             # the assistant's health check can take seconds; do not repeat it per page view
+        return cached[1]
     out = {"gateway": {"status": "ok", "demo_mode": ident.demo_mode()}}
     p2 = deps.p2_client()
     if not p2.configured:
@@ -410,6 +416,7 @@ def services():
             out["assistant"] = {"configured": True, "reachable": r.status_code == 200, "detail": f"HTTP {r.status_code}"}
         except Exception as exc:
             out["assistant"] = {"configured": True, "reachable": False, "detail": type(exc).__name__}
+    _SERVICES["v"] = (time.time(), out)
     return out
 
 
