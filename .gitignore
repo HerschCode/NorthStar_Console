@@ -54,3 +54,6 @@ redteam/runs/
 .venv-demo/
 .venv-ci/
 .venv-ci312/
+
+# any throwaway virtual environment (.venv-ci312, .venv-fuzz, .venv-agentdojo, ...)
+.venv-*/

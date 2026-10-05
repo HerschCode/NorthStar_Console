@@ -54,8 +54,8 @@ def fetch() -> dict:
             dest = DATA / name / f.replace("/", "__")
             if key in manifest and dest.exists() and hashlib.sha256(dest.read_bytes()).hexdigest() == manifest[key]["sha256"]:
                 continue
-            sha = json.load(urllib.request.urlopen(f"https://api.github.com/repos/{repo}/commits/main", timeout=30))["sha"]      # nosec B310 - fixed https URL
-            data = urllib.request.urlopen(f"https://raw.githubusercontent.com/{repo}/{sha}/{f}", timeout=60).read()              # nosec B310 - fixed https URL
+            sha = json.load(urllib.request.urlopen(f"https://api.github.com/repos/{repo}/commits/main", timeout=30))["sha"]      # nosec B310 - fixed https URL  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected - https URL built from the pinned SOURCES table, not user input
+            data = urllib.request.urlopen(f"https://raw.githubusercontent.com/{repo}/{sha}/{f}", timeout=60).read()              # nosec B310 - fixed https URL  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected - https URL built from the pinned SOURCES table, not user input
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(data)
             manifest[key] = {"commit": sha, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
