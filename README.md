@@ -60,3 +60,11 @@ needs a database — the story accepts that in live mode and says so).
 - Typed clients are generated from `openapi/p1|p2|p3.json` (`npm run gen:api`) for paths and requests; P1's responses are free-form
   JSON, so response shapes are hand-written in `src/api/types.ts`.
 - The services are separate processes joined by configuration; the stack is not yet deployed (see the cloud notes in P4).
+
+## Cloud (written, not applied)
+`Dockerfile` (unprivileged nginx on 8080, security headers, `/healthz`) and `.github/workflows/deploy.yml` (manual dispatch,
+workload identity federation, no-ops until the repository variables exist). Neither has been built or run: the machine that
+wrote them has no working Docker daemon, and nothing here calls GCP. In the cloud the **gateway is the only public API**: build the
+console with `VITE_P3_URL=<gateway>` and `VITE_P1_URL=<gateway>/v1/data` (the gateway's read-only, allow-listed passthrough to P1).
+Infrastructure changes (a console Cloud Run service, spend counters, a decision-log sink) belong in `northstar-infra` and need
+its Terraform toolchain to verify; they are described in `docs/cloud.md` rather than committed unverified.

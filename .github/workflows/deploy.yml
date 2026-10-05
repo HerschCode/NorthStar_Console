@@ -1,0 +1,21 @@
+name: Deploy (manual)
+# Builds the image, pushes it to Artifact Registry and deploys it to Cloud Run through workload identity federation (no keys).
+# It does nothing until the repository variables below exist; nothing in this repo calls GCP before then.
+on:
+  workflow_dispatch: {}
+permissions: { contents: read, id-token: write }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ vars.GCP_PROJECT_ID != '' && vars.GCP_WIF_PROVIDER != '' && vars.GCP_DEPLOY_SA != '' }}
+    env:
+      IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.GCP_AR_REPO }}/northstar-console:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with: { workload_identity_provider: "${{ vars.GCP_WIF_PROVIDER }}", service_account: "${{ vars.GCP_DEPLOY_SA }}" }
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+      - run: docker build --build-arg VITE_P3_URL="${{ vars.GATEWAY_URL }}" --build-arg VITE_P1_URL="${{ vars.GATEWAY_URL }}/v1/data" -t "$IMAGE" .
+      - run: docker push "$IMAGE"
+      - run: gcloud run deploy northstar-console --image "$IMAGE" --region "${{ vars.GCP_REGION }}" --project "${{ vars.GCP_PROJECT_ID }}" --allow-unauthenticated --port 8080
