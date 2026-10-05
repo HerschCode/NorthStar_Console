@@ -57,12 +57,9 @@ def main():
     sup_ids = [r["supplier_id"] for r in parts["suppliers"]["rows"][:SUPPLIERS_IN_SNAPSHOT]]
     _dump("supplier_360", {sid: build.supplier_360(ctx, sid, t) for sid in sup_ids})
     # search is live-only; no snapshot (a missing snapshot returns 503 with a clear message)
-    from src.api.main import app
+    from scripts.export_openapi import main as export_openapi
 
-    Path("openapi").mkdir(exist_ok=True)
-    spec = {**app.openapi()}
-    spec["paths"] = {k: v for k, v in spec["paths"].items() if k.startswith("/v1")}
-    Path("openapi/p1.json").write_text(json.dumps(spec, indent=1), encoding="utf-8")
+    export_openapi()
     print("snapshot files:", sorted(p.name for p in OUT.glob("*.json")))
 
 

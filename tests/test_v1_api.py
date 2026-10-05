@@ -182,6 +182,15 @@ def test_openapi_contract_is_exported_and_lists_the_v1_paths():
         assert p in spec["paths"]
 
 
+def test_the_committed_openapi_spec_is_what_the_app_publishes():
+    from scripts.export_openapi import build_spec
+
+    committed = json.loads(Path("openapi/p1.json").read_text(encoding="utf-8"))
+    live = json.loads(json.dumps(build_spec(), sort_keys=True))
+    assert json.loads(json.dumps(committed, sort_keys=True)) == live, (
+        "openapi/p1.json is stale: run `python -m scripts.export_openapi` and commit it (the console's CI compares its pinned copy with main)")
+
+
 def test_overview_trend_is_grouped_by_deadline_month_with_intervals(live, ctx):
     r = client.get("/v1/overview?as_of=2018-04-16").json()
     tr = r["trend"]
