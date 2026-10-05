@@ -21,8 +21,9 @@ from src.v1 import build
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1", tags=["v1"])
 SNAPSHOT_DIR = Path(__file__).resolve().parents[2] / "reports" / "v1_snapshot"
-_CTX: dict = {"ctx": None, "at": 0.0}
+_CTX: dict = {"ctx": None, "at": 0.0, "failed_at": 0.0, "error": None}
 _CTX_TTL = 600
+_FAIL_COOLDOWN = 30.0     # after a database failure, serve the snapshot without re-trying the database for this long
 DEFAULT_AS_OF_STR = str(DEFAULT_AS_OF.date())
 
 
@@ -41,9 +42,16 @@ def get_context() -> build.Context:
     now = time.monotonic()
     if _CTX["ctx"] is not None and now - _CTX["at"] < _CTX_TTL:
         return _CTX["ctx"]
+    if _CTX["error"] is not None and now - _CTX["failed_at"] < _FAIL_COOLDOWN:
+        raise _CTX["error"]                  # circuit breaker: a down database costs seconds per attempt (connection retries)
     from src.api import db
 
-    cases, events = db.load_cases(), db.load_events()
+    try:
+        cases, events = db.load_cases(), db.load_events()
+    except Exception as exc:
+        _CTX.update(failed_at=now, error=exc)
+        raise
+    _CTX["error"] = None
     try:
         ap = pd.read_sql("select * from analytics.ap_control_exceptions", db.get_engine())
         ap = ap if not ap.empty else None

@@ -198,3 +198,18 @@ def test_snapshot_queue_honours_limit_and_filters(down):
     assert big and all(r["value_eur"] >= 1_000_000 for r in big) and len(big) <= len(full)
     sup = full[0]["supplier_id"]
     assert all(r["supplier_id"] == sup for r in client.get(f"/v1/queue?supplier={sup}").json()["rows"])
+
+
+def test_database_failure_is_not_retried_on_every_request(monkeypatch):
+    from src.api import db
+    calls = []
+
+    def boom():
+        calls.append(1)
+        raise RuntimeError("connection refused")
+    monkeypatch.setattr(db, "load_cases", boom)
+    monkeypatch.setattr(v1router, "_CTX", {"ctx": None, "at": 0.0, "failed_at": 0.0, "error": None})
+    for _ in range(4):
+        r = client.get("/v1/overview")
+        assert r.status_code == 200 and r.json()["snapshot"]["live"] is False
+    assert len(calls) == 1                      # one attempt, then the cooldown serves the snapshot immediately
