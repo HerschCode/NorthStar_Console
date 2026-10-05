@@ -188,3 +188,13 @@ def test_overview_trend_is_grouped_by_deadline_month_with_intervals(live, ctx):
     assert tr["provenance"] == "measured" and "deadline month" in tr["note"]
     for pt in tr["series"]:
         assert pt["n"] >= 30 and pt["ci95"][0] <= pt["breach_rate"] <= pt["ci95"][1]
+
+
+def test_snapshot_queue_honours_limit_and_filters(down):
+    full = client.get("/v1/queue?limit=500").json()["rows"]
+    few = client.get("/v1/queue?limit=3").json()
+    assert len(few["rows"]) == 3 and few["limit"] == 3 and few["total_matching"] >= 3
+    big = client.get("/v1/queue?limit=500&min_value=1000000").json()["rows"]
+    assert big and all(r["value_eur"] >= 1_000_000 for r in big) and len(big) <= len(full)
+    sup = full[0]["supplier_id"]
+    assert all(r["supplier_id"] == sup for r in client.get(f"/v1/queue?supplier={sup}").json()["rows"])

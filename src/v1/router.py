@@ -67,6 +67,23 @@ def _snapshot(name: str, key: str | None = None):
     return data
 
 
+def _filter_snapshot(name: str, data: dict, params: dict) -> dict:
+    """Snapshots hold the default view; apply the cheap request filters so a snapshot answers the same question a live call would
+    (a `limit=6` call must not return 500 rows)."""
+    if name == "queue" and isinstance(data.get("rows"), list):
+        rows = data["rows"]
+        if params.get("min_value"):
+            rows = [r for r in rows if (r.get("value_eur") or 0) >= params["min_value"]]
+        if params.get("supplier"):
+            rows = [r for r in rows if r.get("supplier_id") == params["supplier"]]
+        if params.get("stage"):
+            from src.v1.build import _yaml
+            label = next((s["label"] for s in _yaml("config/stages.yaml")["stages"] if s["id"] == params["stage"]), None)
+            rows = [r for r in rows if r.get("stage") == label]
+        data = {**data, "total_matching": len(rows), "rows": rows[: int(params.get("limit") or 100)], "limit": int(params.get("limit") or 100)}
+    return data
+
+
 def _serve(request: Request, name: str, fn, *, key: str | None = None, default_clock_only: bool = True, **params):
     as_of = params.get("as_of")
     try:
@@ -77,6 +94,7 @@ def _serve(request: Request, name: str, fn, *, key: str | None = None, default_c
         snap = _snapshot(name, key)
         if snap is None:
             raise HTTPException(503 if key is None else 404, f"database unavailable and no snapshot for {name}{'/' + key if key else ''}")
+        snap = _filter_snapshot(name, snap, params)
         snap.setdefault("snapshot", {})["reason"] = str(exc)[:160]
         return snap
     data = fn(ctx, **params)
