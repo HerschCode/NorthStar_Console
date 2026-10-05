@@ -9,6 +9,7 @@ import { fmt, pct } from '../lib/format'
 import { useSession } from '../state/session'
 import { ApiError } from '../api/client'
 import type { LabRun, LabScenario } from '../api/types'
+import { describeGatewayEvent, ledgerTrace } from '../lib/audit'
 
 export function Security() {
   const [window, setWindow] = useState('1h')
@@ -178,13 +179,13 @@ export function AuditLog() {
   const ints = useInterventions()
   const [trace, setTrace] = useState('')
   const merged = useMemo(() => {
-    const g = (events.data?.events ?? []).map((e) => ({ ts: e.ts, source: 'gateway' as const, what: `${e.kind} · ${e.decision ?? e.effect}${e.layer ? ' @ ' + e.layer : e.stage ? ' @ ' + e.stage : ''}`, who: e.session, trace: e.trace_id ?? '', detail: e.rule_id ?? e.tool ?? e.rule ?? '' }))
-    const p = (ints.data?.interventions ?? []).flatMap((i) => i.history.map((h) => ({ ts: h.ts, source: 'assistant ledger' as const, what: `intervention #${i.id} → ${h.status.replace(/_/g, ' ')}`, who: h.actor, trace: '', detail: i.case_id })))
+    const g = (events.data?.events ?? []).map((e) => { const d = describeGatewayEvent(e); return { ts: e.ts, source: 'gateway' as const, what: d.what, who: e.session, trace: e.trace_id ?? '', detail: d.detail || e.tool || '' } })
+    const p = (ints.data?.interventions ?? []).flatMap((i) => i.history.map((h) => ({ ts: h.ts, source: 'assistant ledger' as const, what: `intervention #${i.id} → ${h.status.replace(/_/g, ' ')}`, who: h.actor, trace: ledgerTrace(h.detail), detail: i.case_id })))
     return [...g, ...p].sort((a, b) => b.ts - a.ts).filter((r) => !trace || r.trace.startsWith(trace))
   }, [events.data, ints.data, trace])
   return (
     <div>
-      <PageHeader title="Audit log" subtitle="Server-side records merged: the gateway's decisions and the assistant's intervention history. Filter by trace id to follow one request end to end." />
+      <PageHeader title="Audit log" subtitle="Server-side records merged: the gateway's decisions (including who approved a held action) and the assistant's intervention history. Filter by trace id to follow one request end to end." />
       <Card className="mb-3"><label className="text-xs text-muted">Trace id (prefix)<input value={trace} onChange={(e) => setTrace(e.target.value.trim())} placeholder="4bf92f35…" className="mt-0.5 block w-72 rounded-md border border-line bg-panel2 px-2 py-1 text-sm text-ink" data-testid="audit-trace" /></label>{events.data?.note && <p className="mt-1 text-xs text-muted">{events.data.note}</p>}</Card>
       <Card><Async q={events} rows={5} isEmpty={() => merged.length === 0} empty={<p className="text-sm text-muted">No records{trace ? ' for this trace' : ''}.</p>}>{() => (
         <DataTable caption="Merged audit records" maxHeight="600px" rows={merged} rowKey={(r) => `${r.ts}${r.source}${r.what}${r.who}`} onRowClick={(r) => r.trace && nav({ to: '/observability', search: { trace: r.trace } })} columns={[

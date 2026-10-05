@@ -87,6 +87,7 @@ export async function runDemoStory(page: Page, mode: 'fixtures' | 'live') {
   await page.goto('/audit')
   await expect(page.getByText(/intervention #\d+ → gateway held/i).first()).toBeVisible({ timeout: 20_000 })
   await expect(page.getByText(/→ approved/i).first()).toBeVisible()
+  await expect(page.getByText('approval granted by a manager').first()).toBeVisible()        // the gateway's own record of who decided, in what role
   await snap(page, '08-audit-log')
 
   // 8. Back on the overview the ledger count has moved

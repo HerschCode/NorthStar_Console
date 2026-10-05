@@ -55,6 +55,8 @@ test.describe('fixtures (no services)', () => {
 
   test('command palette opens with Ctrl+K and navigates', async ({ page }) => {
     await page.goto('/')
+    await page.waitForLoadState('networkidle')                                  // the shortcut is attached once the shell has mounted; a key pressed before that is simply lost
+    await expect(page.getByRole('button', { name: 'Search (Ctrl+K)' })).toBeVisible()
     await page.keyboard.press('Control+k')
     await page.getByLabel('Search pages, cases and suppliers').fill('process')
     await page.keyboard.press('Enter')

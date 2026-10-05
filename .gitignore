@@ -10,3 +10,7 @@ test-results
 e2e/.auth
 lighthouse-reports
 coverage
+
+.dev-pids.json
+.dev-state
+.dev-logs

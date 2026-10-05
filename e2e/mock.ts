@@ -11,11 +11,12 @@ const live = <T extends object>(d: T): T => ({ ...d, snapshot: { live: true } })
 const EVIDENCE = { claims: [{ claim: 'The model beats a simple order-value rule', status: 'not_established', evidence: 'paired CIs include 0' }], experiments: [], limitations: ['Closed historical replay.'] }
 const EXPERIMENTS = { experiments: [{ id: 'benford', name: 'Benford first-digit screen', hypothesis: 'x', result: 'failed', decision: 'Not valid', detail: '~55% flags', doc: 'docs/external-validation.md' }], note: '' }
 
-export interface MockState { users: Map<string, { user: string; role: string }>; interventions: any[]; nextId: number; nextUser: number; asks: number }
+export interface MockState { users: Map<string, { user: string; role: string }>; interventions: any[]; decisions: any[]; nextId: number; nextUser: number; asks: number }
+const MOCK_TRACE = 'a'.repeat(32)
 
 /** Recorded P1 data + an in-memory stand-in for the gateway (identity, ask, interventions, approvals), so the demo story runs without services. */
 export async function installMocks(page: Page): Promise<MockState> {
-  const st: MockState = { users: new Map(), interventions: [], nextId: 1, nextUser: 1, asks: 0 }
+  const st: MockState = { users: new Map(), interventions: [], decisions: [], nextId: 1, nextUser: 1, asks: 0 }
   const json = (route: Route, body: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', headers: { 'X-Trace-ID': 'a'.repeat(32) }, body: JSON.stringify(body) })
   const who = (route: Route) => {
     const t = (route.request().headers()['authorization'] ?? '').replace('Bearer ', '')
@@ -80,7 +81,7 @@ export async function installMocks(page: Page): Promise<MockState> {
       const b = req.postDataJSON()
       const row = { id: st.nextId++, case_id: b.case_id, intervention_type: b.intervention_type, rationale: b.rationale, risk: b.risk, proposer: me.user, proposer_role: me.role, status: 'gateway_held', approval_id: `apr_${st.nextId}`,
         gateway_decision: { effect: 'require_approval', stage: 'approval', reasons: ['write action requires human approval'], risk: 'medium' }, p1_intervention_id: null, assignment: null, outcome: null, created: Date.now() / 1000, updated: Date.now() / 1000,
-        history: [{ ts: Date.now() / 1000, status: 'proposed', actor: me.user, detail: {} }, { ts: Date.now() / 1000, status: 'gateway_held', actor: 'gateway', detail: {} }] }
+        history: [{ ts: Date.now() / 1000, status: 'proposed', actor: me.user, detail: { trace_id: MOCK_TRACE } }, { ts: Date.now() / 1000, status: 'gateway_held', actor: 'gateway', detail: { trace_id: MOCK_TRACE } }] }
       st.interventions.unshift(row)
       return json(route, row, 201)
     }
@@ -91,12 +92,12 @@ export async function installMocks(page: Page): Promise<MockState> {
       if (!me || !row) return json(route, { detail: 'not found' }, 404)
       if (me.user === row.proposer) return json(route, { detail: 'separation of duties: the proposer cannot decide their own intervention' }, 403)
       if (!['manager', 'admin'].includes(me.role)) return json(route, { detail: `role '${me.role}' may not decide interventions` }, 403)
-      if (m[2] === 'approve') { row.status = 'executed'; row.p1_intervention_id = 7; row.assignment = 'treat'; row.history.push({ ts: Date.now() / 1000, status: 'approved', actor: me.user, detail: {} }, { ts: Date.now() / 1000, status: 'executed', actor: 'system', detail: {} }) }
-      if (m[2] === 'reject') { row.status = 'rejected'; row.history.push({ ts: Date.now() / 1000, status: 'rejected', actor: me.user, detail: {} }) }
+      if (m[2] === 'approve') { row.status = 'executed'; row.p1_intervention_id = 7; row.assignment = 'treat'; row.history.push({ ts: Date.now() / 1000, status: 'approved', actor: me.user, detail: { trace_id: MOCK_TRACE } }, { ts: Date.now() / 1000, status: 'executed', actor: 'system', detail: { trace_id: MOCK_TRACE } }); st.decisions.push({ kind: 'action', ts: Date.now() / 1000, tool: 'propose_intervention', effect: 'approval_granted', stage: 'approval_decision', rule: null, risk: 'medium', role: me.role, session: 'abc123def0', trace_id: MOCK_TRACE, approval_id: row.approval_id }) }
+      if (m[2] === 'reject') { row.status = 'rejected'; row.history.push({ ts: Date.now() / 1000, status: 'rejected', actor: me.user, detail: { trace_id: MOCK_TRACE } }); st.decisions.push({ kind: 'action', ts: Date.now() / 1000, tool: 'propose_intervention', effect: 'approval_rejected', stage: 'approval_decision', rule: null, risk: 'medium', role: me.role, session: 'abc123def0', trace_id: MOCK_TRACE, approval_id: row.approval_id }) }
       return json(route, row)
     }
     if (path === '/v1/governance/summary') return json(route, { window: '1h', requests: st.asks, blocked_requests: 0, block_rate: st.asks ? 0 : null, blocks_by_layer: {}, blocks_by_rule: {}, pii_requests: 0, latency_ms: { p50: 1.4, p95: 2.1 }, actions: { total: st.interventions.length, held: st.interventions.length }, series: [] })
-    if (path === '/v1/governance/events') return json(route, { detail_level: 'redacted', note: 'Session ids are hashed and reasons are withheld below the admin role.', events: st.interventions.map((r) => ({ kind: 'action', ts: r.created, tool: 'propose_intervention', effect: 'require_approval', stage: 'approval', rule: 'manager-standard', risk: 'medium', role: r.proposer_role, session: 'abc123def0', trace_id: 'a'.repeat(32), approval_id: r.approval_id })) })
+    if (path === '/v1/governance/events') return json(route, { detail_level: 'redacted', note: 'Session ids are hashed and reasons are withheld below the admin role.', events: [...st.interventions.map((r) => ({ kind: 'action', ts: r.created, tool: 'propose_intervention', effect: 'require_approval', stage: 'approval', rule: 'manager-standard', risk: 'medium', role: r.proposer_role, session: 'abc123def0', trace_id: MOCK_TRACE, approval_id: r.approval_id })), ...st.decisions] })
     if (path === '/v1/governance/policy-matrix') return json(route, { roles: ['employee', 'analyst', 'manager', 'admin'], default_effect: 'deny', policy_sha256: 'deadbeefdeadbeef', tools: [{ tool: 'propose_intervention', kind: 'write', output_trust: 'trusted', taint: { target: 'deny' }, max_per_session: 5, cells: { employee: { effect: 'deny', rules: [] }, analyst: { effect: 'approval', rules: [{ name: 'manager-standard', approval: 'required', require_role_separation: false, args: {} }] }, manager: { effect: 'approval', rules: [] }, admin: { effect: 'approval', rules: [] } } }] })
     if (path === '/v1/rules') return json(route, { rules: [], note: '' })
     if (path === '/v1/config') return json(route, { detector_backend: { classifier: 'numpy', embedding: 'none', lite_mode: false }, thresholds: { classifier: 0.5 }, policy: { sha256: 'deadbeefdeadbeef', default_effect: 'deny' }, model_integrity: { mode: 'off', artifact_hashes: {} }, demo_mode: true, assistant_configured: true })

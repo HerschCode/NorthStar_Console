@@ -10,6 +10,10 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
+      - name: Generated API types match the pinned OpenAPI specs
+        run: npm run gen:api && git diff --exit-code -- src/api/generated
+      - name: Pinned OpenAPI specs match what P1, P2 and P3 publish on main
+        run: node scripts/sync-specs.mjs --check
       - run: npm run typecheck
       - run: npm test
       - run: npm run build

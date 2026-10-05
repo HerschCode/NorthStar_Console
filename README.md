@@ -10,12 +10,15 @@ act → measure*, with every number labelled by how it was produced.
 ## 60-second quickstart (Windows)
 ```powershell
 npm install
-powershell -ExecutionPolicy Bypass -File scripts\dev.ps1   # P1 :8000, P2 :8001, P3 :8002 (local throw-away secrets)
-npm run dev                                                # console http://localhost:5173
+powershell -ExecutionPolicy Bypass -File scripts\dev.ps1 -Ollama   # P1 :8000, P2 :8001, P3 :8002 (local throw-away secrets)
+npm run dev                                                        # console http://localhost:5173
 ```
-Click **Sign in (demo)** in the top bar and pick a role. Without a language model P2 returns labelled template answers; set
+Click **Sign in (demo)** in the top bar and pick a role. `-Ollama` makes P2 answer with a local [Ollama](https://ollama.com) model
+(free, weak, every answer labelled `ollama:<model>`); without it, and without a key, P2 returns labelled template answers. Set
 `ANTHROPIC_API_KEY` in your own environment for real ones (spend is capped by P2's guard). P1 serves its committed snapshot
-unless you set `P1_REAL_DB=1`.
+unless you set `P1_REAL_DB=1`. `-Fresh` starts with empty state, `-Stop` stops only what the script started (it checks that a
+recorded process is still a uvicorn before stopping it); a run's state is in `.dev-state\` and its logs in `.dev-logs\`, both
+ignored by git, so it never touches the other repositories' data.
 
 ## What is in it
 Overview (KPIs with provenance, executive brief traced to facts, breach trend with 95% bands, risk funnel, risk × value, where
@@ -41,9 +44,14 @@ needs a database — the story accepts that in live mode and says so).
 | ![](docs/demo/05-gateway-holds-proposal.png) | ![](docs/demo/07-separation-of-duties.png) |
 
 ## Quality bars, measured
-- Type-check clean; 15 unit tests (Vitest) and 22 Playwright tests on recorded data (demo story, provenance on every KPI,
+- Type-check clean; 20 unit tests (Vitest) and 22 Playwright tests on recorded data (demo story, provenance on every KPI,
   snapshot state, replay clock, loading/empty/error states, command palette, **axe: no serious/critical violations on 15 pages**,
-  **no horizontal scroll at 375 px**) plus the same story on the live stack.
+  **no horizontal scroll at 375 px**) plus the same story on the live stack. The live run (P1 snapshot, P2 on a local Ollama
+  model, current P3) also checks that the audit log shows the manager's approval as the gateway recorded it.
+- **Contracts.** `openapi/p1|p2|p3.json` are pinned copies of what each service publishes. CI regenerates the typed clients and
+  fails if `src/api/generated` differs, and `node scripts/sync-specs.mjs --check` fails if a pinned copy differs from the service's
+  `main` (`--local` compares with sibling checkouts; run without `--check` to update). P3 also fails its own build on a breaking
+  change to its spec, and tests that its committed spec is what the app publishes.
 - Lighthouse on the production build (`npm run lighthouse`), Edge: **accessibility 100 and best-practices 100 on all five pages
   tested; performance 73–90**, so the 90 bar is met only on Process Mining (90) and missed on Action Center (89), AI Security (86),
   AP controls (75) and the overview (73) — the cost is ECharts' script evaluation
@@ -56,7 +64,9 @@ needs a database — the story accepts that in live mode and says so).
   order changes) labelled as such, not a SHAP waterfall.
 - **Playwright runs on the installed Edge** (`PW_CHANNEL`), so nothing is downloaded locally; CI installs Chromium. Video needs
   `npx playwright install ffmpeg` (opt-in), so the story is committed as storyboard frames instead of a GIF.
-- The audit log merges the gateway's decisions with P2's intervention history; decisions are not yet written to a shared store.
+- The audit log merges the gateway's records (including who approved or rejected a held action, in what role) with P2's intervention
+  history, joined by trace id. P1's own intervention log is not merged: it needs P1's database, which is not part of the local
+  stack, and the records are not yet written to one shared store.
 - Typed clients are generated from `openapi/p1|p2|p3.json` (`npm run gen:api`) for paths and requests; P1's responses are free-form
   JSON, so response shapes are hand-written in `src/api/types.ts`.
 - The services are separate processes joined by configuration; the stack is not yet deployed (see the cloud notes in P4).
