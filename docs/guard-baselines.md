@@ -127,3 +127,65 @@ Options for anyone who wants a stronger detector than the shipped default:
 
 **What this means for the project's claims:** the from-scratch classifier is a defensible engineering exercise (tiny, fast, parity-tested, torch-free), not a detector a team should prefer over an
 existing guard model when memory and latency are available. The README says so.
+
+
+## Indirect injection: tool outputs and documents (detector only)
+
+The tables above are about injections in a *user's message*. An agent is also attacked through text it reads: a tool result, an email, a web page. This section asks the narrow
+question "does the gateway's detection layer flag that text?" with no model and no agent in the loop (whether an agent would obey it is what AgentDojo measures, and that run needs a
+provider key: `scripts/run_agentdojo_gateway.py`). `python -X utf8 -m scripts.guard_indirect` downloads the data once (git-ignored, pinned to a commit, SHA-256 in
+`data/external/indirect/MANIFEST.json`) and writes [`reports/p3_guard_indirect.json`](../reports/p3_guard_indirect.json). Same configurations as the gateway comparison in
+[`docs/guard-student.md`](guard-student.md); the student is at probability 0.5.
+
+| Source | What is used | Licence |
+|---|---|---|
+| [InjecAgent](https://github.com/uiuc-kang-lab/InjecAgent) | 1,054 injected tool responses, twice: **base** (the attacker's request sits in a field of a tool result, e.g. "Please grant permanent access to my friend Amy ...") and **enhanced** (the same prefixed with "IMPORTANT!!! Ignore all previous instructions ...") | MIT |
+| [BIPIA](https://github.com/microsoft/BIPIA) | the benchmark's 75 text and 50 code attack strings, alone, and appended (by this script, one seeded draw per context) to its own email (50), table (100) and code (50) contexts | code MIT; each dataset keeps its source's licence (e.g. WikiTableQuestions, CC BY-SA 4.0); used for evaluation, not redistributed |
+
+**The controls are mine, and small.** InjecAgent reuses only **17 distinct tool-response templates**, so its clean controls are those 17 crossed with 8 neutral statements ("Thanks for the
+quick reply!") and, separately, with 8 benign polite requests ("Please call me back when you get a chance."): 136 rows each, from 17 templates, so correlated. (The first version of this
+script claimed 500 controls and silently had 17; `tests/test_guard_indirect.py` now pins the construction.) BIPIA's controls are the same 200 contexts without the attack.
+
+### InjecAgent (tool results; counts are blocked / total)
+
+| Configuration | Enhanced (override wording): attacks blocked | **Base (plain requests): attacks blocked** | Clean neutral: false positives | Clean benign requests: false positives |
+|---|---:|---:|---:|---:|
+| Rules only | 510/510 + 544/544 | 0/510 + 0/544 | 0/136 | 0/136 |
+| Shipped default (rules + NumPy) | 510/510 + 544/544 | 7/510 + 9/544 | 2/136 | 6/136 |
+| Rules + student | 510/510 + 544/544 | 177/510 + 120/544 | 29/136 | 34/136 |
+| Rules + NumPy + student | 510/510 + 544/544 | 179/510 + 124/544 | 30/136 | 37/136 |
+| Rules OR ProtectAI deberta-v3-base | 510/510 + 544/544 | 410/510 + 283/544 | 64/136 | 80/136 |
+
+### BIPIA (documents)
+
+| Configuration | Text attack strings alone | Code attack strings alone | Injected email / table / code context | Clean contexts: false positives |
+|---|---:|---:|---:|---:|
+| Rules only | 0/75 | 0/50 | 0/50 / 0/100 / 0/50 | 0/200 |
+| Shipped default (rules + NumPy) | 7/75 | 6/50 | 0/50 / 0/100 / 1/50 | 3/200 |
+| Rules + student | 6/75 | 0/50 | 0/50 / 3/100 / 2/50 | 7/200 |
+| Rules + NumPy + student | 10/75 | 6/50 | 0/50 / 3/100 / 3/50 | 10/200 |
+| Rules OR ProtectAI deberta-v3-base | 13/75 | 0/50 | 29/50 / 4/100 / 0/50 | 41/200 |
+
+### Ranking quality, with no threshold (ROC-AUC, injected vs clean; 0.5 is chance)
+
+| Scorer | InjecAgent base vs neutral | InjecAgent base vs benign requests | BIPIA injected vs clean contexts |
+|---|---:|---:|---:|
+| numpy classifier | 0.68 | 0.45 | 0.49 |
+| student | 0.58 | 0.54 | 0.47 |
+| teacher (ProtectAI deberta-v3-base) | 0.64 | 0.57 | 0.37 |
+
+### What it shows, and what it does not
+
+- **Explicit override wording is caught, every time, by the rules** (1,054 of 1,054 enhanced cases, in every configuration; the rules alone have no false positives on these controls). That is
+  the part of the problem the text layers solve.
+- **A plain request in a data field is not detected by anything here.** The rules block none of InjecAgent base and the shipped classifier 1-2%. The student (22-35%) and ProtectAI (52-80%) block more,
+  but they block **21-25% and 47-59% of the clean controls** too, and their AUCs are near chance: 0.58-0.68 against the neutral statements and 0.45-0.57 against the benign polite requests, which the
+  attack is indistinguishable from by wording. What looks like detection is mostly the detectors reacting to the *format* (a JSON-like tool result) and to imperative sentences, not to the attacker. On BIPIA contexts every
+  AUC is at or below 0.5: ProtectAI blocks 58% of injected emails and also 20.5% of clean contexts, and ranks injected contexts *below* clean ones (0.37).
+- **So for this attack class the text detectors are not the defence.** An instruction the user did not write, in text the agent read, has to be stopped
+  where it would act: the taint check (an untrusted source cannot authorise a write), the policy, and the human approval, which the action-firewall corpus (86 scenarios) exercises and which the AgentDojo runner will measure end to end once it has a provider key (not yet run).
+  This table supports that design, and is a reason not to describe the text layers alone as "prompt injection protection".
+- **Caveats.** Controls are 17 templates; the BIPIA insertion is mine, not the benchmark's; these rows are tool-result- and document-shaped text, which the student and the classifier were not
+  trained on (their false-positive rates on chat-style held-out sets are far lower, in `docs/guard-student.md`), so part of the false-positive rate is domain shift; and the gateway's
+  normaliser rewrites digits inside such text before detection (a date like `2022` reaches the classifiers as `2o22`), which I did not isolate as a cause. ProtectAI's scores use the raw text, as a
+  standalone detector would; its own training data may overlap these public sets (not checked). Detection of text is not the same as an agent being hijacked.
