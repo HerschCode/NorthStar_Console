@@ -8,9 +8,15 @@ os.environ.setdefault("GATEWAY_LOG_STDOUT", "0")
 from gateway.app import app  # noqa: E402
 
 
-def main():
+def build_spec() -> dict:
+    """The published contract: the /v1 surface only (the legacy /gateway routes are not part of it)."""
     spec = app.openapi()
     spec["paths"] = {k: v for k, v in spec["paths"].items() if k.startswith("/v1")}
+    return spec
+
+
+def main():
+    spec = build_spec()
     Path("openapi").mkdir(exist_ok=True)
     Path("openapi/p3.json").write_text(json.dumps(spec, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     print(len(spec["paths"]), "paths")

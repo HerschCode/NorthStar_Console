@@ -74,3 +74,37 @@ jobs:
           pip-audit -r requirements-render.lock --require-hashes --strict
           pip-audit -r requirements.lock --require-hashes --strict
           pip-audit -r requirements-student.lock --require-hashes --strict
+
+  openapi-contract:
+    # The console generates its typed client from openapi/p3.json and the other services call these routes: a removed route, a removed response field or a newly
+    # required request field breaks them silently. The spec is compared with its version before this push (or before the pull request's base), and a breaking
+    # change fails the build unless the commit message says `openapi-break-ok`, which turns the failure into a warning that someone chose it.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          fetch-depth: 0          # the previous version of the spec has to be in the history
+
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5.5.0
+        with:
+          go-version: "1.26"      # oasdiff v1.33.0 declares go 1.26 and toolchain go1.27.1; the go command fetches that toolchain
+
+      - name: Install oasdiff (pinned release)
+        run: go install github.com/oasdiff/oasdiff@v1.33.0
+
+      - name: No breaking change to openapi/p3.json
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE_SHA:openapi/p3.json" 2>/dev/null; then
+            echo "no earlier version of openapi/p3.json to compare with"; exit 0
+          fi
+          git show "$BASE_SHA:openapi/p3.json" > "$RUNNER_TEMP/base.json"
+          if "$(go env GOPATH)/bin/oasdiff" breaking "$RUNNER_TEMP/base.json" openapi/p3.json --fail-on ERR --format githubactions; then
+            exit 0
+          fi
+          if git log -1 --format=%B | grep -q "openapi-break-ok"; then
+            echo "::warning::breaking OpenAPI change, acknowledged by openapi-break-ok in the commit message"; exit 0
+          fi
+          echo "::error::breaking change to openapi/p3.json since $BASE_SHA. If it is intended, say openapi-break-ok in the commit message and update the console's pinned copy."
+          exit 1
