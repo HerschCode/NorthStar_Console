@@ -1,0 +1,1974 @@
+{
+ "components": {
+  "schemas": {
+   "AskContext": {
+    "properties": {
+     "as_of": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "As Of"
+     },
+     "case_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Case Id"
+     },
+     "control": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Control"
+     },
+     "filters": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Filters"
+     },
+     "page": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Page"
+     },
+     "supplier_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Supplier Id"
+     }
+    },
+    "title": "AskContext",
+    "type": "object"
+   },
+   "AskRequest": {
+    "properties": {
+     "context": {
+      "$ref": "#/components/schemas/AskContext"
+     },
+     "conversation_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Conversation Id"
+     },
+     "question": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Question",
+      "type": "string"
+     }
+    },
+    "required": [
+     "question"
+    ],
+    "title": "AskRequest",
+    "type": "object"
+   },
+   "AuditReportResponse": {
+    "properties": {
+     "data_evidence": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "title": "Data Evidence",
+      "type": "array"
+     },
+     "exception_summary": {
+      "title": "Exception Summary",
+      "type": "string"
+     },
+     "flagged_clauses": {
+      "items": {
+       "$ref": "#/components/schemas/FlaggedClause"
+      },
+      "title": "Flagged Clauses",
+      "type": "array"
+     },
+     "gate_applied": {
+      "title": "Gate Applied",
+      "type": "boolean"
+     },
+     "limitations": {
+      "title": "Limitations",
+      "type": "string"
+     },
+     "policy_clauses": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Policy Clauses",
+      "type": "array"
+     },
+     "recommended_action": {
+      "title": "Recommended Action",
+      "type": "string"
+     },
+     "risk_assessment": {
+      "title": "Risk Assessment",
+      "type": "string"
+     }
+    },
+    "required": [
+     "exception_summary",
+     "data_evidence",
+     "policy_clauses",
+     "flagged_clauses",
+     "risk_assessment",
+     "recommended_action",
+     "limitations",
+     "gate_applied"
+    ],
+    "title": "AuditReportResponse",
+    "type": "object"
+   },
+   "AuditRequest": {
+    "properties": {
+     "case_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "AP case or document ID to investigate.",
+      "title": "Case Id"
+     },
+     "vendor": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Vendor name or ID to investigate.",
+      "title": "Vendor"
+     }
+    },
+    "title": "AuditRequest",
+    "type": "object"
+   },
+   "AuditResponse": {
+    "properties": {
+     "p1_unavailable": {
+      "title": "P1 Unavailable",
+      "type": "boolean"
+     },
+     "parse_failed": {
+      "title": "Parse Failed",
+      "type": "boolean"
+     },
+     "report": {
+      "$ref": "#/components/schemas/AuditReportResponse"
+     }
+    },
+    "required": [
+     "report",
+     "p1_unavailable",
+     "parse_failed"
+    ],
+    "title": "AuditResponse",
+    "type": "object"
+   },
+   "Body_upload_document_documents_post": {
+    "properties": {
+     "file": {
+      "contentMediaType": "application/octet-stream",
+      "title": "File",
+      "type": "string"
+     }
+    },
+    "required": [
+     "file"
+    ],
+    "title": "Body_upload_document_documents_post",
+    "type": "object"
+   },
+   "BriefingRequest": {
+    "properties": {
+     "as_of": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "As Of"
+     }
+    },
+    "title": "BriefingRequest",
+    "type": "object"
+   },
+   "ChatRequest": {
+    "properties": {
+     "conversation_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Reuse across turns for follow-up questions with context (see Phase 18).",
+      "title": "Conversation Id"
+     },
+     "provider": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Override the server's default demo provider: 'gemini' or 'groq'. Ignored on authenticated /chat.",
+      "title": "Provider"
+     },
+     "question": {
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Question",
+      "type": "string"
+     }
+    },
+    "required": [
+     "question"
+    ],
+    "title": "ChatRequest",
+    "type": "object"
+   },
+   "ChatResponse": {
+    "properties": {
+     "answer": {
+      "title": "Answer",
+      "type": "string"
+     },
+     "citations": {
+      "items": {
+       "$ref": "#/components/schemas/SourceCitation"
+      },
+      "title": "Citations",
+      "type": "array"
+     },
+     "conversation_id": {
+      "title": "Conversation Id",
+      "type": "string"
+     },
+     "cost_usd": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cost Usd"
+     },
+     "grounding": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Grounding"
+     },
+     "input_tokens": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Input Tokens"
+     },
+     "latency_ms": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Latency Ms"
+     },
+     "model": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model"
+     },
+     "output_tokens": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Output Tokens"
+     },
+     "tools_used": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Tools Used",
+      "type": "array"
+     }
+    },
+    "required": [
+     "answer",
+     "tools_used",
+     "citations",
+     "conversation_id"
+    ],
+    "title": "ChatResponse",
+    "type": "object"
+   },
+   "DecideRequest": {
+    "properties": {
+     "note": {
+      "default": "",
+      "maxLength": 300,
+      "title": "Note",
+      "type": "string"
+     }
+    },
+    "title": "DecideRequest",
+    "type": "object"
+   },
+   "DocumentListItem": {
+    "properties": {
+     "chunk_count": {
+      "title": "Chunk Count",
+      "type": "integer"
+     },
+     "document_id": {
+      "title": "Document Id",
+      "type": "string"
+     },
+     "title": {
+      "title": "Title",
+      "type": "string"
+     },
+     "version": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Version"
+     }
+    },
+    "required": [
+     "document_id",
+     "title",
+     "chunk_count"
+    ],
+    "title": "DocumentListItem",
+    "type": "object"
+   },
+   "DocumentUploadResponse": {
+    "properties": {
+     "chunk_count": {
+      "title": "Chunk Count",
+      "type": "integer"
+     },
+     "document_id": {
+      "title": "Document Id",
+      "type": "string"
+     },
+     "title": {
+      "title": "Title",
+      "type": "string"
+     }
+    },
+    "required": [
+     "document_id",
+     "title",
+     "chunk_count"
+    ],
+    "title": "DocumentUploadResponse",
+    "type": "object"
+   },
+   "FlaggedClause": {
+    "properties": {
+     "clause": {
+      "title": "Clause",
+      "type": "string"
+     },
+     "reasons": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Reasons",
+      "type": "array"
+     }
+    },
+    "required": [
+     "clause",
+     "reasons"
+    ],
+    "title": "FlaggedClause",
+    "type": "object"
+   },
+   "HITLChatResponse": {
+    "description": "Response from POST /chat/hitl.\n\nstatus=\"awaiting_approval\" when the graph paused at propose_intervention;\nthe caller must POST /interventions/{intervention_id}/approve|reject to continue.\nstatus=\"done\" when the graph completed without interruption.",
+    "properties": {
+     "answer": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Answer"
+     },
+     "citations": {
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/SourceCitation"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Citations"
+     },
+     "intervention": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/InterventionProposal"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "status": {
+      "title": "Status",
+      "type": "string"
+     },
+     "thread_id": {
+      "title": "Thread Id",
+      "type": "string"
+     },
+     "tools_used": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tools Used"
+     }
+    },
+    "required": [
+     "status",
+     "thread_id"
+    ],
+    "title": "HITLChatResponse",
+    "type": "object"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "title": "Detail",
+      "type": "array"
+     }
+    },
+    "title": "HTTPValidationError",
+    "type": "object"
+   },
+   "HealthResponse": {
+    "properties": {
+     "ops_performance_api_reachable": {
+      "title": "Ops Performance Api Reachable",
+      "type": "boolean"
+     },
+     "status": {
+      "title": "Status",
+      "type": "string"
+     },
+     "vector_store_reachable": {
+      "title": "Vector Store Reachable",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "status",
+     "ops_performance_api_reachable",
+     "vector_store_reachable"
+    ],
+    "title": "HealthResponse",
+    "type": "object"
+   },
+   "InterventionProposal": {
+    "properties": {
+     "action": {
+      "title": "Action",
+      "type": "string"
+     },
+     "intervention_id": {
+      "title": "Intervention Id",
+      "type": "string"
+     },
+     "priority": {
+      "title": "Priority",
+      "type": "string"
+     },
+     "reason": {
+      "title": "Reason",
+      "type": "string"
+     },
+     "target": {
+      "title": "Target",
+      "type": "string"
+     }
+    },
+    "required": [
+     "intervention_id",
+     "action",
+     "target",
+     "reason",
+     "priority"
+    ],
+    "title": "InterventionProposal",
+    "type": "object"
+   },
+   "InterventionResumeResponse": {
+    "description": "Response from POST /interventions/{id}/approve|reject.\n\nReturns the final agent answer after the graph resumes.",
+    "properties": {
+     "answer": {
+      "title": "Answer",
+      "type": "string"
+     },
+     "citations": {
+      "items": {
+       "$ref": "#/components/schemas/SourceCitation"
+      },
+      "title": "Citations",
+      "type": "array"
+     },
+     "decision": {
+      "title": "Decision",
+      "type": "string"
+     },
+     "intervention_id": {
+      "title": "Intervention Id",
+      "type": "string"
+     },
+     "tools_used": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Tools Used",
+      "type": "array"
+     }
+    },
+    "required": [
+     "intervention_id",
+     "decision",
+     "answer",
+     "tools_used",
+     "citations"
+    ],
+    "title": "InterventionResumeResponse",
+    "type": "object"
+   },
+   "InterventionStatusResponse": {
+    "properties": {
+     "action": {
+      "title": "Action",
+      "type": "string"
+     },
+     "approved_by": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Approved By"
+     },
+     "execution_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Execution Note"
+     },
+     "initiated_by": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Initiated By"
+     },
+     "intervention_id": {
+      "title": "Intervention Id",
+      "type": "string"
+     },
+     "priority": {
+      "title": "Priority",
+      "type": "string"
+     },
+     "reason": {
+      "title": "Reason",
+      "type": "string"
+     },
+     "status": {
+      "title": "Status",
+      "type": "string"
+     },
+     "target": {
+      "title": "Target",
+      "type": "string"
+     },
+     "thread_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Thread Id"
+     }
+    },
+    "required": [
+     "intervention_id",
+     "action",
+     "target",
+     "reason",
+     "priority",
+     "status"
+    ],
+    "title": "InterventionStatusResponse",
+    "type": "object"
+   },
+   "InvestigateRequest": {
+    "properties": {
+     "question": {
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Question",
+      "type": "string"
+     }
+    },
+    "required": [
+     "question"
+    ],
+    "title": "InvestigateRequest",
+    "type": "object"
+   },
+   "InvestigateResponse": {
+    "properties": {
+     "report": {
+      "$ref": "#/components/schemas/InvestigationReport"
+     },
+     "tools_used": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Tools Used",
+      "type": "array"
+     }
+    },
+    "required": [
+     "report",
+     "tools_used"
+    ],
+    "title": "InvestigateResponse",
+    "type": "object"
+   },
+   "InvestigationReport": {
+    "properties": {
+     "evidence": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Evidence",
+      "type": "array"
+     },
+     "executive_summary": {
+      "title": "Executive Summary",
+      "type": "string"
+     },
+     "limitations": {
+      "title": "Limitations",
+      "type": "string"
+     },
+     "problem": {
+      "title": "Problem",
+      "type": "string"
+     },
+     "recommendations": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Recommendations",
+      "type": "array"
+     },
+     "relevant_policy": {
+      "items": {
+       "$ref": "#/components/schemas/SourceCitation"
+      },
+      "title": "Relevant Policy",
+      "type": "array"
+     },
+     "root_causes": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Root Causes",
+      "type": "array"
+     }
+    },
+    "required": [
+     "executive_summary",
+     "problem",
+     "evidence",
+     "root_causes",
+     "relevant_policy",
+     "recommendations",
+     "limitations"
+    ],
+    "title": "InvestigationReport",
+    "type": "object"
+   },
+   "InvestigationRequest": {
+    "properties": {
+     "context": {
+      "$ref": "#/components/schemas/AskContext"
+     },
+     "question": {
+      "maxLength": 1000,
+      "minLength": 3,
+      "title": "Question",
+      "type": "string"
+     }
+    },
+    "required": [
+     "question"
+    ],
+    "title": "InvestigationRequest",
+    "type": "object"
+   },
+   "NLFilterRequest": {
+    "properties": {
+     "question": {
+      "maxLength": 300,
+      "minLength": 1,
+      "title": "Question",
+      "type": "string"
+     }
+    },
+    "required": [
+     "question"
+    ],
+    "title": "NLFilterRequest",
+    "type": "object"
+   },
+   "OutcomeRequest": {
+    "properties": {
+     "breached_after": {
+      "title": "Breached After",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "breached_after"
+    ],
+    "title": "OutcomeRequest",
+    "type": "object"
+   },
+   "ProposeRequest": {
+    "properties": {
+     "case_id": {
+      "title": "Case Id",
+      "type": "string"
+     },
+     "intervention_type": {
+      "default": "expedite_approval",
+      "title": "Intervention Type",
+      "type": "string"
+     },
+     "rationale": {
+      "maxLength": 500,
+      "minLength": 3,
+      "title": "Rationale",
+      "type": "string"
+     },
+     "risk": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Risk",
+      "type": "number"
+     },
+     "sources": {
+      "description": "[{kind, text, trust: trusted|untrusted}] registered with the gateway before authorising",
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "title": "Sources",
+      "type": "array"
+     }
+    },
+    "required": [
+     "case_id",
+     "rationale",
+     "risk"
+    ],
+    "title": "ProposeRequest",
+    "type": "object"
+   },
+   "RejectRequest": {
+    "properties": {
+     "reason": {
+      "default": "",
+      "title": "Reason",
+      "type": "string"
+     }
+    },
+    "title": "RejectRequest",
+    "type": "object"
+   },
+   "SourceCitation": {
+    "properties": {
+     "kind": {
+      "title": "Kind",
+      "type": "string"
+     },
+     "reference": {
+      "title": "Reference",
+      "type": "string"
+     }
+    },
+    "required": [
+     "kind",
+     "reference"
+    ],
+    "title": "SourceCitation",
+    "type": "object"
+   },
+   "ValidationError": {
+    "properties": {
+     "ctx": {
+      "title": "Context",
+      "type": "object"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "title": "Location",
+      "type": "array"
+     },
+     "msg": {
+      "title": "Message",
+      "type": "string"
+     },
+     "type": {
+      "title": "Error Type",
+      "type": "string"
+     }
+    },
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError",
+    "type": "object"
+   }
+  }
+ },
+ "info": {
+  "description": "Investigation assistant over Northstar Manufacturing's operational data and policy documents. Consumes operations-performance's API as agent tools rather than reimplementing any analytics -- one analytics engine, two front doors.",
+  "title": "Operations Assistant API",
+  "version": "0.1.0"
+ },
+ "openapi": "3.1.0",
+ "paths": {
+  "/v1/ask": {
+   "post": {
+    "operationId": "v1_ask_v1_ask_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-api-key",
+      "required": false,
+      "schema": {
+       "title": "X-Api-Key",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-northstar-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Northstar-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-northstar-role",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Northstar-Role"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AskRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "V1 Ask",
+    "tags": [
+     "v1"
+    ]
+   }
+  },
+  "/v1/briefing": {
+   "post": {
+    "operationId": "v1_briefing_v1_briefing_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-api-key",
+      "required": false,
+      "schema": {
+       "title": "X-Api-Key",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BriefingRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "V1 Briefing",
+    "tags": [
+     "v1"
+    ]
+   }
+  },
+  "/v1/interventions": {
+   "get": {
+    "operationId": "v1_list_interventions_v1_interventions_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "status",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "in": "query",
+      "name": "limit",
+      "required": false,
+      "schema": {
+       "default": 100,
+       "maximum": 500,
+       "minimum": 1,
+       "title": "Limit",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-api-key",
+      "required": false,
+      "schema": {
+       "title": "X-Api-Key",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "V1 List Interventions",
+    "tags": [
+     "v1"
+    ]
+   },
+   "post": {
+    "operationId": "v1_propose_v1_interventions_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-api-key",
+      "required": false,
+      "schema": {
+       "title": "X-Api-Key",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-northstar-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Northstar-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-northstar-role",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Northstar-Role"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProposeRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "V1 Propose",
+    "tags": [
+     "v1"
+    ]
+   }
+  },
+  "/v1/interventions/{iid}": {
+   "get": {
+    "operationId": "v1_get_intervention_v1_interventions__iid__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "iid",
+      "required": true,
+      "schema": {
+       "title": "Iid",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-api-key",
+      "required": false,
+      "schema": {
+       "title": "X-Api-Key",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "V1 Get Intervention",
+    "tags": [
+     "v1"
+    ]
+   }
+  },
+  "/v1/interventions/{iid}/approve": {
+   "post": {
+    "operationId": "v1_approve_v1_interventions__iid__approve_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "iid",
+      "required": true,
+      "schema": {
+       "title": "Iid",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-api-key",
+      "required": false,
+      "schema": {
+       "title": "X-Api-Key",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-northstar-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Northstar-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-northstar-role",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Northstar-Role"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DecideRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "V1 Approve",
+    "tags": [
+     "v1"
+    ]
+   }
+  },
+  "/v1/interventions/{iid}/outcome": {
+   "post": {
+    "operationId": "v1_outcome_v1_interventions__iid__outcome_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "iid",
+      "required": true,
+      "schema": {
+       "title": "Iid",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-api-key",
+      "required": false,
+      "schema": {
+       "title": "X-Api-Key",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-northstar-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Northstar-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-northstar-role",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Northstar-Role"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/OutcomeRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "V1 Outcome",
+    "tags": [
+     "v1"
+    ]
+   }
+  },
+  "/v1/interventions/{iid}/reject": {
+   "post": {
+    "operationId": "v1_reject_v1_interventions__iid__reject_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "iid",
+      "required": true,
+      "schema": {
+       "title": "Iid",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-api-key",
+      "required": false,
+      "schema": {
+       "title": "X-Api-Key",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-northstar-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Northstar-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-northstar-role",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Northstar-Role"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DecideRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "V1 Reject",
+    "tags": [
+     "v1"
+    ]
+   }
+  },
+  "/v1/investigations": {
+   "get": {
+    "operationId": "v1_list_investigations_v1_investigations_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "limit",
+      "required": false,
+      "schema": {
+       "default": 50,
+       "maximum": 200,
+       "minimum": 1,
+       "title": "Limit",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-api-key",
+      "required": false,
+      "schema": {
+       "title": "X-Api-Key",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "V1 List Investigations",
+    "tags": [
+     "v1"
+    ]
+   },
+   "post": {
+    "operationId": "v1_investigate_v1_investigations_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-api-key",
+      "required": false,
+      "schema": {
+       "title": "X-Api-Key",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-northstar-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Northstar-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-northstar-role",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Northstar-Role"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/InvestigationRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "V1 Investigate",
+    "tags": [
+     "v1"
+    ]
+   }
+  },
+  "/v1/investigations/{inv_id}": {
+   "get": {
+    "operationId": "v1_get_investigation_v1_investigations__inv_id__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "inv_id",
+      "required": true,
+      "schema": {
+       "title": "Inv Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-api-key",
+      "required": false,
+      "schema": {
+       "title": "X-Api-Key",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "V1 Get Investigation",
+    "tags": [
+     "v1"
+    ]
+   }
+  },
+  "/v1/investigations/{inv_id}/export": {
+   "get": {
+    "operationId": "v1_export_investigation_v1_investigations__inv_id__export_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "inv_id",
+      "required": true,
+      "schema": {
+       "title": "Inv Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "format",
+      "required": false,
+      "schema": {
+       "default": "md",
+       "pattern": "^(md|pdf)$",
+       "title": "Format",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-api-key",
+      "required": false,
+      "schema": {
+       "title": "X-Api-Key",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "V1 Export Investigation",
+    "tags": [
+     "v1"
+    ]
+   }
+  },
+  "/v1/nl-filter": {
+   "post": {
+    "operationId": "v1_nl_filter_v1_nl_filter_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-api-key",
+      "required": false,
+      "schema": {
+       "title": "X-Api-Key",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/NLFilterRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "V1 Nl Filter",
+    "tags": [
+     "v1"
+    ]
+   }
+  },
+  "/v1/spend": {
+   "get": {
+    "operationId": "v1_spend_v1_spend_get",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-api-key",
+      "required": false,
+      "schema": {
+       "title": "X-Api-Key",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "V1 Spend",
+    "tags": [
+     "v1"
+    ]
+   }
+  },
+  "/v1/traces/{trace_id}": {
+   "get": {
+    "operationId": "v1_trace_v1_traces__trace_id__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "trace_id",
+      "required": true,
+      "schema": {
+       "title": "Trace Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-api-key",
+      "required": false,
+      "schema": {
+       "title": "X-Api-Key",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "V1 Trace",
+    "tags": [
+     "v1"
+    ]
+   }
+  }
+ }
+}
