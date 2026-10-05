@@ -26,6 +26,20 @@ the queue itself enforces that the decider is a different person and, for `relea
 requester. The policy now lists `finance` for payment hold/release and `analyst` for standard proposals (all still require
 approval), so the console's five personas are meaningful.
 
+A human deciding a held action is **audited**, not only recorded in the queue: each approval or rejection (through `/v1/approvals/...` or the assistant's
+`/gateway/actions/approvals/...` call) appends an `approval_granted` / `approval_rejected` entry (stage `approval_decision`) to the append-only action audit with
+the approver's id and role, the approval id, the note (PII-redacted) and the **trace id of the deciding request**; a refused or repeated decision logs nothing.
+`GET /v1/traces/{id}` therefore shows the question, the held action and the human decision under one id (`role` and `approval_id` are on each action entry).
+The governance summary counts these apart (`actions.approvals_decided`) so held / allowed / denied stay one per action.
+
+## Checking the three services together
+`python -X utf8 -m scripts.local_chain_check --p1-dir <P1> --p2-dir <P2> [--no-llm] [--write-report]` starts P1, P2 and this gateway on free ports with their state in
+a temp directory and drives the console's story through `/v1` with demo identities and **no paid call**: login, a real case from P1, an ask answered by a local
+model (or the template with `--no-llm`) with every claim verified, an injection stopped at the gateway, a proposal held by the firewall, the people rules (no
+self-approval, a viewer cannot propose), a second person approving, and the audit showing all of it under one trace id with no prompt text stored. The
+last result is `reports/p3_local_chain.json`. One hop is **not proven locally**: writing an approved intervention to P1's ledger needs P1's Postgres, so the
+ledger records `execution_failed` and the check reports that step as not proven rather than passed. It is not in CI (P1 and P2 are not checked out there).
+
 ## Governance (persisted, not in-process)
 `gateway/v1/store.py` ingests `logs/gateway.jsonl` and `logs/actions.jsonl` into SQLite incrementally and idempotently; session and
 user ids are stored as short salted hashes; prompt text is never stored.

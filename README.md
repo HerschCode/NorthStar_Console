@@ -133,6 +133,7 @@ Settings are environment variables, read per request where that is safe:
 | `GATEWAY_REQUIRE_IDENTITY`, `GATEWAY_IDENTITY_TOKEN` | disabled, unset | Require identity headers from a trusted reverse proxy on chat, action, dashboard, connectivity and demo-run endpoints; the gateway ignores caller-supplied user/role fields and isolates session state by authenticated user |
 | `EMBEDDING_BACKEND` | `none` | Opt-in similarity layers (`tfidf`, `sentence_transformer`); retired from the default after an ablation |
 | `OPS_ASSISTANT_URL` | unset | Adds the real Project 2 agent as a backend |
+| `GATEWAY_LOG_PATH`, `GATEWAY_ACTIONS_AUDIT` | `logs/gateway.jsonl`, `logs/actions.jsonl` | Where the text-decision log and the action audit are written (and read by the dashboard and governance store); move them for a test run or a second instance |
 
 ## Decisions that shaped it
 

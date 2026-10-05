@@ -1235,3 +1235,23 @@ logs, a generated policy matrix, a rules catalog with OWASP mapping, and a live 
 rules (approval still required; release still needs a different role); no existing scenario outcome changes. (4) Measured, did
 not fix, 3 of 40 console filter phrasings blocked by the classifier (docs/v1-console-api.md). **Not done:** prometheus-client is
 not in the hash-locked requirements, so `/metrics` returns 501 until the locks are regenerated; OpenTelemetry is API-only.
+
+
+## 2026-10-05: The three services as one product with no API key: Bandit fix, a local model for P2, and an audit gap the end-to-end check found
+
+**Context.** P1, P2 and P3 each had a `/v1` API and green CI of their own; nothing had ever run them together, and P3's Security workflow was red. Phase 0 of the completion plan: unblock, then prove the chain with no paid call.
+
+**1. Security was red on two bare `except Exception: pass` blocks** in `gateway/v1/routes.py` (Bandit B110, the workflow accepts no finding of any severity). The other four Security jobs were green. They now log why they failed (the trace-context cache at debug, the pending-approvals gauge at warning) and still return normally; a test for each fails on the old code. Silencing them with `# nosec` would have kept the failure invisible.
+
+**2. P2 could not use the local model.** Its LLM layer supported Anthropic, a no-model fallback and a test fake, so with Ollama running every `ask` still returned the template. P2 now has an `OllamaLLM` provider (`P2_LLM_PROVIDER=ollama`, never auto-detected, so a deployed instance cannot probe localhost). Two things Ollama does silently are handled: it truncates a prompt longer than the context window (the provider sets `num_ctx` and refuses a prompt that would not fit, because answering from part of the evidence breaks "answer only from the evidence"), and JSON mode is used when the prompt asks for JSON. Results are labelled `ollama:<model>` and cost 0. Smoke-tested against the real `qwen2.5:7b-instruct`.
+
+**3. `scripts/local_chain_check.py` starts the three services on free ports with temp state and drives the console's story through `/v1`.** With the real local model: login, a real case from P1, an answer from P1's live numbers (544 late, 1088 at risk; 2 of 2 claims verified; 9.6 s), an injection blocked at the gateway, a proposal held by the firewall, no self-approval, a viewer cannot propose, a manager approves, a second approval is refused, and the audit. It found a real gap on its first complete run: **a human approval was written only to the approval queue's mutable row, not to the append-only audit, so neither `/v1/traces/{id}` nor the governance events could show who decided.** Fixed: `ActionFirewall.decide_approval` decides and appends an `approval_granted` / `approval_rejected` entry (approver, role, approval id, redacted note, the deciding request's trace id); a refused or repeated decision logs nothing; the summary counts decisions apart (`actions.approvals_decided`) so held/allowed/denied stay one per action; P2 now forwards `traceparent` on approve and reject. **A process note:** another session's commit `19b1c36` (the `/v1/data` passthrough) staged the same files and swept this change in under its own message; it is on `main` and tested, but the history does not say so, and I cannot rewrite pushed history.
+
+**Mistakes on the way.** The readiness probe gave up at 2 s while P1's `/health` takes 2.03 s because it probes its dead database (P1 was healthy the whole time). I expected 201 from the proposal and P3's front door returns 200. I assumed P2's claim gate would catch a non-numeric false claim.
+
+**Findings to carry forward.**
+- **P2's claim gate verifies figures and citations, not meaning.** A claim with no number that cites real evidence passes, whatever it says. With Claude that is a documented limit; with a 7B local model it matters more. Any local-model eval must be labelled "local 7B" and must not read "claims supported" as "claims true".
+- **Writing an approved intervention to P1's ledger is not proven here:** P1 needs Postgres, which is not running, so the ledger records `execution_failed` and the check reports that step as not proven. Everything up to and including the approval is proven.
+- P3's `/v1/nl-filter` can still block benign phrasings (3 of 40 measured earlier); unchanged.
+
+**Not done.** Phase 1 onward (the console repo and later phases). A run with P1's Postgres. A real run with a Claude model (needs a key, set by the account owner).
