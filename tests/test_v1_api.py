@@ -216,6 +216,16 @@ def test_missing_approval_id_fails_closed(tmp_path):
     assert e.value.status == 409
 
 
+def test_the_committed_openapi_spec_is_what_the_app_publishes():
+    from pathlib import Path
+
+    from scripts.export_openapi import build_spec
+
+    committed = json.loads((Path(__file__).resolve().parents[1] / "openapi" / "p2.json").read_text(encoding="utf-8"))
+    live = json.loads(json.dumps(build_spec(), sort_keys=True))
+    assert committed == live, "openapi/p2.json is stale: run `python -m scripts.export_openapi` and commit it (the console's CI compares its pinned copy with main)"
+
+
 def test_openapi_lists_the_v1_surface():
     paths = app.openapi()["paths"]
     for p in ("/v1/ask", "/v1/investigations", "/v1/briefing", "/v1/nl-filter", "/v1/interventions", "/v1/traces/{trace_id}", "/v1/spend"):
