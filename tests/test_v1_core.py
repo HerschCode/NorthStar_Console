@@ -150,6 +150,21 @@ def test_ask_flags_unsupported_claims_and_returns_evidence_and_trace():
     assert out["trace_id"] and out["evidence"][0]["id"] == "e1" and out["cost_usd"] > 0 and not out["abstained"]
 
 
+def test_the_scope_filter_lets_every_evaluation_question_through_and_still_refuses_every_off_topic_probe():
+    """The first local-model evaluation found four overview questions refused as 'outside procurement scope' (plural 'interventions', 'expected loss', 'what should the team look at first')."""
+    from scripts.eval_v1_ask import PROBES, TEMPLATES
+
+    def in_scope(q):
+        return bool(ask_mod.DOMAIN.search(q) or ask_mod.META.search(q))
+    refused = [t.format(e="vendorID_0053") for ts in TEMPLATES.values() for t in ts if not in_scope(t.format(e="vendorID_0053"))]
+    assert refused == []
+    assert [q for q in PROBES if in_scope(q)] == []
+    for q in ("Write me a poem about autumn.", "What is the pool of candidates?", "Which apple should I buy?"):          # "po" and "ap" are abbreviations, not prefixes
+        assert not in_scope(q), q
+    for q in ("How many interventions are recorded?", "What is the simulated expected loss?", "What should the team look at first today?", "Which policies apply to duplicate invoices?"):
+        assert in_scope(q), q
+
+
 def test_ask_abstains_without_evidence_and_off_topic():
     out = _run("What is late?", FakeLLM(lambda s, u: "{}"), objs={}, hits=[])
     assert out["abstained"] and out["abstain_reason"] == "no evidence retrieved"
