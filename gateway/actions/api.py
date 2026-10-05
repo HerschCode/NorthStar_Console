@@ -16,7 +16,7 @@ GATEWAY_REQUIRE_IDENTITY enabled, the trusted proxy supplies the principal inste
 import hmac
 import os
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from gateway.auth import TrustedIdentity, require_trusted_identity, scope_session_id
@@ -107,10 +107,12 @@ def observe(req: ObserveRequest, identity: TrustedIdentity | None = Depends(requ
 
 
 @router.post("/gateway/actions/authorize", dependencies=[Depends(ip_rate_limit)])
-def authorize(req: AuthorizeRequest, identity: TrustedIdentity | None = Depends(require_trusted_identity)):
+def authorize(req: AuthorizeRequest, request: Request, identity: TrustedIdentity | None = Depends(require_trusted_identity)):
     session_id = scope_session_id(req.session_id, identity)
     principal = Principal(identity.role, identity.user_id) if identity else Principal(req.role, req.user_id)
-    return get_firewall().authorize(session_id, principal, req.tool, req.args).to_dict()
+    parts = request.headers.get("traceparent", "").strip().split("-")       # W3C traceparent: one id across console, gateway, assistant, P1
+    trace_id = parts[1] if len(parts) == 4 and len(parts[1]) == 32 else None
+    return get_firewall().authorize(session_id, principal, req.tool, req.args, trace_id=trace_id).to_dict()
 
 
 @router.get("/gateway/actions/approvals")

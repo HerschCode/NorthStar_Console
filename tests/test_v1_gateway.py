@@ -377,3 +377,12 @@ def test_lab_scenario_timelines_are_stable():
 def test_services_reports_assistant_reachability(env):
     out = client.get("/v1/services").json()
     assert out["gateway"]["status"] == "ok" and out["assistant"]["configured"] is True
+
+
+def test_authorize_records_the_callers_trace_id_in_the_audit_and_governance_store(env):
+    tid = "4bf92f3577b34da6a3ce929d0e0e4736"
+    client.post("/gateway/actions/authorize", headers={"traceparent": f"00-{tid}-00f067aa0ba902b7-01"},
+                json={"session_id": "t1", "role": "analyst", "user_id": "ann", "tool": "propose_intervention",
+                      "args": {"action": "request_approval", "target": "C-1", "reason": "slow", "priority": "normal"}})
+    out = client.get(f"/v1/traces/{tid}", headers=login("viewer")).json()
+    assert out["gateway"]["actions"] and out["gateway"]["actions"][0]["effect"] == "require_approval"
