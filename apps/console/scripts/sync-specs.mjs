@@ -1,11 +1,11 @@
-// Keeps the console's pinned copies of the services' OpenAPI contracts (openapi/p1|p2|p3.json) equal to what each service publishes.
+// Keeps the console's pinned copies of the service OpenAPI contracts equal to the canonical monorepo copies.
 //
-//   node scripts/sync-specs.mjs --check            compare with each repository's main branch on GitHub (what CI does)
-//   node scripts/sync-specs.mjs --check --local    compare with sibling checkouts instead
-//   node scripts/sync-specs.mjs [--local]          overwrite the pinned copies, then run `npm run gen:api` and commit both
+//   node scripts/sync-specs.mjs --check            compare with this repo's main branch on GitHub (what CI does)
+//   node scripts/sync-specs.mjs --check --local    compare with the local service directories
+//   node scripts/sync-specs.mjs [--local]          overwrite pinned copies, then run `npm run gen:api` and commit both
 //
-// Monorepo siblings: ../../services/performance, ../../services/assistant and ../../services/gateway; override
-// with NORTHSTAR_P1_DIR / NORTHSTAR_P2_DIR. Specs are compared as parsed JSON, so formatting and line endings never count as drift.
+// Local service directories default to ../../services/{performance,assistant,gateway}; override with NORTHSTAR_P1_DIR /
+// NORTHSTAR_P2_DIR / NORTHSTAR_P3_DIR. Specs are compared as parsed JSON, so formatting and line endings never count as drift.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
@@ -13,15 +13,25 @@ const args = new Set(process.argv.slice(2))
 const check = args.has('--check')
 const local = args.has('--local')
 
+const REPOSITORY = 'NorthStar_Console'
 const SERVICES = {
-  p1: { repo: 'operations-performance', dir: process.env.NORTHSTAR_P1_DIR ?? '../../services/performance' },
-  p2: { repo: 'operations-assistant', dir: process.env.NORTHSTAR_P2_DIR ?? '../../services/assistant' },
-  p3: { repo: 'llm-security-gateway', dir: process.env.NORTHSTAR_P3_DIR ?? '../../services/gateway' },
+  p1: {
+    remotePath: 'services/performance/openapi/p1.json',
+    dir: process.env.NORTHSTAR_P1_DIR ?? '../../services/performance',
+  },
+  p2: {
+    remotePath: 'services/assistant/openapi/p2.json',
+    dir: process.env.NORTHSTAR_P2_DIR ?? '../../services/assistant',
+  },
+  p3: {
+    remotePath: 'services/gateway/openapi/p3.json',
+    dir: process.env.NORTHSTAR_P3_DIR ?? '../../services/gateway',
+  },
 }
 
-async function producerSpec(svc, { repo, dir }) {
+async function producerSpec(svc, { remotePath, dir }) {
   if (local) return readFileSync(resolve(dir, 'openapi', `${svc}.json`), 'utf8')
-  const url = `https://raw.githubusercontent.com/HerschCode/${repo}/main/openapi/${svc}.json`
+  const url = `https://raw.githubusercontent.com/HerschCode/${REPOSITORY}/main/${remotePath}`
   // A connect timeout to GitHub is transient and would turn a CI run red for no reason: retry a few times before giving up. A real answer (even a 404) is never retried.
   for (let attempt = 1; ; attempt++) {
     try {

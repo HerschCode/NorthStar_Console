@@ -126,5 +126,10 @@ suggestive, not conclusive.
 
 ## Registry view in the console (2026-10-06)
 P1 `GET /v1/mlops/registry` (3 tests; pinned OpenAPI regenerated and synced to the console) and a Model health card. Verified: console type-check, 26 unit tests, production build,
-23 Playwright fixture tests including axe on `/models` and no horizontal scroll at 375 px. Only the empty state (no model registered) is exercised by the e2e mock; the
-populated card is covered by the API tests, not by a browser test. The gateway passthrough already forwards any `v1/` path, so no gateway change was needed.
+24 Playwright fixture tests including axe on `/models` and no horizontal scroll at 375 px. The browser suite now covers both the empty state and a populated registry,
+including champion/challenger versions, a hash mismatch, and a held-promotion event. The gateway passthrough already forwards any `v1/` path, so no gateway change was needed.
+
+## Monorepo OpenAPI contract CI (2026-10-06)
+The console's remote contract check was still fetching the pre-monorepo service repositories, causing the Console CI run on `dce40f3` to fail even though the pinned contracts
+matched the service code. `apps/console/scripts/sync-specs.mjs` now compares against the canonical OpenAPI files under `services/{performance,assistant,gateway}/openapi` on this
+repository's `main`; local mode continues to compare against the checked-out service directories. Both remote and local checks pass. CI now runs the check in `--local` mode (the specs are in the same checkout), so a pull request that changes a spec is not compared against an older `main`; remote mode remains available for manual use.

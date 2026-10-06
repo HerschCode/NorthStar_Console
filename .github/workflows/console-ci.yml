@@ -21,8 +21,8 @@ jobs:
       - run: npm ci
       - name: Generated API types match the pinned OpenAPI specs
         run: npm run gen:api && git diff --exit-code -- src/api/generated
-      - name: Pinned OpenAPI specs match what P1, P2 and P3 publish on main
-        run: node scripts/sync-specs.mjs --check
+      - name: Pinned OpenAPI specs match the service directories in this checkout
+        run: node scripts/sync-specs.mjs --check --local
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
