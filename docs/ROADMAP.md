@@ -91,3 +91,12 @@ and a short blog post per phase (4, 5, 7 are the strongest).
 
 ## Credential hygiene
 Neon, Gemini and Groq credentials go in `.env` (git-ignored), repo secrets or Secret Manager only. A password pasted into chat should be rotated.
+
+## Reconciliation with the earlier separate checkouts (2026-10-06)
+The monorepo implementations are canonical for the registry/promotion cycle, the event replay and lakehouse layer, conformal prediction and the
+claim-gate polarity check (`GATE_POLARITY`: wrong-fact pass 25% -> 15.6%, correct pass 71.9% -> 65.6% on the pinned 32-answer set). An earlier,
+separate polarity implementation reported no aggregate improvement on its own evaluation; the two results are different experiments and are not combined.
+The gateway trace lookup now logs an upstream (assistant) failure with the trace id and status, never the upstream detail, while still returning the
+gateway's own evidence (`test_trace_lookup_logs_p2_failure_and_keeps_gateway_evidence`).
+Validation from the earlier checkouts (116 smoke tests, console 26 tests and build, Compose config) predates the monorepo; the root Make targets and
+CI workflows are the check for the monorepo itself, and a Docker-backed demo has not been run.

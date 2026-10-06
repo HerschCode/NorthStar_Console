@@ -266,8 +266,8 @@ def get_trace(trace_id: str, request: Request, identity: Identity = Depends(requ
     p2 = None
     try:
         p2 = deps.p2_client().request("GET", f"/v1/traces/{trace_id}", identity, None).json()
-    except UpstreamError:
-        pass
+    except UpstreamError as exc:
+        log.warning("assistant trace lookup failed trace_id=%s status=%s", trace_id, exc.status)
     if not gw and not acts and p2 is None:
         raise HTTPException(404, "trace not found")
     return {"trace_id": trace_id, "gateway": {"decisions": gw, "actions": acts}, "assistant": p2}

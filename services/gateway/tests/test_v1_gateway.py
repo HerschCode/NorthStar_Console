@@ -1,6 +1,7 @@
 """Tests for the /v1 console surface: demo identity, AI routes through pre/post-flight, governance from persisted data,
 policy matrix, rules catalog, approvals with separation of duties, the live Attack Lab and trace propagation."""
 import json
+import logging
 import time
 
 import httpx
@@ -16,7 +17,7 @@ from gateway.detectors import rule_based
 from gateway.ip_limits import reset_for_tests
 from gateway.v1 import identity as ident
 from gateway.v1 import routes
-from gateway.v1.proxy import P2Client
+from gateway.v1.proxy import P2Client, UpstreamError
 from gateway.v1.store import GovernanceStore
 
 client = TestClient(app)
@@ -423,6 +424,29 @@ def test_authorize_records_the_callers_trace_id_in_the_audit_and_governance_stor
                       "args": {"action": "request_approval", "target": "C-1", "reason": "slow", "priority": "normal"}})
     out = client.get(f"/v1/traces/{tid}", headers=login("viewer")).json()
     assert out["gateway"]["actions"] and out["gateway"]["actions"][0]["effect"] == "require_approval"
+
+
+def test_trace_lookup_logs_p2_failure_and_keeps_gateway_evidence(env, caplog, monkeypatch):
+    tid = "4bf92f3577b34da6a3ce929d0e0e4737"
+    client.post("/gateway/actions/authorize", headers={"traceparent": f"00-{tid}-00f067aa0ba902b7-01"},
+                json={"session_id": "t2", "role": "analyst", "user_id": "ann", "tool": "propose_intervention",
+                      "args": {"action": "request_approval", "target": "C-2", "reason": "slow", "priority": "normal"}})
+
+    class UnavailableAssistant:
+        def request(self, *args, **kwargs):
+            raise UpstreamError(503, "provider detail must not be logged")
+
+    monkeypatch.setattr(routes.deps, "p2", UnavailableAssistant())
+    caplog.set_level(logging.WARNING, logger=routes.__name__)
+    response = client.get(f"/v1/traces/{tid}", headers=login("viewer"))
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["gateway"]["actions"]
+    assert payload["assistant"] is None
+    assert "assistant trace lookup failed" in caplog.text
+    assert tid in caplog.text
+    assert "provider detail must not be logged" not in caplog.text
 
 
 # ── approval decisions are audited ──
