@@ -1,0 +1,11 @@
+# Promotion gate (src/mlops/gate.py). A challenger replaces the champion only if every rule passes.
+min_test_rows: 300            # fewer held-out rows than this and the metrics are not trusted
+min_auc_gain: 0.005           # must beat the champion's ROC-AUC by at least this much (0 = non-regression only)
+max_auc_drop: 0.0             # used when min_auc_gain <= 0: how much AUC may be lost
+max_brier_worsening: 0.01     # Brier score may not get worse by more than this
+max_ece_worsening: 0.02       # calibration error may not get worse by more than this
+max_ece_absolute: 0.15        # and may never exceed this, champion or not
+first_model_min_auc: 0.60     # with no champion yet, the first model still has to clear this floor
+suspicious_auc_jump: 0.10     # a bigger AUC jump than this is held for human review (it is how the calibration-on-train bug looked)
+degenerate_base_rate: [0.05, 0.95]   # target outside this band: metrics are not informative, block promotion
+min_unique_scores: 20         # a model emitting a handful of distinct scores cannot rank
