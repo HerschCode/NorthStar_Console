@@ -37,12 +37,13 @@ Status labels: **built** = in the code and tested; **written** = code exists but
 - Restricted model loading (sha256 check + allowlisted unpickler), `models/MANIFEST.sha256` verified in CI
 - Conformal prediction sets with abstention, leakage-safe group+temporal splits, calibration/lift/expected-loss metrics with group bootstrap CIs
 - Partitioned Parquet lakehouse queried with DuckDB; replayable event log with idempotent, checkpointed consumer and incremental case metrics; Airflow DAG (written, not run)
+- Offline power planner for a two-arm binary breach-outcome trial, with the normal-approximation assumptions and clustering/attrition limitations documented
 
 ## Assistant service, P2 (`services/assistant`)
 - Hybrid retrieval (BM25 + semantic, RRF) with optional cross-encoder rerank, over 12 policy/SOP documents; retrieval benchmark (165 questions)
 - Answer gate: claim-support check (default), NLI gate (corrected pair order), LLM-judge comparison, evaluation on public RAGTruth data
 - Agent with five interchangeable providers (Groq, Anthropic, Gemini, LangChain, LangGraph with parallel tool dispatch), tool-selection evals (25-question smoke, 101-question v2)
-- Optional polarity check for the answer gate (`GATE_POLARITY=1`), measured trade-off in `reports/polarity_eval.json`
+- Optional polarity check for the answer gate (`GATE_POLARITY=1`), measured trade-off and paired bootstrap intervals in `reports/polarity_eval.json` (labels are not independently annotated)
 - Runtime grounding report on every answer; conversational context; semantic cache (calibrated); cost estimator; free-model quota handling
 - Investigations and intervention ledger, evidence drawer data, MCP server, document upload, API-key auth, rate limiting, observability and load test
 - Fine-tuning experiments (embeddings, generation, tool selection) with results written up, including negative ones

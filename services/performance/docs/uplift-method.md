@@ -106,6 +106,38 @@ forest's own training rows) had ROC-AUC 0.665 vs 0.986 raw; fixed in [`calibrati
   the **measured** breach reduction (holdout minus treated) with a 95% CI. Today it is empty of outcomes: no real
   case has been treated, so the assumed effects above remain assumptions.
 
+## Prospective randomized holdout and sample-size planning
+
+Before acting on interventions, specify the binary primary outcome, a minimum
+business-relevant absolute breach-rate reduction, significance level, target
+power, and assignment ratio. Use historical data only to choose plausible
+baseline/outcome rates; the effect size is a planning assumption until measured
+in a randomized experiment.
+
+The offline planner uses a two-sided independent-proportions normal
+approximation. For example:
+
+```powershell
+python -m scripts.power_analysis --holdout-rate 0.40 --treatment-rate 0.30 `
+  --holdout-share 0.20 --alpha 0.05 --power 0.80
+```
+
+Under those hypothetical rates it estimates 219 holdout and 874 treatment
+observations (1,093 total) for approximately 80% power. This is a planning
+example, **not** a result from Northstar's event data. The calculation assumes
+independent cases, one fixed binary outcome per case, no supplier/purchase-order
+clustering, no attrition, a stable treatment, and no interim peeking. Repeated
+cases from one supplier or PO violate the independence assumption; use
+cluster-aware power analysis or randomize/aggregate at the true independent
+unit before using a real trial. The current hash assignment is Bernoulli-style
+and will not produce perfectly fixed arm counts. Analyse assignments as
+randomized (intention-to-treat), keep assignment and outcome timestamps, and
+do not infer causal impact from the simulated ledger.
+
+The standard-library calculation is reproducible without a database, network,
+or model provider. Its code and invalid-input/target-power tests are
+`src/roi/power.py` and `tests/test_power.py`.
+
 ## Validated on semi-synthetic data
 Reproduce: `python -m scripts.uplift_validation` (about 3 minutes; raw JSON `reports/uplift_validation.json`).
 Real held-out-window covariates and real model risk scores, with a **planted, known, heterogeneous effect**: the

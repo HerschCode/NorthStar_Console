@@ -27,7 +27,7 @@ Phases 5-7 are depth that can be added while you apply; Phase 8 (packaging) shou
 |---|---|---|---|
 | 4 MLOps | `src/mlops` (registry with aliases/rollback/audit log, promotion gate, retrain cycle with drift trigger and shadow compare, model cards, restricted model loader), `scripts/mlops_cycle.py`, `performance-mlops.yml` | 8 tests + a runnable demo loop on synthetic data; the committed model loads under the allowlist | Wire `train_fn` to the real DB-backed training (needs Neon loaded); run on a schedule |
 | 5 Data eng | `src/dataeng` (partitioned Parquet + DuckDB, replayable log, idempotent consumer with checkpointing and incremental case metrics), Airflow DAG | 3 tests (duplicates, late events, crash before commit); DAG only compiles | Real BPI 2019 load, dbt incremental models, Airflow actually run |
-| 6 Evaluation | conformal prediction (class-conditional), group+temporal split with leakage assertion, claim-gate polarity check (opt-in) | tests incl. coverage holding and breaking under shift; polarity measured on the 32-answer set (wrong-fact pass 25%->16%, correct pass 72%->66%) | Re-run PO-grouped evaluations on the real event log; independent labels |
+| 6 Evaluation | conformal prediction (class-conditional), group+temporal split with leakage assertion, claim-gate polarity check (opt-in) with paired bootstrap intervals, binary-outcome randomized-trial power planner | tests incl. coverage holding and breaking under shift; polarity measured on the 32-answer set (wrong-fact pass 25%->16%, correct pass 72%->66%) with uncertainty intervals; power planner has focused input/target tests and an offline example | Re-run PO-grouped evaluations on the real event log; obtain independent labels; validate cluster-aware power/analysis before any real intervention trial |
 | 7 Security | model manifest + CI check, restricted unpickler, system threat model with OWASP LLM 2025 mapping | malicious-pickle test; manifest check passes | Artifact signing, independent test, scheduled garak/AgentDojo, corpus poisoning controls |
 
 ## Phase 1: Consolidate
@@ -89,6 +89,11 @@ Phases 5-7 are depth that can be added while you apply; Phase 8 (packaging) shou
 README top section with live link, 3-minute video, one architecture diagram, "mistakes and fixes" page, resume bullets with measured numbers,
 and a short blog post per phase (4, 5, 7 are the strongest).
 
+Local packaging progress: the root README now links to a cross-service
+architecture overview and a decisions/lessons page. The live URL, recorded
+demo, and measured resume bullets remain pending a verified deployment and
+fresh cross-service run.
+
 ## Credential hygiene
 Neon, Gemini and Groq credentials go in `.env` (git-ignored), repo secrets or Secret Manager only. A password pasted into chat should be rotated.
 
@@ -100,3 +105,21 @@ The gateway trace lookup now logs an upstream (assistant) failure with the trace
 gateway's own evidence (`test_trace_lookup_logs_p2_failure_and_keeps_gateway_evidence`).
 Validation from the earlier checkouts (116 smoke tests, console 26 tests and build, Compose config) predates the monorepo; the root Make targets and
 CI workflows are the check for the monorepo itself, and a Docker-backed demo has not been run.
+
+## Additional local build — intervention trial power planning (2026-10-06)
+
+Added `services/performance/src/roi/power.py` and
+`services/performance/scripts/power_analysis.py` to estimate sample sizes for a
+two-arm randomized experiment with a binary breach outcome. The tested offline
+example (hypothetical 40% holdout vs. 30% treatment breach rates, 20% holdout,
+alpha 0.05, 80% target power) estimates 219 holdout and 874 treatment cases.
+This is a normal-approximation planning result, not measured impact. It assumes
+independent cases and does not adjust for supplier/PO clustering or attrition;
+see `services/performance/docs/uplift-method.md`. A real trial and real-data
+re-estimation are still outstanding.
+
+The P2 opt-in polarity evaluation now adds paired bootstrap uncertainty
+intervals over the 32 source questions; these quantify resampling uncertainty
+only and do not replace independent labels. On the pinned run the 95% intervals
+for correct and wrong-fact pass-rate changes both reach 0.0; treat the result as
+suggestive, not conclusive.

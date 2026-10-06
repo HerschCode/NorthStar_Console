@@ -34,6 +34,28 @@ answers (56-62% vs 69-75%). So claim support remains the better trade-off for ca
 Sixteen held-out questions per cell is small: treat differences under about 15 points as noise. A gate that requires *both* (claim support and NLI) was not evaluated; it is the obvious next experiment,
 and the choice of default is the owner's.
 
+## Paired uncertainty intervals for the optional polarity check
+
+`python -m scripts.polarity_eval` now reports deterministic 95% percentile
+bootstrap intervals for the baseline pass rate, polarity-enabled pass rate, and
+their paired difference. It resamples source questions, keeping each
+question's baseline and polarity outcomes together. The report uses 5,000
+resamples and a fixed seed so the committed output is reproducible.
+
+These intervals quantify resampling uncertainty only. The 32 labels were
+authored by the same person who designed the answer set, are not an independent
+annotation, and may not represent deployment traffic. In particular, a narrow
+interval must not be presented as external validation. The optional polarity
+gate remains opt-in; keep measuring both wrong-fact rejection and correct-answer
+recall.
+
+On the pinned run, the correct-answer pass-rate change (polarity minus baseline)
+was -6.3 percentage points, with paired 95% interval [-15.6, 0.0]; the
+wrong-fact pass-rate change was -9.4 points, with interval [-21.9, 0.0].
+Both intervals include no change at the displayed precision. This small
+evaluation is suggestive, not conclusive: add independently annotated examples
+before tuning or making a quality claim.
+
 **Not re-run, and therefore still resting on the swapped pairs:** the Ragas-vs-NLI comparison in `docs/eval-tooling-comparison.md`, `scripts/calibrate_gate.py` and
 `scripts/analyze_hard_negatives.py` (they read the scores stored in `data/evaluation/faithfulness_results.json`, produced before the fix), and the table further down this page.
 
