@@ -34,7 +34,9 @@ Status labels: **built** = in the code and tested; **written** = code exists but
 
 ## MLOps and data engineering additions (`services/performance`)
 - Model registry (immutable versions, champion/challenger aliases, audit log, rollback), promotion gate (min test rows, AUC gain, Brier/ECE non-regression, degenerate-target and suspicious-jump review), retrain cycle, shadow comparison, generated model cards
+- Read-only `GET /v1/mlops/registry` (champion, challenger, versions, hash check, recent promotion/rollback events) shown as a card on the console's Model health page; empty state until a model is registered
 - Restricted model loading (sha256 check + allowlisted unpickler), `models/MANIFEST.sha256` verified in CI
+- Trial power planning (`src/roi/power.py`) and paired bootstrap intervals on the polarity evaluation
 - Conformal prediction sets with abstention, leakage-safe group+temporal splits, calibration/lift/expected-loss metrics with group bootstrap CIs
 - Partitioned Parquet lakehouse queried with DuckDB; replayable event log with idempotent, checkpointed consumer and incremental case metrics; Airflow DAG (written, not run)
 - Offline power planner for a two-arm binary breach-outcome trial, with the normal-approximation assumptions and clustering/attrition limitations documented

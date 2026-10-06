@@ -12,6 +12,7 @@ repositories is preserved (`git log --follow` works across the move).
 | `services/gateway` | `llm-security-gateway` (P3) | Text guard, action firewall, PII, red-team harness |
 | `infra` | `northstar-infra` | Terraform, 21 policy-as-code rules, budget guard (written, not applied) |
 
+* **Architecture:** [docs/architecture.md](docs/architecture.md)  ·  **Decisions and lessons:** [docs/decisions-and-lessons.md](docs/decisions-and-lessons.md)  ·  **Threat model:** [docs/threat-model.md](docs/threat-model.md)
 * **All features:** [docs/FEATURES.md](docs/FEATURES.md)
 * **Status and next steps:** [docs/ROADMAP.md](docs/ROADMAP.md)
 * Each directory keeps its own README, tests and lockfiles; the services remain separate deployables on purpose.

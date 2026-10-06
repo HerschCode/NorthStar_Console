@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/v1/mlops/registry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * V1 Mlops Registry
+         * @description Champion/challenger state, version list and the latest promotion/rollback events (src/mlops). Read-only; creates nothing.
+         */
+        get: operations["v1_mlops_registry_v1_mlops_registry_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/overview": {
         parameters: {
             query?: never;
@@ -600,6 +620,60 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** RegistryEvent */
+        RegistryEvent: {
+            /** At */
+            at: string;
+            /** Event */
+            event: string;
+            /** Detail */
+            detail?: {
+                [key: string]: unknown;
+            };
+        };
+        /** RegistryModel */
+        RegistryModel: {
+            /** Version */
+            version: string;
+            /** Registered At */
+            registered_at: string;
+            /** Sha256 */
+            sha256: string;
+            /** Data Fingerprint */
+            data_fingerprint?: string | null;
+            /** Metrics */
+            metrics: {
+                [key: string]: unknown;
+            };
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+        };
+        /**
+         * RegistryStatus
+         * @description Model lifecycle state read straight from the file registry (no database). `available` is False until a model has been registered.
+         */
+        RegistryStatus: {
+            /** Available */
+            available: boolean;
+            /** Name */
+            name: string;
+            champion?: components["schemas"]["RegistryModel"] | null;
+            challenger?: components["schemas"]["RegistryModel"] | null;
+            /** Versions */
+            versions?: string[];
+            /** Champion Hash Verified */
+            champion_hash_verified?: boolean | null;
+            /** Events */
+            events?: components["schemas"]["RegistryEvent"][];
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
         /** RiskBucketDrift */
         RiskBucketDrift: {
             /** Bucket */
@@ -709,6 +783,38 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    v1_mlops_registry_v1_mlops_registry_get: {
+        parameters: {
+            query?: {
+                name?: string;
+                events?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistryStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     v1_overview_v1_overview_get: {
         parameters: {
             query?: {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { useDataQuality, useEvidence, useExperiments, useLimits, useLineage, useModels, useServices, useTrace } from '../api/hooks'
+import { useDataQuality, useEvidence, useExperiments, useLimits, useLineage, useModels, useRegistry, useServices, useTrace } from '../api/hooks'
 import { Async, Badge, Bar, Button, Callout, Card, DataTable, Grid, PageHeader } from '../components/ui'
 import { StatusBadge } from '../components/domain'
 import { ProvBadge } from '../components/Prov'
@@ -79,6 +79,7 @@ export function Observability() {
 
 export function Models() {
   const q = useModels()
+  const reg = useRegistry()
   return (
     <div>
       <PageHeader title="Model health" subtitle="Two models: the early-warning GRU that scores open cases, and the late-stage model that scores finished cases." />
@@ -89,6 +90,21 @@ export function Models() {
               { key: 'k', header: 'Events seen (k)', render: ([k]) => k }, { key: 'a', header: 'ROC-AUC', align: 'right', render: ([, v]) => fmt(v.test_roc_auc, 3) },
               { key: 'c', header: '95% CI', align: 'right', render: ([, v]) => `${fmt(v.ci95[0], 3)}–${fmt(v.ci95[1], 3)}` }, { key: 'b', header: 'Base rate', align: 'right', render: ([, v]) => fmt(v.base_rate, 3) }, { key: 'n', header: 'n test', align: 'right', render: ([, v]) => fmt(v.n_test) }]} />
             <p className="mt-2 text-xs text-muted">{m.early_warning.note}</p>
+          </Card>
+          <Card title="Model registry (champion / challenger)" subtitle="Versions, the promotion gate's decisions and rollbacks, read from the file registry" actions={<ProvBadge p="measured" source="models/registry" />}>
+            <Async q={reg} rows={3}>{(r) => !r.available ? <p className="text-sm text-muted">{r.note}</p> : (
+              <div className="space-y-3">
+                <Grid cols={2}>
+                  {([['Champion', r.champion], ['Challenger', r.challenger]] as const).map(([label, m]) => (
+                    <div key={label} className="rounded-md border border-accent bg-panel2 p-3 text-sm">
+                      <div className="flex items-center gap-2"><strong>{label}</strong>{m ? <Badge>{m.version}</Badge> : <span className="text-muted">none</span>}{label === 'Champion' && r.champion_hash_verified === true && <Badge tone="good">hash verified</Badge>}{label === 'Champion' && r.champion_hash_verified === false && <Badge tone="bad">hash mismatch</Badge>}</div>
+                      {m && <p className="mt-1 text-xs text-muted">ROC-AUC {fmt(Number(m.metrics.roc_auc), 3)} · Brier {fmt(Number(m.metrics.brier), 3)} · ECE {fmt(Number(m.metrics.ece), 3)} · n {fmt(Number(m.metrics.n_test))} · registered {m.registered_at.slice(0, 10)}</p>}
+                    </div>))}
+                </Grid>
+                <DataTable caption="Registry events" rows={[...r.events].reverse()} rowKey={(e) => e.at + e.event} columns={[
+                  { key: 'w', header: 'When', render: (e) => e.at.slice(0, 19).replace('T', ' ') }, { key: 'e', header: 'Event', render: (e) => e.event },
+                  { key: 'd', header: 'Detail', render: (e) => String(e.detail.summary ?? e.detail.reason ?? e.detail.version ?? e.detail.to ?? '') }]} />
+              </div>)}</Async>
           </Card>
           <Grid cols={2}>
             <Card title="Late-stage model (scores finished cases)" subtitle={`${m.late_stage_model.name}, trained ${m.late_stage_model.trained_at?.slice(0, 10)}, ${m.late_stage_model.calibration} calibration`}>

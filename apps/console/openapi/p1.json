@@ -6,6 +6,63 @@
   "version": "0.1.0"
  },
  "paths": {
+  "/v1/mlops/registry": {
+   "get": {
+    "tags": [
+     "v1"
+    ],
+    "summary": "V1 Mlops Registry",
+    "description": "Champion/challenger state, version list and the latest promotion/rollback events (src/mlops). Read-only; creates nothing.",
+    "operationId": "v1_mlops_registry_v1_mlops_registry_get",
+    "parameters": [
+     {
+      "name": "name",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "pattern": "^[A-Za-z0-9_-]{1,64}$",
+       "default": "sla_risk",
+       "title": "Name"
+      }
+     },
+     {
+      "name": "events",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 100,
+       "minimum": 0,
+       "default": 15,
+       "title": "Events"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RegistryStatus"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/v1/overview": {
    "get": {
     "tags": [
@@ -1615,6 +1672,143 @@
      "buckets"
     ],
     "title": "PredictionDriftReport"
+   },
+   "RegistryEvent": {
+    "properties": {
+     "at": {
+      "type": "string",
+      "title": "At"
+     },
+     "event": {
+      "type": "string",
+      "title": "Event"
+     },
+     "detail": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "required": [
+     "at",
+     "event"
+    ],
+    "title": "RegistryEvent"
+   },
+   "RegistryModel": {
+    "properties": {
+     "version": {
+      "type": "string",
+      "title": "Version"
+     },
+     "registered_at": {
+      "type": "string",
+      "title": "Registered At"
+     },
+     "sha256": {
+      "type": "string",
+      "title": "Sha256"
+     },
+     "data_fingerprint": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Data Fingerprint"
+     },
+     "metrics": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Metrics"
+     },
+     "notes": {
+      "type": "string",
+      "title": "Notes",
+      "default": ""
+     }
+    },
+    "type": "object",
+    "required": [
+     "version",
+     "registered_at",
+     "sha256",
+     "metrics"
+    ],
+    "title": "RegistryModel"
+   },
+   "RegistryStatus": {
+    "properties": {
+     "available": {
+      "type": "boolean",
+      "title": "Available"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "champion": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/RegistryModel"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "challenger": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/RegistryModel"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "versions": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Versions"
+     },
+     "champion_hash_verified": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Champion Hash Verified"
+     },
+     "events": {
+      "items": {
+       "$ref": "#/components/schemas/RegistryEvent"
+      },
+      "type": "array",
+      "title": "Events"
+     },
+     "note": {
+      "type": "string",
+      "title": "Note",
+      "default": ""
+     }
+    },
+    "type": "object",
+    "required": [
+     "available",
+     "name"
+    ],
+    "title": "RegistryStatus",
+    "description": "Model lifecycle state read straight from the file registry (no database). `available` is False until a model has been registered."
    },
    "RiskBucketDrift": {
     "properties": {

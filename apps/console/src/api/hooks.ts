@@ -54,6 +54,7 @@ export const useFinanceExceptions = () => useQuery({ queryKey: ['fin-exc'], stal
 export const useWorkingCapital = () => useQuery({ queryKey: ['wc'], staleTime: STALE, queryFn: () => unwrap<T.WorkingCapital>(p1.GET('/v1/finance/working-capital')) })
 export const useRoi = () => useQuery({ queryKey: ['roi'], staleTime: STALE, queryFn: () => unwrap<T.Roi>(p1.GET('/v1/interventions/roi')) })
 export const useModels = () => useQuery({ queryKey: ['models'], staleTime: STALE, queryFn: () => unwrap<T.Models>(p1.GET('/v1/models')) })
+export const useRegistry = () => useQuery({ queryKey: ['registry'], staleTime: STALE, queryFn: () => unwrap<T.RegistryStatus>(p1.GET('/v1/mlops/registry', { params: { query: {} } })) })
 export const useDataQuality = () => useQuery({ queryKey: ['dq'], staleTime: STALE, queryFn: () => unwrap<T.DataQuality>(p1.GET('/v1/data-quality')) })
 export const useLineage = () => useQuery({ queryKey: ['lineage'], staleTime: STALE, queryFn: () => unwrap<T.Lineage>(p1.GET('/v1/lineage', { params: { query: {} } })) })
 export const useExperiments = () => useQuery({ queryKey: ['experiments'], staleTime: STALE, queryFn: () => unwrap<T.Experiments>(p1.GET('/v1/experiments')) })

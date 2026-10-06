@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 from pathlib import Path
 
@@ -36,6 +37,61 @@ class Metric(BaseModel):
     as_of: str | None = None
     n: int | None = None
     note: str | None = None
+
+
+class RegistryModel(BaseModel):
+    version: str
+    registered_at: str
+    sha256: str
+    data_fingerprint: str | None = None
+    metrics: dict
+    notes: str = ""
+
+
+class RegistryEvent(BaseModel):
+    at: str
+    event: str
+    detail: dict = Field(default_factory=dict)
+
+
+class RegistryStatus(BaseModel):
+    """Model lifecycle state read straight from the file registry (no database). `available` is False until a model has been registered."""
+    available: bool
+    name: str
+    champion: RegistryModel | None = None
+    challenger: RegistryModel | None = None
+    versions: list[str] = Field(default_factory=list)
+    champion_hash_verified: bool | None = None
+    events: list[RegistryEvent] = Field(default_factory=list)
+    note: str = ""
+
+
+def _registry_dir() -> Path:
+    return Path(os.environ.get("MODEL_REGISTRY_DIR") or Path(__file__).resolve().parents[2] / "models" / "registry")
+
+
+def _registry_model(rec: dict | None) -> RegistryModel | None:
+    if rec is None:
+        return None
+    return RegistryModel(version=rec["version"], registered_at=rec["registered_at"], sha256=rec["sha256"],
+                         data_fingerprint=rec.get("data_fingerprint"), metrics=rec["metrics"], notes=rec.get("notes", ""))
+
+
+@router.get("/mlops/registry", response_model=RegistryStatus)
+def v1_mlops_registry(name: str = Query("sla_risk", pattern="^[A-Za-z0-9_-]{1,64}$"), events: int = Query(15, ge=0, le=100)):
+    """Champion/challenger state, version list and the latest promotion/rollback events (src/mlops). Read-only; creates nothing."""
+    from src.mlops.registry import ModelRegistry
+
+    root = _registry_dir()
+    if not (root / name).is_dir():
+        return RegistryStatus(available=False, name=name, note="No model has been registered yet. Run: python -m scripts.mlops_cycle")
+    reg = ModelRegistry(root)
+    champion, challenger = reg.resolve(name, "champion"), reg.resolve(name, "challenger")
+    evs = [e for e in reg.events() if e.get("name") == name][-events:] if events else []
+    return RegistryStatus(
+        available=True, name=name, champion=_registry_model(champion), challenger=_registry_model(challenger),
+        versions=reg.versions(name), champion_hash_verified=reg.verify(name, champion["version"]) if champion else None,
+        events=[RegistryEvent(at=e["at"], event=e["event"], detail={k: v for k, v in e.items() if k not in ("at", "event", "name")}) for e in evs])
 
 
 def get_context() -> build.Context:

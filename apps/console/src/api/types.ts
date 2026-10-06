@@ -91,6 +91,8 @@ export interface Models {
   early_warning: { name: string; target: string; trained_at: string; per_k: Record<string, { test_roc_auc: number; ci95: [number, number]; n_test: number; base_rate: number }>; note: string }
   governance_checks: { check: string; status: string }[]
 }
+export interface RegistryModel { version: string; registered_at: string; sha256: string; data_fingerprint: string | null; metrics: Record<string, unknown>; notes: string }
+export interface RegistryStatus { available: boolean; name: string; champion: RegistryModel | null; challenger: RegistryModel | null; versions: string[]; champion_hash_verified: boolean | null; events: { at: string; event: string; detail: Record<string, unknown> }[]; note: string }
 export interface DataQuality { cases: number; events: number; suppliers: number; explicit_sla_share_pct: number; mode: string; freshness_note: string; checks: { check: string; status: string; detail?: string }[] }
 export interface Experiments { experiments: { id: string; name: string; hypothesis: string; result: string; decision: string; detail: string; doc: string }[]; note: string }
 export interface Evidence { claims: { claim: string; status: string; evidence: string }[]; experiments: unknown[]; limitations: string[] }

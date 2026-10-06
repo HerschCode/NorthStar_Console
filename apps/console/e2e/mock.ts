@@ -40,6 +40,7 @@ export async function installMocks(page: Page): Promise<MockState> {
     if (path === '/v1/finance/working-capital') return json(route, file('finance_working_capital'))
     if (path === '/v1/interventions/roi') return json(route, file('interventions_roi'))
     if (path === '/v1/models') return json(route, file('models'))
+    if (path === '/v1/mlops/registry') return json(route, { available: false, name: 'sla_risk', champion: null, challenger: null, versions: [], champion_hash_verified: null, events: [], note: 'No model has been registered yet. Run: python -m scripts.mlops_cycle' })
     if (path === '/v1/data-quality') return json(route, file('data_quality'))
     if (path === '/v1/lineage') return json(route, file('lineage'))
     if (path === '/v1/experiments') return json(route, EXPERIMENTS)

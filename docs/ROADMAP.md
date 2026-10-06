@@ -123,3 +123,8 @@ intervals over the 32 source questions; these quantify resampling uncertainty
 only and do not replace independent labels. On the pinned run the 95% intervals
 for correct and wrong-fact pass-rate changes both reach 0.0; treat the result as
 suggestive, not conclusive.
+
+## Registry view in the console (2026-10-06)
+P1 `GET /v1/mlops/registry` (3 tests; pinned OpenAPI regenerated and synced to the console) and a Model health card. Verified: console type-check, 26 unit tests, production build,
+23 Playwright fixture tests including axe on `/models` and no horizontal scroll at 375 px. Only the empty state (no model registered) is exercised by the e2e mock; the
+populated card is covered by the API tests, not by a browser test. The gateway passthrough already forwards any `v1/` path, so no gateway change was needed.
