@@ -1,0 +1,73 @@
+name: dbt build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  dbt-build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dbt_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install schema + seed dependencies
+        run: pip install sqlalchemy psycopg2-binary python-dotenv
+
+      - name: Create schema and seed the CI database
+        env:
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: dbt_ci
+          DB_SSLMODE: prefer
+        run: |
+          python -m scripts.setup_database
+          python - <<'PYEOF'
+          import os
+          from sqlalchemy import create_engine, text
+          from scripts.setup_database import split_sql_statements
+          url = f"postgresql+psycopg2://{os.environ['DB_USER']}:{os.environ['DB_PASSWORD']}@{os.environ['DB_HOST']}:{os.environ['DB_PORT']}/{os.environ['DB_NAME']}?sslmode={os.environ['DB_SSLMODE']}"
+          engine = create_engine(url)
+          sql = open("dbt/seed_ci_fixture.sql").read()
+          with engine.begin() as conn:
+              for stmt in split_sql_statements(sql):
+                  conn.execute(text(stmt))
+          print("seeded CI fixture data")
+          PYEOF
+
+      - name: Install dbt-core + dbt-postgres
+        run: pip install dbt-core dbt-postgres
+
+      - name: dbt build
+        working-directory: dbt
+        env:
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: dbt_ci
+          DB_SSLMODE: prefer
+        run: dbt build --profiles-dir . --project-dir . --target ci

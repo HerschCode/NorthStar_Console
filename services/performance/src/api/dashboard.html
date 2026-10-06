@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Northstar Manufacturing — Procure-to-Pay Intelligence</title>
+<style>
+  /* ── Theme variables ─────────────────────────────────────────────────────── */
+  :root {
+    color-scheme: light;
+    --bg: #f3f6fa;
+    --panel: #ffffff;
+    --panel2: #f5f8fb;
+    --border: #dce5ee;
+    --text: #172b3a;
+    --muted: #607487;
+    --accent: #087e8b;
+    --accent-soft: #e3f4f3;
+    --good: #18794e;
+    --warn: #a15c07;
+    --bad: #bd3b35;
+    --grid: #e8eef4;
+    --shadow: rgba(27, 50, 69, 0.08);
+  }
+  [data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #101923;
+    --panel: #172330;
+    --panel2: #202f3d;
+    --border: #2d4050;
+    --text: #e6eef5;
+    --muted: #a2b2c0;
+    --accent: #55c4c4;
+    --accent-soft: #203b43;
+    --good: #57c58a;
+    --warn: #e8b454;
+    --bad: #f07870;
+    --grid: #263746;
+    --shadow: rgba(0,0,0,0.24);
+  }
+
+  /* ── Reset & base ────────────────────────────────────────────────────────── */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-family: Inter, "Aptos", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    padding: clamp(16px, 3vw, 32px) clamp(12px, 2.5vw, 28px);
+    transition: background 0.25s, color 0.25s;
+  }
+  .container { max-width: 1320px; margin: 0 auto; }
+
+  /* ── Header ──────────────────────────────────────────────────────────────── */
+  header {
+    margin-bottom: 16px;
+    padding: 22px 24px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: linear-gradient(118deg, var(--panel) 55%, var(--accent-soft));
+    box-shadow: 0 8px 28px var(--shadow);
+  }
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  h1 { font-size: clamp(1.35rem, 2.5vw, 1.8rem); margin: 0 0 4px; font-weight: 750; letter-spacing: -0.035em; line-height: 1.2; }
+  .subtitle { color: var(--muted); font-size: 0.85rem; line-height: 1.5; }
+  .subtitle a { color: var(--accent); text-decoration: none; }
+  .subtitle a:hover { text-decoration: underline; }
+  :target { scroll-margin-top: 82px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .dashboard-nav {
+    position: sticky; top: 8px; z-index: 20; display: flex; gap: 6px;
+    width: fit-content; max-width: 100%; margin: 12px 0 18px; padding: 6px;
+    overflow-x: auto; border: 1px solid var(--border); border-radius: 10px;
+    background: color-mix(in srgb, var(--panel) 94%, transparent);
+    box-shadow: 0 4px 16px var(--shadow); scrollbar-width: thin;
+    backdrop-filter: blur(12px);
+  }
+  .dashboard-nav a {
+    flex: 0 0 auto; padding: 7px 11px; border-radius: 7px;
+    color: var(--muted); font-size: 0.8rem; font-weight: 650;
+    text-decoration: none; white-space: nowrap;
+    transition: color 0.18s, background 0.18s;
+  }
+  .dashboard-nav a:hover, .dashboard-nav a:focus-visible {
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .dashboard-section { margin: 0 0 24px; scroll-margin-top: 74px; }
+  .section-heading { margin: 0 0 11px; }
+  .section-heading h2 { margin: 0; font-size: 1.12rem; letter-spacing: -0.02em; }
+  .section-heading p {
+    margin: 0 0 4px; color: var(--accent); font-size: 0.68rem;
+    font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+  }
+
+  .header-controls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+  .refresh-badge {
+    font-size: 0.73rem; color: var(--muted); background: var(--panel);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 4px 12px; white-space: nowrap;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .refresh-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--good);
+    display: inline-block; animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .theme-toggle {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 0.78rem;
+    font-weight: 650;
+    cursor: pointer;
+    color: var(--text);
+    line-height: 1;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+  }
+  .theme-toggle:hover { border-color: var(--accent); }
+
+  /* ── Explainer panel ─────────────────────────────────────────────────────── */
+  .explainer {
+    background: linear-gradient(110deg, var(--accent-soft), var(--panel));
+    border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--border));
+    border-left: 4px solid var(--accent);
+    border-radius: 12px;
+    margin-bottom: 18px;
+    overflow: hidden;
+    box-shadow: 0 4px 14px var(--shadow);
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.2s;
+  }
+  .explainer:hover { box-shadow: 0 7px 20px var(--shadow); }
+  .explainer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 14px 18px;
+    cursor: pointer;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    gap: 8px;
+  }
+  .explainer-header:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+  .explainer-header:focus-visible { outline-offset: -4px; }
+  .explainer-copy { display: flex; flex-direction: column; gap: 2px; }
+  .explainer-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .explainer-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 23px;
+    height: 23px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 800;
+    font-style: normal;
+  }
+  .explainer-hint { color: var(--muted); font-size: 0.76rem; line-height: 1.35; }
+  .explainer-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    flex-shrink: 0;
+    padding: 7px 11px;
+    border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--border));
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--accent);
+    font-size: 0.77rem;
+    font-weight: 700;
+  }
+  .explainer-chevron {
+    font-size: 0.72rem;
+    transition: transform 0.2s;
+  }
+  .explainer.open .explainer-chevron { transform: rotate(180deg); }
+  .explainer-body {
+    display: none;
+    padding: 0 18px 16px;
+    font-size: 0.84rem;
+    color: var(--muted);
+    line-height: 1.65;
+    border-top: 1px solid var(--border);
+  }
+  .explainer.open .explainer-body { display: block; }
+  .explainer-body p { margin: 10px 0 0; }
+  .explainer-body strong { color: var(--text); }
+  .explainer-body a { color: var(--accent); }
+
+  /* ── Key finding callout ─────────────────────────────────────────────────── */
+  .callout {
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.84rem;
+    margin-bottom: 18px;
+    border-left: 4px solid;
+    line-height: 1.5;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .callout.visible { opacity: 1; }
+  .callout.warn { background: color-mix(in srgb, var(--warn) 12%, var(--panel)); border-color: var(--warn); color: var(--text); }
+  .callout.bad  { background: color-mix(in srgb, var(--bad)  12%, var(--panel)); border-color: var(--bad);  color: var(--text); }
+  .callout.good { background: color-mix(in srgb, var(--good) 12%, var(--panel)); border-color: var(--good); color: var(--text); }
+
+  /* ── KPI strip ───────────────────────────────────────────────────────────── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .kpi {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    padding: 16px 18px;
+    box-shadow: 0 3px 12px var(--shadow);
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.35s, transform 0.35s, background 0.25s, border-color 0.25s;
+  }
+  .kpi.visible { opacity: 1; transform: translateY(0); }
+  .kpi-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .kpi-value { font-size: 1.5rem; font-weight: 700; line-height: 1.1; }
+  .kpi-value.warn { color: var(--warn); }
+  .kpi-value.bad  { color: var(--bad);  }
+  .kpi-value.good { color: var(--good); }
+  .kpi-context { font-size: 0.71rem; color: var(--muted); margin-top: 5px; line-height: 1.35; }
+  .kpi-context.good { color: var(--good); }
+  .kpi-context.warn { color: var(--warn); }
+  .kpi-context.bad  { color: var(--bad);  }
+
+  /* ── Two-col layout ──────────────────────────────────────────────────────── */
+  .grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 840px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* ── Cards ───────────────────────────────────────────────────────────────── */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 14px;
+    box-shadow: 0 3px 14px var(--shadow);
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.2s;
+  }
+  .card:hover { box-shadow: 0 7px 20px var(--shadow); }
+  .card h2 {
+    font-size: 0.96rem;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .card-sublabel {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 14px;
+    line-height: 1.4;
+  }
+  .badge { font-size: 0.68rem; font-weight: 400; color: var(--muted); white-space: nowrap; }
+
+  /* ── Skeleton loading ────────────────────────────────────────────────────── */
+  .skeleton {
+    background: linear-gradient(90deg, var(--panel2) 25%, var(--grid) 50%, var(--panel2) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 4px;
+    height: 12px;
+    margin-bottom: 8px;
+  }
+  .skeleton.tall { height: 24px; width: 60%; }
+  .skeleton.short { width: 40%; }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  /* ── Bottleneck bars ─────────────────────────────────────────────────────── */
+  .bn-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; font-size: 0.81rem; }
+  .bn-label { min-width: 140px; max-width: 220px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.78rem; cursor: default; }
+  .bn-bar-wrap { flex: 1; background: var(--panel2); border-radius: 4px; height: 8px; overflow: hidden; }
+  .bn-bar { height: 8px; background: var(--accent); border-radius: 4px; width: 0; transition: width 0.6s ease; }
+  .bn-val { min-width: 46px; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+
+  /* ── Supplier table ──────────────────────────────────────────────────────── */
+  .supplier-filter { width: 100%; box-sizing: border-box; padding: 6px 10px; margin-bottom: 10px; background: var(--panel2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.82rem; outline: none; }
+  .supplier-filter:focus { border-color: var(--accent); }
+  .supplier-filter::placeholder { color: var(--muted); }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  tr:last-child td { border-bottom: none; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  th.num { text-align: right; }
+
+  /* ── Pill badges ─────────────────────────────────────────────────────────── */
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 0.7rem; font-weight: 600; }
+  .pill.low  { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good); }
+  .pill.med  { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+  .pill.high { background: color-mix(in srgb, var(--bad)  18%, transparent); color: var(--bad);  }
+  .pill.ok   { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good); }
+  .pill.fail { background: color-mix(in srgb, var(--bad)  18%, transparent); color: var(--bad);  }
+  .pill.run  { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+  .pill.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+  .pill.worst { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); margin-left: 6px; font-size: 0.63rem; }
+
+  /* ── Breach rate cell coloring ───────────────────────────────────────────── */
+  .breach-good { color: var(--good); font-weight: 600; }
+  .breach-warn { color: var(--warn); font-weight: 600; }
+  .breach-bad  { color: var(--bad);  font-weight: 600; }
+
+  /* ── SLA risk distribution ───────────────────────────────────────────────── */
+  .risk-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .risk-label { width: 68px; font-size: 0.82rem; }
+  .risk-bar-wrap { flex: 1; background: var(--panel2); border-radius: 4px; height: 10px; overflow: hidden; }
+  .risk-bar { height: 10px; border-radius: 4px; width: 0; transition: width 0.6s ease; }
+  .risk-bar.low  { background: var(--good); }
+  .risk-bar.med  { background: var(--warn); }
+  .risk-bar.high { background: var(--bad);  }
+  .risk-count { min-width: 44px; text-align: right; font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* ── Orders needing attention (worklist) ────────────────────────────────── */
+  .order-worklist { display: flex; flex-direction: column; gap: 6px; }
+  .order-item { display: grid; grid-template-columns: 7rem 7rem 5rem 1fr; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; background: var(--panel2); border-left: 3px solid var(--bad); }
+  .order-item-id { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .order-item-id:hover { text-decoration: underline; }
+  .order-item-sup { color: var(--muted); font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .order-item-prob { color: var(--bad); font-weight: 700; font-size: 0.9rem; font-variant-numeric: tabular-nums; text-align: right; }
+  .order-item-factors { display: flex; flex-wrap: wrap; gap: 4px; }
+  .factor-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 0.73rem; padding: 2px 7px; border-radius: 10px; white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+  .factor-chip.up   { background: rgba(192,57,43,0.12); color: #c0392b; }
+  .factor-chip.down { background: rgba(39,174,96,0.12);  color: #27ae60; }
+
+  /* ── Breach mini bar (supplier table) ───────────────────────────────────── */
+  .breach-bar-wrap { display: inline-block; width: 48px; height: 5px; background: var(--panel2); border-radius: 3px; vertical-align: middle; margin-left: 5px; overflow: hidden; }
+  .breach-bar-fill { height: 5px; border-radius: 3px; }
+  .breach-bar-fill.good { background: var(--good); }
+  .breach-bar-fill.warn { background: var(--warn); }
+  .breach-bar-fill.bad  { background: var(--bad);  }
+
+  /* ── Recommended actions ─────────────────────────────────────────────────── */
+  .action-list { list-style: none; padding: 0; margin: 0; }
+  .action-list li { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 0.83rem; line-height: 1.45; }
+  .action-list li:last-child { border-bottom: none; }
+  .action-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+  .action-text strong { display: block; color: var(--text); }
+  .action-text span { color: var(--muted); font-size: 0.78rem; }
+
+  /* ── Sortable headers ────────────────────────────────────────────────────── */
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: var(--accent); }
+  th.sort-asc::after  { content: " ▲"; font-size: 0.65em; }
+  th.sort-desc::after { content: " ▼"; font-size: 0.65em; }
+
+  /* ── Conformance ─────────────────────────────────────────────────────────── */
+  .conf-rate { font-size: 2.2rem; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  .conf-sub  { font-size: 0.8rem; color: var(--muted); margin-bottom: 14px; }
+
+  /* ── Pipeline runs ───────────────────────────────────────────────────────── */
+  .run-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 0.81rem; }
+  .run-row:last-child { border-bottom: none; }
+  .run-meta { flex: 1; min-width: 0; }
+  .run-id   { color: var(--muted); font-size: 0.72rem; }
+  .run-time { color: var(--muted); font-size: 0.72rem; }
+
+  /* ── Model health ────────────────────────────────────────────────────────── */
+  .model-meta { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 12px; }
+  .model-meta-item { display: flex; flex-direction: column; gap: 2px; }
+  .model-meta-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .model-meta-val { font-size: 0.9rem; font-weight: 600; }
+  .dist-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 8px 0 4px; }
+  .dist-bar-seg { transition: width 0.3s; min-width: 0; }
+  .dist-legend { display: flex; gap: 12px; font-size: 0.73rem; color: var(--muted); }
+  .dist-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 3px; vertical-align: middle; }
+  .run-counts { font-size: 0.78rem; color: var(--muted); margin-top: 3px; }
+
+  /* ── Empty / loading states ──────────────────────────────────────────────── */
+  .empty { color: var(--muted); font-size: 0.83rem; padding: 18px 0; text-align: center; }
+
+  /* ── Footer ──────────────────────────────────────────────────────────────── */
+  footer {
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-align: center;
+    margin-top: 28px;
+    line-height: 2;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 16px;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 620px) {
+    header { padding: 18px 16px; }
+    .dashboard-nav { width: 100%; top: 4px; scroll-snap-type: x proximity; }
+    .dashboard-nav a { scroll-snap-align: start; }
+    .header-controls { width: 100%; justify-content: space-between; }
+    .order-item { grid-template-columns: minmax(0, 1fr) auto; gap: 5px 10px; }
+    .order-item-id { grid-column: 1; }
+    .order-item-sup { grid-column: 1; grid-row: 2; }
+    .order-item-prob { grid-column: 2; grid-row: 1 / span 2; text-align: right; }
+    .order-item-factors { grid-column: 1 / -1; }
+    .explainer-header { padding: 12px; }
+    .explainer-action { padding: 7px 9px; font-size: 0.73rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="header-top">
+      <div>
+        <h1>Procure-to-Pay Intelligence — Northstar Manufacturing</h1>
+        <div class="subtitle">
+          Live procurement process analytics · process mining, SLA risk, supplier performance &middot;
+          data from <a href="/docs" target="_blank">operations-performance API</a>
+          &middot; <a href="https://operations-assistant.onrender.com/" target="_blank" rel="noreferrer">ask the agent &#8594;</a>
+        </div>
+      </div>
+      <div class="header-controls">
+        <button class="theme-toggle" id="theme-toggle" title="Switch theme" aria-label="Switch theme">☾ Dark</button>
+        <div class="refresh-badge"><span class="refresh-dot"></span> <span id="refresh-label">Loading…</span></div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="dashboard-nav" aria-label="Dashboard sections">
+    <a href="#overview-section">Overview</a>
+    <a href="#process-section">Process &amp; risk</a>
+    <a href="#controls-section">Controls &amp; finance</a>
+    <a href="#platform-section">Platform health</a>
+  </nav>
+
+  <!-- ── Explainer panel ── -->
+  <div class="explainer" id="explainer">
+    <button class="explainer-header" id="explainer-toggle" type="button" aria-expanded="false" aria-controls="explainer-body">
+      <span class="explainer-copy">
+        <span class="explainer-title"><i class="explainer-icon" aria-hidden="true">i</i> Dashboard guide</span>
+        <span class="explainer-hint">Definitions, model caveats &amp; how to read the metrics</span>
+      </span>
+      <span class="explainer-action"><span id="explainer-action-label">Expand guide</span><span class="explainer-chevron" aria-hidden="true">▼</span></span>
+    </button>
+    <div class="explainer-body" id="explainer-body">
+      <p>This dashboard shows live procurement process data for <strong>Northstar Manufacturing</strong>.</p>
+      <p><strong>Cycle Time</strong> — how long it takes from purchase order creation to delivery. The 30-day reference line is an illustrative internal target, not a sourced industry benchmark. Northstar's average is highlighted.</p>
+      <p><strong>SLA Breach Rate</strong> — the % of orders that exceeded their agreed delivery deadline. The 15% line is an illustrative target. Note: the configured SLA targets (10–14 days) sit far below this dataset's real cycle times, so ~94% of cases breach; see the project's evaluation docs.</p>
+      <p><strong>Bottlenecks</strong> — which process stages cause the most delay, ranked by average hours spent there. The top stage explains most SLA breaches.</p>
+      <p><strong>SLA Risk</strong> — each order is scored LOW / MEDIUM / HIGH by a calibrated model (best of RF/LR/GB by held-out AUC -- see the exact model below) trained on historical breach patterns. Its ROC-AUC shown below (~0.98) is on the configured breach target and is inflated; on realistic targets it is 0.78–0.93, and it is a late-stage score (most of its signal comes from features known late in a case). Risk score ≠ breach rate: the distribution shows predicted likelihood, not confirmed outcome.</p>
+      <p><strong>Orders Needing Attention</strong> — the top HIGH-risk orders ranked by predicted breach probability. Each order shows SHAP feature attributions: signed, per-instance contributions from the model (positive = pushed breach probability up, negative = pushed it down), ranked by magnitude.</p>
+      <p><strong>Supplier Performance</strong> — which suppliers are slowest and which breach SLA most often. Click any column header to re-sort. A <span class="pill worst" style="position:relative;top:-1px">worst</span> badge marks the highest breach-rate supplier.</p>
+      <p><strong>Recommended Actions</strong> — synthesised from the data above: the highest-impact interventions given current breach rate, top bottleneck, and worst-performing supplier.</p>
+      <p><strong>Want to dig deeper?</strong> The <a href="https://operations-assistant.onrender.com/" target="_blank" rel="noreferrer">Procurement Intelligence Agent</a> can answer plain-English questions about this data &mdash; <em>"Why did SLA breaches increase?"</em> or <em>"What does our rework policy say about supplier delays?"</em> &mdash; and cites both the event-log evidence and the policy section it drew from.</p>
+    </div>
+  </div>
+
+  <section class="dashboard-section" id="overview-section" aria-labelledby="overview-heading">
+    <div class="section-heading">
+      <p>01 · Summary</p>
+      <h2 id="overview-heading">Operations at a glance</h2>
+    </div>
+    <div class="callout good" id="callout" hidden></div>
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi visible" style="grid-column:1/-1">
+        <div class="skeleton tall"></div>
+        <div class="skeleton short"></div>
+        <div class="skeleton" style="width:80%"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="dashboard-section" id="process-section" aria-labelledby="process-heading">
+    <div class="section-heading">
+      <p>02 · Triage</p>
+      <h2 id="process-heading">Process performance &amp; risk</h2>
+    </div>
+    <div class="card" id="attention-card" hidden>
+      <h2>🚨 Orders Needing Attention <span class="badge">top HIGH-risk · ranked by breach probability</span></h2>
+      <div class="card-sublabel">Highest predicted breach probability. Click an order to see the full risk explanation via the API.</div>
+      <div class="order-worklist" id="attention-body"></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>Top Bottlenecks <span class="badge">avg delay by process stage</span></h2>
+        <div class="card-sublabel">Longest average delays by process stage (hours). The top bottleneck explains most SLA breaches.</div>
+        <div id="bottlenecks-body">
+          <div class="skeleton"></div><div class="skeleton short"></div><div class="skeleton" style="width:70%"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>SLA Risk Distribution <span class="badge">ML-predicted · all cases</span></h2>
+        <div class="card-sublabel">Each order scored by risk of exceeding its SLA deadline.</div>
+        <div id="risk-body">
+          <div class="skeleton"></div><div class="skeleton short"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>Supplier Performance <span class="badge">min 3 orders · click headers to sort</span></h2>
+        <div class="card-sublabel">Breach rate colour: <span class="breach-good">green &lt;10%</span> · <span class="breach-warn">yellow 10–25%</span> · <span class="breach-bad">red &gt;25%</span></div>
+        <input id="supplier-filter" class="supplier-filter" type="text" placeholder="Filter by supplier ID…" aria-label="Filter suppliers" />
+        <div class="table-wrap" id="suppliers-body">
+          <div class="skeleton"></div><div class="skeleton short"></div><div class="skeleton" style="width:85%"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Process Conformance</h2>
+        <div class="card-sublabel">% of orders that follow the expected activity sequence.</div>
+        <div id="conformance-body">
+          <div class="skeleton tall"></div><div class="skeleton short"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="dashboard-section" id="controls-section" aria-labelledby="controls-heading">
+    <div class="section-heading">
+      <p>03 · Governance</p>
+      <h2 id="controls-heading">Controls &amp; working capital</h2>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h2>AP Controls <span class="badge">anomaly triage, not fraud -- BPI 2019 has no fraud labels</span></h2>
+        <div class="card-sublabel">Rule violations / statistical anomalies from the real event log. See <a href="/docs" style="color:var(--accent)">docs/ap-controls.md</a> for what each control tests and its known false-positive sources.</div>
+        <div id="ap-controls-body">
+          <div class="skeleton tall"></div><div class="skeleton short"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Working Capital</h2>
+        <div class="card-sublabel">Late-payment exposure and an early-payment-discount scenario. Payment terms are a stated assumption (net 30 / 2-10 net 30).</div>
+        <div id="working-capital-body">
+          <div class="skeleton tall"></div><div class="skeleton short"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="actions-card" hidden>
+      <h2>💡 Recommended Actions <span class="badge">derived from current data</span></h2>
+      <ul class="action-list" id="actions-list"></ul>
+    </div>
+  </section>
+
+  <section class="dashboard-section" id="platform-section" aria-labelledby="platform-heading">
+    <div class="section-heading">
+      <p>04 · Reliability</p>
+      <h2 id="platform-heading">Platform health</h2>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h2>Recent Pipeline Runs <span class="badge">last 5</span></h2>
+        <div id="runs-body">
+          <div class="skeleton"></div><div class="skeleton short"></div>
+        </div>
+      </div>
+
+      <div class="card" id="model-health-card" hidden>
+        <h2>Model Health <span class="badge">sla_risk_predictor · calibrated (best of RF/LR/GB)</span></h2>
+        <div id="model-health-body">
+          <div class="skeleton"></div><div class="skeleton short"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="data-quality-card" hidden>
+      <h2>Data Quality <span class="badge">pipeline checks</span></h2>
+      <div id="data-quality-body">
+        <div class="skeleton"></div><div class="skeleton short"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <a href="https://operations-assistant.onrender.com" target="_blank">Ask the AI agent →</a>
+    <a href="/docs" target="_blank">This API's Swagger docs →</a>
+    <a href="https://github.com/HerschCode/operations-performance" target="_blank">Source on GitHub →</a>
+  </footer>
+
+</div><!-- /container -->
+
+<script>
+// ── Theme toggle ─────────────────────────────────────────────────────────────
+(function() {
+  const stored = localStorage.getItem('dash-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', stored);
+  const btn = document.getElementById('theme-toggle');
+  function updateThemeButton(theme) {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    btn.textContent = nextTheme === 'dark' ? '☾ Dark' : '☀ Light';
+    btn.setAttribute('aria-label', 'Switch to ' + nextTheme + ' theme');
+    btn.title = 'Switch to ' + nextTheme + ' theme';
+  }
+  updateThemeButton(stored);
+
+  btn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    updateThemeButton(next);
+    localStorage.setItem('dash-theme', next);
+  });
+})();
+
+// ── Explainer panel ───────────────────────────────────────────────────────────
+(function() {
+  const panel = document.getElementById('explainer');
+  const toggle = document.getElementById('explainer-toggle');
+  const actionLabel = document.getElementById('explainer-action-label');
+
+  function togglePanel() {
+    const open = panel.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open);
+    actionLabel.textContent = open ? 'Collapse guide' : 'Expand guide';
+  }
+  toggle.addEventListener('click', togglePanel);
+})();
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function empty(msg) { return `<div class="empty">${msg}</div>`; }
+function fmt(n, decimals = 1) {
+  return Number(n).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+// ── Key finding callout ───────────────────────────────────────────────────────
+function renderCallout(overview, conformance) {
+  const el = document.getElementById('callout');
+  if (!overview || !overview.available) { el.hidden = true; return; }
+
+  let cls = 'good';
+  let msg = '✓ Operations within normal parameters. Monitor high-risk cases in the SLA Risk section.';
+
+  if (overview.breach_rate_pct > 20) {
+    cls = 'bad';
+    msg = '⚠️ High SLA breach rate detected (' + fmt(overview.breach_rate_pct) + '%). Check the top bottleneck stage and worst-performing supplier below.';
+  } else if (conformance && conformance.available && conformance.conformance_rate_pct < 80) {
+    cls = 'warn';
+    msg = '⚠️ Process conformance is below 80% (' + fmt(conformance.conformance_rate_pct) + '%) — many orders deviate from the expected workflow.';
+  } else if (overview.breach_rate_pct > 10) {
+    cls = 'warn';
+    msg = '⚠️ SLA breach rate of ' + fmt(overview.breach_rate_pct) + '% is elevated. Consider reviewing bottleneck stages.';
+  }
+
+  el.className = 'callout ' + cls;
+  el.textContent = msg;
+  el.hidden = false;
+  // trigger fade-in
+  requestAnimationFrame(() => { requestAnimationFrame(() => el.classList.add('visible')); });
+}
+
+// ── KPI strip ─────────────────────────────────────────────────────────────────
+function renderKpis(ov) {
+  const el = document.getElementById('kpi-grid');
+  if (!ov.available) {
+    el.innerHTML = empty('No process data loaded yet — run the pipeline first.');
+    return;
+  }
+
+  const days = (ov.mean_cycle_hours / 24).toFixed(1);
+  const benchmarkDays = 30;
+  const isAboveBenchmark = (ov.mean_cycle_hours / 24) > benchmarkDays;
+
+  const TARGET_BREACH = 15;
+  const mult = (ov.mean_cycle_hours / 24 / benchmarkDays).toFixed(1);
+  const breachCls = ov.breach_rate_pct > 20 ? 'bad' : ov.breach_rate_pct > 10 ? 'warn' : '';
+  const breachCtxCls = ov.breach_rate_pct > 20 ? 'bad' : ov.breach_rate_pct > 10 ? 'warn' : 'good';
+  const breachDelta = (ov.breach_rate_pct - TARGET_BREACH).toFixed(1);
+  const breachCtx = ov.breach_rate_pct > TARGET_BREACH
+    ? `↑ ${breachDelta}pp vs ${TARGET_BREACH}% target`
+    : `✓ ${Math.abs(breachDelta)}pp below ${TARGET_BREACH}% target`;
+
+  const cards = [
+    {
+      label: 'Avg Cycle Time',
+      value: fmt(ov.mean_cycle_hours) + 'h',
+      valueCls: isAboveBenchmark ? 'warn' : '',
+      ctx: days + ' days · ' + mult + '× 30-day reference',
+      ctxCls: isAboveBenchmark ? 'warn' : 'good',
+    },
+    {
+      label: 'Median Cycle Time',
+      value: fmt(ov.median_cycle_hours) + 'h',
+      valueCls: '',
+      ctx: (ov.median_cycle_hours / 24).toFixed(1) + ' days',
+      ctxCls: '',
+    },
+    {
+      label: 'P90 Cycle Time',
+      value: fmt(ov.p90_cycle_hours) + 'h',
+      valueCls: '',
+      ctx: '90% of orders finish within ' + (ov.p90_cycle_hours / 24).toFixed(1) + ' days',
+      ctxCls: '',
+    },
+    {
+      label: 'SLA Breach Rate',
+      value: fmt(ov.breach_rate_pct) + '%',
+      valueCls: breachCls,
+      ctx: breachCtx,
+      ctxCls: breachCtxCls,
+    },
+    {
+      label: 'Total Cases',
+      value: ov.case_count.toLocaleString(),
+      valueCls: '',
+      ctx: 'orders analysed',
+      ctxCls: '',
+    },
+  ];
+
+  el.innerHTML = cards.map((c, i) => `
+    <div class="kpi" style="transition-delay:${i * 60}ms">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value ${c.valueCls}">${c.value}</div>
+      <div class="kpi-context ${c.ctxCls}">${c.ctx}</div>
+    </div>`).join('');
+
+  // trigger fade-in
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      el.querySelectorAll('.kpi').forEach(k => k.classList.add('visible'));
+    });
+  });
+}
+
+// ── Bottlenecks ───────────────────────────────────────────────────────────────
+function shortStageLabel(stage) {
+  const abbrev = s => s.length > 20 ? s.slice(0, 18).trimEnd() + '…' : s;
+  if (stage.includes(' -> ')) {
+    const [a, b] = stage.split(' -> ');
+    return abbrev(a) + ' → ' + abbrev(b);
+  }
+  return abbrev(stage);
+}
+
+function renderBottlenecks(data) {
+  const el = document.getElementById('bottlenecks-body');
+  if (!data.available || !data.stages || !data.stages.length) {
+    el.innerHTML = empty('No bottleneck data available yet.');
+    return;
+  }
+  const top = data.stages.slice(0, 7);
+  const maxVal = Math.max(...top.map(s => s.avg_hours));
+  el.innerHTML = top.map(s => `
+    <div class="bn-row">
+      <div class="bn-label" title="${s.stage}">${shortStageLabel(s.stage)}</div>
+      <div class="bn-bar-wrap"><div class="bn-bar" data-pct="${(s.avg_hours / maxVal * 100).toFixed(1)}"></div></div>
+      <div class="bn-val">${fmt(s.avg_hours)}h</div>
+    </div>`).join('');
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      el.querySelectorAll('.bn-bar').forEach(b => { b.style.width = b.dataset.pct + '%'; });
+    });
+  });
+}
+
+// ── SLA Risk Distribution ─────────────────────────────────────────────────────
+function renderRisk(data) {
+  const el = document.getElementById('risk-body');
+  if (!data.available) {
+    el.innerHTML = empty('No trained SLA-risk model — run src/ml/train.py first.');
+    return;
+  }
+  const total = (data.low || 0) + (data.medium || 0) + (data.high || 0) || 1;
+  const rows = [
+    { label: 'LOW',    cls: 'low',  count: data.low    || 0 },
+    { label: 'MEDIUM', cls: 'med',  count: data.medium || 0 },
+    { label: 'HIGH',   cls: 'high', count: data.high   || 0 },
+  ];
+  el.innerHTML = rows.map(r => {
+    const pct = (r.count / total * 100).toFixed(1);
+    return `
+    <div class="risk-row">
+      <div class="risk-label"><span class="pill ${r.cls}">${r.label}</span></div>
+      <div class="risk-bar-wrap"><div class="risk-bar ${r.cls}" data-pct="${pct}"></div></div>
+      <div class="risk-count">${r.count.toLocaleString()} <span style="color:var(--muted);font-size:0.73rem">${pct}%</span></div>
+    </div>`;
+  }).join('') +
+    `<div style="color:var(--muted);font-size:0.75rem;margin-top:10px;line-height:1.4">${(data.total_scored ?? total).toLocaleString()} cases scored · Risk = predicted breach probability, not confirmed outcome</div>`;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      el.querySelectorAll('.risk-bar').forEach(b => { b.style.width = b.dataset.pct + '%'; });
+    });
+  });
+}
+
+// ── Supplier Performance ──────────────────────────────────────────────────────
+let _suppliersAll = [];
+let _supplierSort = { col: 'breach', dir: -1 };  // default: breach rate desc
+
+function _sortSuppliers(arr) {
+  const { col, dir } = _supplierSort;
+  return [...arr].sort((a, b) => {
+    let va = col === 'breach' ? (a.sla_breach_rate ?? -1)
+           : col === 'cycle'  ? (a.avg_cycle_time_hours ?? 0)
+           : col === 'orders' ? (a.order_count ?? 0)
+           : 0;
+    let vb = col === 'breach' ? (b.sla_breach_rate ?? -1)
+           : col === 'cycle'  ? (b.avg_cycle_time_hours ?? 0)
+           : col === 'orders' ? (b.order_count ?? 0)
+           : 0;
+    return dir * (va - vb);
+  });
+}
+
+function _renderSuppliersTable(suppliers) {
+  const el = document.getElementById('suppliers-body');
+  if (!suppliers.length) {
+    el.innerHTML = empty('No suppliers match the filter.');
+    return;
+  }
+  const sorted = _sortSuppliers(suppliers);
+  const maxBreach = Math.max(...sorted.map(s => s.sla_breach_rate ?? 0), 0.001);
+  const worstIdx = sorted.reduce((wi, s, i, arr) => {
+    return (s.sla_breach_rate ?? 0) > (arr[wi].sla_breach_rate ?? 0) ? i : wi;
+  }, 0);
+
+  function hdrCls(col) {
+    if (_supplierSort.col !== col) return 'sortable';
+    return 'sortable ' + (_supplierSort.dir === -1 ? 'sort-desc' : 'sort-asc');
+  }
+
+  el.innerHTML = `
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>Supplier</th>
+        <th class="num ${hdrCls('orders')}" data-sort="orders">Orders</th>
+        <th class="num ${hdrCls('cycle')}"  data-sort="cycle">Avg Cycle</th>
+        <th class="num ${hdrCls('breach')}" data-sort="breach">Breach Rate</th>
+      </tr></thead>
+      <tbody>${sorted.map((s, i) => {
+        const bp = s.sla_breach_rate != null ? s.sla_breach_rate * 100 : null;
+        const bpFmt = bp != null ? bp.toFixed(0) + '%' : '—';
+        const bpCls = bp == null ? '' : bp > 25 ? 'breach-bad' : bp > 10 ? 'breach-warn' : 'breach-good';
+        const barCls = bp == null ? '' : bp > 25 ? 'bad' : bp > 10 ? 'warn' : 'good';
+        const barW = bp != null ? ((s.sla_breach_rate / maxBreach) * 100).toFixed(0) : 0;
+        const worstBadge = i === worstIdx && bp != null ? '<span class="pill worst">worst</span>' : '';
+        const bar = bp != null
+          ? `<span class="breach-bar-wrap"><span class="breach-bar-fill ${barCls}" style="width:${barW}%"></span></span>`
+          : '';
+        return `<tr>
+          <td>${s.supplier_id}${worstBadge}</td>
+          <td class="num">${s.order_count}</td>
+          <td class="num">${fmt(s.avg_cycle_time_hours)}h</td>
+          <td class="num ${bpCls}">${bpFmt}${bar}</td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table></div>`;
+
+  // wire sort clicks
+  el.querySelectorAll('th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.sort;
+      if (_supplierSort.col === col) {
+        _supplierSort.dir *= -1;
+      } else {
+        _supplierSort = { col, dir: -1 };
+      }
+      const q = document.getElementById('supplier-filter').value.trim().toLowerCase();
+      const toRender = q ? _suppliersAll.filter(s => String(s.supplier_id).toLowerCase().includes(q)) : _suppliersAll;
+      _renderSuppliersTable(toRender);
+    });
+  });
+}
+
+function renderSuppliers(data) {
+  const el = document.getElementById('suppliers-body');
+  if (!data.available || !data.suppliers || !data.suppliers.length) {
+    el.innerHTML = empty('No supplier data available yet.');
+    return;
+  }
+  _suppliersAll = data.suppliers;
+  _renderSuppliersTable(_suppliersAll);
+  const filterEl = document.getElementById('supplier-filter');
+  filterEl.addEventListener('input', () => {
+    const q = filterEl.value.trim().toLowerCase();
+    const filtered = q ? _suppliersAll.filter(s => String(s.supplier_id).toLowerCase().includes(q)) : _suppliersAll;
+    _renderSuppliersTable(filtered);
+  });
+}
+
+// ── Process Conformance ───────────────────────────────────────────────────────
+function renderConformance(data) {
+  const el = document.getElementById('conformance-body');
+  if (!data.available) {
+    el.innerHTML = empty('Conformance checking not configured or no events loaded.');
+    return;
+  }
+  const rateCls = data.conformance_rate_pct >= 90 ? '' :
+                  data.conformance_rate_pct >= 80 ? 'warn' : 'bad';
+  const devs = Object.entries(data.deviation_breakdown || {});
+  el.innerHTML = `
+    <div class="conf-rate" style="color:var(${rateCls === 'bad' ? '--bad' : rateCls === 'warn' ? '--warn' : '--text'})">${fmt(data.conformance_rate_pct)}%</div>
+    <div class="conf-sub">${data.conformant_cases?.toLocaleString()} / ${data.total_cases?.toLocaleString()} cases conform to expected sequence</div>
+    ${devs.length ? `
+    <table>
+      <thead><tr><th>Deviation type</th><th class="num">Count</th></tr></thead>
+      <tbody>${devs.map(([k, v]) => `<tr><td>${k}</td><td class="num">${v}</td></tr>`).join('')}</tbody>
+    </table>` : ''}`;
+}
+
+// ── AP Controls ────────────────────────────────────────────────────────────────
+function renderApControls(data) {
+  const el = document.getElementById('ap-controls-body');
+  if (!data.available || !data.controls || !data.controls.length) {
+    el.innerHTML = empty('No AP control run yet -- run scripts.run_ap_controls.');
+    return;
+  }
+  const rows = data.controls.map(c => `
+    <tr>
+      <td>${c.control_id}</td>
+      <td class="num">${c.count.toLocaleString()}</td>
+      <td class="num">€${c.total_exposure_eur.toLocaleString(undefined, {maximumFractionDigits:0})}</td>
+      <td class="num">${c.high ? `<span class="breach-bad">${c.high} high</span>` : ''}${c.medium ? ` ${c.medium} med` : ''}${c.low ? ` ${c.low} low` : ''}</td>
+    </tr>`).join('');
+  el.innerHTML = `
+    <div class="card-sublabel" style="margin-bottom:6px">${data.total_exceptions.toLocaleString()} total exceptions across ${data.controls.length} controls</div>
+    <table>
+      <thead><tr><th>Control</th><th class="num">Count</th><th class="num">Exposure</th><th class="num">Severity</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ── Working Capital ──────────────────────────────────────────────────────────
+function renderWorkingCapital(data) {
+  const el = document.getElementById('working-capital-body');
+  if (!data.available) {
+    el.innerHTML = empty('No working-capital data available yet.');
+    return;
+  }
+  const lp = data.late_payment, ds = data.early_discount_scenario;
+  el.innerHTML = `
+    <div class="kpi-grid" style="margin-bottom:10px">
+      <div class="kpi"><div class="kpi-label">Late (&gt;${lp.payment_terms_days}d)</div><div class="kpi-value ${lp.late_rate_pct > 30 ? 'warn' : ''}">${lp.late_rate_pct ?? '—'}%</div><div class="kpi-sub">€${(lp.exposure_eur||0).toLocaleString(undefined,{maximumFractionDigits:0})} exposure</div></div>
+      <div class="kpi"><div class="kpi-label">Discount captured</div><div class="kpi-value">€${(ds.captured_discount_eur||0).toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="kpi-sub">of €${(ds.potential_discount_eur||0).toLocaleString(undefined,{maximumFractionDigits:0})} potential</div></div>
+      <div class="kpi"><div class="kpi-label">Missed discount</div><div class="kpi-value warn">€${(ds.missed_discount_eur||0).toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="kpi-sub">${ds.discount_pct*100}% / ${ds.discount_window_days}d assumption</div></div>
+    </div>
+    ${(data.dpo_by_spend_area||[]).length ? `
+    <div class="card-sublabel" style="margin-bottom:4px">Invoice-to-clear days by spend area</div>
+    <table>
+      <thead><tr><th>Spend area</th><th class="num">Cases</th><th class="num">Mean days</th></tr></thead>
+      <tbody>${data.dpo_by_spend_area.map(r => `<tr><td>${r.sub_spend_area ?? '—'}</td><td class="num">${r.case_count}</td><td class="num">${r.mean_days.toFixed(1)}</td></tr>`).join('')}</tbody>
+    </table>` : ''}`;
+}
+
+// ── Orders Needing Attention ──────────────────────────────────────────────────
+function renderAttention(data) {
+  const card = document.getElementById('attention-card');
+  const list = document.getElementById('attention-body');
+  if (!data || !data.available || !data.cases || !data.cases.length) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+  list.innerHTML = data.cases.map(c => {
+    const orderId = c.case_id.includes('_') ? c.case_id.split('_').pop() : c.case_id.slice(-8);
+    const suppId = c.supplier_id && c.supplier_id.startsWith('vendorID_') ? '#' + c.supplier_id.slice(9) : (c.supplier_id || '—');
+    const probFmt = c.breach_probability >= 99.5 ? '>99%' : parseFloat(c.breach_probability).toFixed(1) + '%';
+    const chips = (c.shap_factors || []).slice(0, 2).map(f => {
+      const cls = f.shap > 0 ? 'up' : 'down';
+      const arrow = f.shap > 0 ? '↑' : '↓';
+      const label = f.label.length > 28 ? f.label.slice(0, 25) + '…' : f.label;
+      return `<span class="factor-chip ${cls}">${arrow} ${label}</span>`;
+    }).join('');
+    return `<div class="order-item">
+      <a href="/orders/${encodeURIComponent(c.case_id)}/risk?explain=true" target="_blank" class="order-item-id" title="${c.case_id}">${orderId}</a>
+      <span class="order-item-sup">${suppId}</span>
+      <span class="order-item-prob">${probFmt}</span>
+      <div class="order-item-factors">${chips}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Recommended Actions ───────────────────────────────────────────────────────
+function renderActions(data) {
+  const card = document.getElementById('actions-card');
+  const list = document.getElementById('actions-list');
+  const ov = data.executive_overview;
+  const bn = data.bottlenecks;
+  const sup = data.suppliers;
+  const risk = data.sla_risk;
+
+  if (!ov || !ov.available) { card.hidden = true; return; }
+
+  const actions = [];
+
+  // 1. SLA breach severity
+  if (ov.breach_rate_pct > 15) {
+    const delta = (ov.breach_rate_pct - 15).toFixed(1);
+    actions.push({
+      icon: '🔴',
+      strong: `Escalate SLA breach rate — ${fmt(ov.breach_rate_pct)}% (${delta}pp above 15% target)`,
+      detail: `${risk && risk.available ? risk.high.toLocaleString() + ' HIGH-risk orders are currently predicted to breach their deadlines.' : 'Review all open orders against SLA deadlines.'}`,
+    });
+  }
+
+  // 2. Worst supplier
+  if (sup && sup.available && sup.suppliers && sup.suppliers.length) {
+    const worst = sup.suppliers.reduce((a, b) => (b.sla_breach_rate ?? 0) > (a.sla_breach_rate ?? 0) ? b : a);
+    if (worst.sla_breach_rate != null && worst.sla_breach_rate > 0.25) {
+      actions.push({
+        icon: '🟠',
+        strong: `Investigate ${worst.supplier_id} — ${(worst.sla_breach_rate * 100).toFixed(0)}% breach rate`,
+        detail: `Highest-breach supplier across ${worst.order_count} orders. Avg cycle ${fmt(worst.avg_cycle_time_hours)}h — consider performance review or alternate sourcing.`,
+      });
+    }
+  }
+
+  // 3. Top bottleneck
+  if (bn && bn.available && bn.stages && bn.stages.length) {
+    const top = bn.stages[0];
+    actions.push({
+      icon: '🟠',
+      strong: `Review "${shortStageLabel(top.stage)}" stage — highest average delay`,
+      detail: `${fmt(top.avg_hours)}h average (${top.case_count?.toLocaleString() ?? '?'} cases). This single transition accounts for the largest share of total process delay.`,
+    });
+  }
+
+  // 4. Cycle time vs benchmark
+  if (ov.mean_cycle_hours / 24 > 30) {
+    const mult = (ov.mean_cycle_hours / 24 / 30).toFixed(1);
+    actions.push({
+      icon: '🟡',
+      strong: `Reduce average cycle time — currently ${mult}× the 30-day reference`,
+      detail: `Mean ${fmt(ov.mean_cycle_hours)}h (${(ov.mean_cycle_hours/24).toFixed(1)} days). Target: under 720h. Focus on the top bottleneck stage and high-rework suppliers first.`,
+    });
+  }
+
+  if (!actions.length) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+  list.innerHTML = actions.map(a => `
+    <li>
+      <span class="action-icon">${a.icon}</span>
+      <div class="action-text"><strong>${a.strong}</strong><span>${a.detail}</span></div>
+    </li>`).join('');
+}
+
+// ── Pipeline Runs ─────────────────────────────────────────────────────────────
+async function renderRuns() {
+  const el = document.getElementById('runs-body');
+  try {
+    const res = await fetch('/observability/pipeline-runs?limit=5', {
+      headers: { 'X-API-Key': '' }
+    });
+    if (!res.ok) throw new Error('auth');
+    const runs = await res.json();
+    if (!runs.length) { el.innerHTML = empty('No pipeline runs recorded yet.'); return; }
+    el.innerHTML = runs.map(r => {
+      const statusCls = r.status === 'success' ? 'ok' : r.status === 'running' ? 'run' : 'fail';
+      return `
+        <div class="run-row">
+          <div><span class="pill ${statusCls}">${r.status}</span></div>
+          <div class="run-meta">
+            <div class="run-time">${r.started_at?.slice(0, 19).replace('T', ' ')} UTC</div>
+            <div class="run-counts">${r.raw_row_count != null ? r.raw_row_count.toLocaleString() + ' raw → ' : ''}${r.cleaned_row_count != null ? r.cleaned_row_count.toLocaleString() + ' cleaned → ' : ''}${r.case_count != null ? r.case_count.toLocaleString() + ' cases' : ''}</div>
+            ${r.error_message ? `<div style="color:var(--bad);font-size:0.75rem;margin-top:2px">${r.error_message}</div>` : ''}
+          </div>
+          <div class="run-id">#${r.run_id}</div>
+        </div>`;
+    }).join('');
+  } catch (_) {
+    el.innerHTML = empty('Pipeline run history is only available with an API key (authenticated endpoint).');
+  }
+}
+
+// ── Model Health ─────────────────────────────────────────────────────────────
+async function renderModelHealth() {
+  const card = document.getElementById('model-health-card');
+  const el = document.getElementById('model-health-body');
+  try {
+    const [modelRes, driftRes, featRes] = await Promise.all([
+      fetch('/health/model'),
+      fetch('/observability/prediction-drift').catch(() => null),
+      fetch('/health/drift/features').catch(() => null),
+    ]);
+    if (!modelRes.ok) { card.hidden = true; return; }
+    const d = await modelRes.json();
+    const trainedDate = d.trained_at ? d.trained_at.slice(0, 10) : '—';
+    const stale = d.staleness_days != null ? d.staleness_days : '?';
+    const retrainBadge = d.retrain_recommended
+      ? `<span class="pill fail" style="margin-left:6px;font-size:0.68rem;vertical-align:middle">retrain due</span>` : '';
+    const dist = d.prediction_distribution || {};
+    const total = (dist.LOW || 0) + (dist.MEDIUM || 0) + (dist.HIGH || 0);
+    const pct = v => total ? Math.round(v / total * 100) : 0;
+    const distSection = total ? `
+      <div class="card-sublabel" style="margin-bottom:4px">Prediction distribution · ${total.toLocaleString()} scored cases</div>
+      <div class="dist-bar">
+        <div class="dist-bar-seg" style="width:${pct(dist.LOW)}%;background:var(--good)"></div>
+        <div class="dist-bar-seg" style="width:${pct(dist.MEDIUM)}%;background:var(--warn)"></div>
+        <div class="dist-bar-seg" style="width:${pct(dist.HIGH)}%;background:var(--bad)"></div>
+      </div>
+      <div class="dist-legend">
+        <span><span class="dist-dot" style="background:var(--good)"></span>LOW ${dist.LOW.toLocaleString()}</span>
+        <span><span class="dist-dot" style="background:var(--warn)"></span>MED ${dist.MEDIUM.toLocaleString()}</span>
+        <span><span class="dist-dot" style="background:var(--bad)"></span>HIGH ${dist.HIGH.toLocaleString()}</span>
+      </div>` : `<div class="card-sublabel">No predictions recorded yet — run a batch prediction first.</div>`;
+
+    // Drift section — compares current risk distribution vs. training-time baseline
+    let driftSection = '';
+    if (driftRes && driftRes.ok) {
+      const dr = await driftRes.json();
+      if (dr.status === 'no_baseline') {
+        driftSection = `<div class="card-sublabel" style="margin-top:14px">Prediction drift · <em>no baseline yet — retrain to populate</em></div>`;
+      } else {
+        const driftColor = { stable: 'var(--good)', warn: 'var(--warn)', alert: 'var(--bad)' };
+        const driftPillCls = { stable: 'ok', warn: 'warn', alert: 'fail' };
+        const overallPill = `<span class="pill ${driftPillCls[dr.status] || 'ok'}" style="margin-left:6px;font-size:0.68rem;vertical-align:middle">${dr.status}</span>`;
+        const bucketRows = (dr.buckets || []).map(b => {
+          const sign = b.delta_pct > 0 ? '+' : '';
+          const col = driftColor[b.status] || 'var(--text)';
+          return `<div style="display:flex;gap:8px;align-items:center;font-size:0.78rem;padding:2px 0">
+            <span style="width:44px;font-weight:600">${b.bucket}</span>
+            <span style="color:var(--muted)">baseline ${b.baseline_pct}%</span>
+            <span>→ now ${b.current_pct}%</span>
+            <span style="color:${col};font-weight:600;margin-left:auto">${sign}${b.delta_pct}pp</span>
+          </div>`;
+        }).join('');
+        driftSection = `
+          <div class="card-sublabel" style="margin-top:14px;margin-bottom:6px">
+            Prediction drift · vs. training baseline${overallPill}
+          </div>
+          <div style="background:var(--panel2);border-radius:6px;padding:8px 10px">${bucketRows}</div>`;
+      }
+    }
+
+    // Feature drift — per-input PSI vs. training baseline (top 5 by PSI)
+    let featSection = '';
+    if (featRes && featRes.ok) {
+      const fd = await featRes.json();
+      if (fd.status !== 'no_baseline') {
+        const pillCls = { stable: 'ok', warn: 'warn', alert: 'fail' };
+        const col = { stable: 'var(--good)', warn: 'var(--warn)', alert: 'var(--bad)' };
+        const rows = (fd.features || []).slice(0, 5).map(f => `<div style="display:flex;gap:8px;font-size:0.78rem;padding:2px 0">
+          <span style="font-weight:600">${f.feature}</span>
+          <span style="color:${col[f.status]};font-weight:600;margin-left:auto">PSI ${f.psi.toFixed(2)}</span></div>`).join('');
+        featSection = `
+          <div class="card-sublabel" style="margin-top:14px;margin-bottom:6px">
+            Feature drift · last ${fd.n_current_rows} cases vs. training
+            <span class="pill ${pillCls[fd.status] || 'ok'}" style="margin-left:6px;font-size:0.68rem;vertical-align:middle">${fd.status}</span>
+          </div>
+          <div style="background:var(--panel2);border-radius:6px;padding:8px 10px">${rows}
+            <div style="font-size:0.7rem;color:var(--muted);margin-top:4px">${fd.alert_features.length} of ${fd.features.length} inputs past PSI ${fd.thresholds.psi_alert}</div></div>`;
+      }
+    }
+
+    el.innerHTML = `
+      <div class="model-meta">
+        <div class="model-meta-item"><span class="model-meta-label">Model</span><span class="model-meta-val">${d.model_name || '—'}</span></div>
+        <div class="model-meta-item"><span class="model-meta-label">ROC-AUC</span><span class="model-meta-val" style="color:var(--good)">${d.roc_auc != null ? d.roc_auc.toFixed(3) : '—'}</span></div>
+        <div class="model-meta-item"><span class="model-meta-label">Trained</span><span class="model-meta-val">${trainedDate}</span></div>
+        <div class="model-meta-item"><span class="model-meta-label">Age</span><span class="model-meta-val">${stale}d${retrainBadge}</span></div>
+        <div class="model-meta-item"><span class="model-meta-label">Train rows</span><span class="model-meta-val">${d.train_row_count != null ? d.train_row_count.toLocaleString() : '—'}</span></div>
+      </div>
+      ${distSection}
+      ${driftSection}
+      ${featSection}`;
+    card.hidden = false;
+  } catch (_) {
+    card.hidden = true;
+  }
+}
+
+// ── Data Quality ─────────────────────────────────────────────────────────────
+async function renderDataQuality() {
+  const card = document.getElementById('data-quality-card');
+  const el = document.getElementById('data-quality-body');
+  try {
+    const res = await fetch('/observability/data-quality');
+    if (!res.ok) { card.hidden = true; return; }
+    const dq = await res.json();
+    const statusColor = { pass: 'var(--good)', warn: 'var(--warn)', fail: 'var(--bad)' };
+    const pillCls = { pass: 'ok', warn: 'warn', fail: 'fail' };
+    const icon = { pass: '✓', warn: '!', fail: '✗' };
+    const overallPill = `<span class="pill ${pillCls[dq.overall] || 'ok'}" style="margin-left:6px;font-size:0.68rem;vertical-align:middle">${dq.overall}</span>`;
+    const rows = dq.checks.map(c => `
+      <div style="display:flex;gap:8px;align-items:baseline;font-size:0.78rem;padding:3px 0;border-bottom:1px solid var(--border)">
+        <span style="flex:1;color:var(--text)">${c.name}</span>
+        <span style="color:var(--muted)">${c.value}</span>
+        <span style="width:28px;text-align:right;font-weight:700;color:${statusColor[c.status] || 'var(--text)'}">
+          ${icon[c.status] || c.status}
+        </span>
+      </div>`).join('');
+    el.innerHTML = `
+      <div class="card-sublabel" style="margin-bottom:8px">
+        ${dq.checks.length} checks · ${dq.checked_at.slice(0, 19).replace('T', ' ')} UTC${overallPill}
+      </div>
+      <div style="background:var(--panel2);border-radius:6px;padding:8px 10px">${rows}</div>`;
+    card.hidden = false;
+  } catch (_) {
+    card.hidden = true;
+  }
+}
+
+// ── Main load / refresh loop ──────────────────────────────────────────────────
+let refreshTimer;
+
+function renderSnapshotBanner(snap) {
+  let el = document.getElementById('snapshot-banner');
+  if (!snap) { if (el) el.remove(); return; }
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'snapshot-banner';
+    el.setAttribute('role', 'status');
+    el.style.cssText = 'margin:0 0 12px;padding:10px 14px;border-radius:8px;border:1px solid var(--warn);color:var(--text);background:var(--panel2);font-size:13px';
+    document.querySelector('header').insertAdjacentElement('afterend', el);
+  }
+  el.textContent = 'Showing a saved snapshot from ' + (snap.as_of || 'an earlier build') +
+    ' because the live database is unavailable. Numbers are real but not current.';
+}
+
+async function loadDashboard() {
+  const label = document.getElementById('refresh-label');
+  label.textContent = 'Refreshing…';
+  try {
+    const res = await fetch('/dashboard/data');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    renderSnapshotBanner(data.snapshot);
+    renderKpis(data.executive_overview);
+    renderBottlenecks(data.bottlenecks);
+    renderRisk(data.sla_risk);
+    renderAttention(data.top_risk_cases);
+    renderSuppliers(data.suppliers);
+    renderConformance(data.conformance);
+    renderApControls(data.ap_controls);
+    renderWorkingCapital(data.working_capital);
+    renderCallout(data.executive_overview, data.conformance);
+    renderActions(data);
+    await renderRuns();
+    await Promise.all([renderModelHealth(), renderDataQuality()]);
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    label.textContent = `Updated ${now}`;
+  } catch (err) {
+    document.getElementById('kpi-grid').innerHTML = empty('Could not reach the API — it may be waking from a free-tier sleep. Retrying in 30 s.');
+    label.textContent = 'Error — retrying';
+  }
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(loadDashboard, 30_000);
+}
+
+loadDashboard();
+</script>
+</body>
+</html>

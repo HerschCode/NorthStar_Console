@@ -1,0 +1,222 @@
+{
+  "design": "see script docstring",
+  "n_replicates": 20,
+  "n_draw_per_half": 4000,
+  "holdout_share": 0.5,
+  "scenarios": {
+    "p75": {
+      "label": "p75 target (27% base rate)",
+      "mean_baseline_risk": 0.3015,
+      "summary": {
+        "ate_true": {
+          "mean": 0.01164,
+          "sd": 0.00208
+        },
+        "ate_diff_in_means": {
+          "mean": 0.00199,
+          "sd": 0.01143
+        },
+        "n_treat_test": {
+          "mean": 2003.05,
+          "sd": 17.18859
+        },
+        "t_learner_ate": {
+          "mean": 0.01446,
+          "sd": 0.01318
+        },
+        "t_learner_cate_rmse": {
+          "mean": 0.06345,
+          "sd": 0.00943
+        },
+        "t_learner_cate_corr": {
+          "mean": 0.72602,
+          "sd": 0.09355
+        },
+        "x_learner_ate": {
+          "mean": 0.01472,
+          "sd": 0.0129
+        },
+        "x_learner_cate_rmse": {
+          "mean": 0.07026,
+          "sd": 0.00984
+        },
+        "x_learner_cate_corr": {
+          "mean": 0.70213,
+          "sd": 0.0989
+        },
+        "random_oracle_auuc": {
+          "mean": 0.13581,
+          "sd": 1.42594
+        },
+        "random_top20_benefit": {
+          "mean": 9.34638,
+          "sd": 1.94803
+        },
+        "random_observed_auuc": {
+          "mean": 2.5866,
+          "sd": 15.27323
+        },
+        "highest_risk_oracle_auuc": {
+          "mean": 51.12517,
+          "sd": 2.25706
+        },
+        "highest_risk_top20_benefit": {
+          "mean": 71.615,
+          "sd": 6.91999
+        },
+        "highest_risk_observed_auuc": {
+          "mean": 49.1379,
+          "sd": 14.34473
+        },
+        "t_learner_oracle_auuc": {
+          "mean": 66.02436,
+          "sd": 7.37477
+        },
+        "t_learner_top20_benefit": {
+          "mean": 89.79802,
+          "sd": 15.12857
+        },
+        "t_learner_observed_auuc": {
+          "mean": 62.58076,
+          "sd": 18.32335
+        },
+        "x_learner_oracle_auuc": {
+          "mean": 64.7034,
+          "sd": 7.74263
+        },
+        "x_learner_top20_benefit": {
+          "mean": 88.08406,
+          "sd": 13.00246
+        },
+        "x_learner_observed_auuc": {
+          "mean": 63.28511,
+          "sd": 19.92523
+        },
+        "oracle_oracle_auuc": {
+          "mean": 81.93434,
+          "sd": 1.69352
+        },
+        "oracle_top20_benefit": {
+          "mean": 118.88952,
+          "sd": 1.47024
+        },
+        "oracle_observed_auuc": {
+          "mean": 79.18868,
+          "sd": 13.4728
+        }
+      },
+      "acceptance": {
+        "A1_ate_within_0.02": true,
+        "A2_cate_corr_ge_0.5": true,
+        "A3_beats_highest_risk_and_random": true
+      }
+    },
+    "served": {
+      "label": "served model, configured target (97%)",
+      "mean_baseline_risk": 0.9577,
+      "summary": {
+        "ate_true": {
+          "mean": 0.04711,
+          "sd": 0.00196
+        },
+        "ate_diff_in_means": {
+          "mean": 0.04579,
+          "sd": 0.00817
+        },
+        "n_treat_test": {
+          "mean": 2003.05,
+          "sd": 17.18859
+        },
+        "t_learner_ate": {
+          "mean": 0.04837,
+          "sd": 0.00862
+        },
+        "t_learner_cate_rmse": {
+          "mean": 0.0444,
+          "sd": 0.0052
+        },
+        "t_learner_cate_corr": {
+          "mean": 0.83462,
+          "sd": 0.03619
+        },
+        "x_learner_ate": {
+          "mean": 0.04843,
+          "sd": 0.00902
+        },
+        "x_learner_cate_rmse": {
+          "mean": 0.04579,
+          "sd": 0.00678
+        },
+        "x_learner_cate_corr": {
+          "mean": 0.83593,
+          "sd": 0.0454
+        },
+        "random_oracle_auuc": {
+          "mean": 0.12095,
+          "sd": 1.43129
+        },
+        "random_top20_benefit": {
+          "mean": 37.71782,
+          "sd": 2.37528
+        },
+        "random_observed_auuc": {
+          "mean": 0.17693,
+          "sd": 7.61464
+        },
+        "highest_risk_oracle_auuc": {
+          "mean": 10.62278,
+          "sd": 2.00409
+        },
+        "highest_risk_top20_benefit": {
+          "mean": 35.91011,
+          "sd": 2.57868
+        },
+        "highest_risk_observed_auuc": {
+          "mean": 16.15654,
+          "sd": 12.2052
+        },
+        "t_learner_oracle_auuc": {
+          "mean": 68.12329,
+          "sd": 3.07391
+        },
+        "t_learner_top20_benefit": {
+          "mean": 129.15223,
+          "sd": 7.79168
+        },
+        "t_learner_observed_auuc": {
+          "mean": 68.5064,
+          "sd": 12.3372
+        },
+        "x_learner_oracle_auuc": {
+          "mean": 68.35868,
+          "sd": 3.676
+        },
+        "x_learner_top20_benefit": {
+          "mean": 130.06919,
+          "sd": 7.25146
+        },
+        "x_learner_observed_auuc": {
+          "mean": 67.88295,
+          "sd": 11.23969
+        },
+        "oracle_oracle_auuc": {
+          "mean": 76.33611,
+          "sd": 1.64115
+        },
+        "oracle_top20_benefit": {
+          "mean": 138.295,
+          "sd": 1.88825
+        },
+        "oracle_observed_auuc": {
+          "mean": 78.33971,
+          "sd": 13.3682
+        }
+      },
+      "acceptance": {
+        "A1_ate_within_0.02": true,
+        "A2_cate_corr_ge_0.5": true,
+        "A3_beats_highest_risk_and_random": true
+      }
+    }
+  }
+}

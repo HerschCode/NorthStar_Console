@@ -1,0 +1,244 @@
+{
+  "model_name": "gradient_boosting",
+  "trained_at": "2026-10-03T17:07:52.930516+00:00",
+  "sklearn_version": "1.7.1",
+  "feature_code_sha256": "bcc0abaa9a2d47411e06aea39f37bef7d010f181a045ad7e849d11b6976763fe",
+  "train_row_count": 6770,
+  "test_row_count": 1708,
+  "roc_auc": 0.9841,
+  "calibration_method": "sigmoid",
+  "fit_row_count": 5416,
+  "calibration_row_count": 1354,
+  "served_model": {
+    "roc_auc": 0.9841,
+    "pr_auc": 0.9994,
+    "brier_score": 0.0189,
+    "n_unique_scores": 119,
+    "n_scores": 1708
+  },
+  "raw_model": {
+    "roc_auc": 0.9841,
+    "pr_auc": 0.9994,
+    "brier_score": 0.0248,
+    "n_unique_scores": 119,
+    "n_scores": 1708
+  },
+  "train_risk_distribution": {
+    "LOW": 47,
+    "MEDIUM": 35,
+    "HIGH": 1626
+  },
+  "train_breach_rate": 0.9617,
+  "feature_baselines": {
+    "event_count": {
+      "type": "numeric",
+      "edges": [
+        2.0,
+        3.0,
+        5.0,
+        6.0,
+        7.0,
+        830.0
+      ],
+      "shares": [
+        0.0948301329394387,
+        0.030132939438700147,
+        0.4404726735598227,
+        0.29926144756277695,
+        0.13530280649926144
+      ]
+    },
+    "variant_frequency": {
+      "type": "numeric",
+      "edges": [
+        1.0,
+        5.0,
+        44.0,
+        236.0,
+        434.0,
+        643.0,
+        1345.0,
+        2226.0
+      ],
+      "shares": [
+        0.09940915805022156,
+        0.09778434268833087,
+        0.09187592319054654,
+        0.1017725258493353,
+        0.04889217134416544,
+        0.14342688330871492,
+        0.41683899556868537
+      ]
+    },
+    "category": {
+      "type": "categorical",
+      "shares": {
+        "Packaging": 0.43707533234859675,
+        "Sales": 0.24091580502215657,
+        "Additives": 0.08183161004431315,
+        "Trading & End Products": 0.08005908419497784,
+        "Logistics": 0.02895125553914328,
+        "Latex & Monomers": 0.027621861152141804,
+        "CAPEX & SOCS": 0.025110782865583457,
+        "Solvents": 0.014180206794682423,
+        "Pigments & Colorants": 0.013737075332348596,
+        "Specialty Resins": 0.012112259970457902,
+        "Others": 0.010487444608567209,
+        "Titanium Dioxides": 0.009010339734121122,
+        "UNKNOWN": 0.007828655834564255,
+        "Marketing": 0.0066469719350073855,
+        "Commodity Resins": 0.0025110782865583456,
+        "Enterprise Services": 0.0011816838995568684,
+        "Workforce Services": 0.0004431314623338257,
+        "Spend Area Unidentified": 0.00014771048744460856,
+        "Chemicals & Intermediates": 0.00014771048744460856
+      }
+    },
+    "supplier_id": {
+      "type": "categorical",
+      "shares": {
+        "vendorID_0136": 0.05849335302806499,
+        "vendorID_0120": 0.057163958641063516,
+        "vendorID_0188": 0.03707533234859675,
+        "vendorID_0104": 0.025110782865583457,
+        "vendorID_0103": 0.023042836041358938,
+        "vendorID_0118": 0.020827178729689807,
+        "vendorID_0150": 0.01979320531757755,
+        "vendorID_0105": 0.018906942392909895,
+        "vendorID_0106": 0.018759231905465287,
+        "vendorID_0108": 0.017282127031019202,
+        "vendorID_0119": 0.016395864106351552,
+        "vendorID_0110": 0.014180206794682423,
+        "vendorID_0127": 0.013146233382570163,
+        "vendorID_0550": 0.012555391432791729,
+        "vendorID_0171": 0.010192023633677992,
+        "vendorID_0236": 0.009896602658788774,
+        "vendorID_0178": 0.009896602658788774,
+        "vendorID_0162": 0.009748892171344165,
+        "vendorID_0125": 0.00930576070901034,
+        "vendorID_0167": 0.008567208271787297,
+        "vendorID_0114": 0.008419497784342688,
+        "vendorID_0197": 0.00827178729689808,
+        "vendorID_0182": 0.007976366322008863,
+        "vendorID_0147": 0.007976366322008863,
+        "vendorID_0382": 0.007828655834564255,
+        "vendorID_0527": 0.007533234859675037,
+        "vendorID_0237": 0.00723781388478582,
+        "vendorID_0151": 0.0070901033973412115,
+        "vendorID_0196": 0.006942392909896603,
+        "vendorID_0096": 0.006942392909896603,
+        "__other__": 0.5134416543574591
+      }
+    },
+    "start_hour": {
+      "type": "numeric",
+      "edges": [
+        1.0,
+        6.0,
+        7.0,
+        8.0,
+        9.0,
+        10.0,
+        11.0,
+        13.0,
+        14.0,
+        16.0,
+        23.0
+      ],
+      "shares": [
+        0.051698670605613,
+        0.0862629246676514,
+        0.15553914327917281,
+        0.09497784342688331,
+        0.0948301329394387,
+        0.07562776957163958,
+        0.11787296898079763,
+        0.09187592319054654,
+        0.13028064992614474,
+        0.10103397341211226
+      ]
+    },
+    "start_dayofweek": {
+      "type": "numeric",
+      "edges": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0
+      ],
+      "shares": [
+        0.11595273264401773,
+        0.2620384047267356,
+        0.2363367799113737,
+        0.24726735598227473,
+        0.13840472673559823
+      ]
+    },
+    "first_activity": {
+      "type": "categorical",
+      "shares": {
+        "Create Purchase Order Item": 0.9629246676514033,
+        "Vendor creates invoice": 0.022304283604135895,
+        "Create Purchase Requisition Item": 0.010930576070901034,
+        "SRM: Created": 0.0025110782865583456,
+        "Vendor creates debit memo": 0.0007385524372230429,
+        "Change Approval for Purchase Order": 0.0005908419497784342
+      }
+    },
+    "last_activity": {
+      "type": "categorical",
+      "shares": {
+        "Clear Invoice": 0.8440177252584934,
+        "Record Goods Receipt": 0.08611521418020679,
+        "Delete Purchase Order Item": 0.03308714918759232,
+        "Record Invoice Receipt": 0.01654357459379616,
+        "Cancel Invoice Receipt": 0.006942392909896603,
+        "Change Price": 0.002806499261447563,
+        "Change Delivery Indicator": 0.002363367799113737,
+        "Record Service Entry Sheet": 0.0017725258493353029,
+        "Set Payment Block": 0.0014771048744460858,
+        "SRM: Transfer Failed (E.Sys.)": 0.0008862629246676514,
+        "Change Approval for Purchase Order": 0.0007385524372230429,
+        "Change Quantity": 0.0005908419497784342,
+        "Cancel Goods Receipt": 0.0005908419497784342,
+        "Receive Order Confirmation": 0.0005908419497784342,
+        "Block Purchase Order Item": 0.0004431314623338257,
+        "SRM: In Transfer to Execution Syst.": 0.0002954209748892171,
+        "Remove Payment Block": 0.0002954209748892171,
+        "Vendor creates debit memo": 0.00014771048744460856,
+        "Reactivate Purchase Order Item": 0.00014771048744460856,
+        "SRM: Change was Transmitted": 0.00014771048744460856
+      }
+    },
+    "unique_activity_count": {
+      "type": "numeric",
+      "edges": [
+        2.0,
+        3.0,
+        5.0,
+        6.0,
+        20.0
+      ],
+      "shares": [
+        0.0967503692762186,
+        0.036336779911373705,
+        0.4484490398818316,
+        0.41846381093057605
+      ]
+    },
+    "supplier_historical_median_cycle_time": {
+      "type": "numeric",
+      "edges": [
+        -1.0,
+        7.066666666666666,
+        195.31666666666666
+      ],
+      "shares": [
+        0.889807976366322,
+        0.11019202363367799
+      ]
+    }
+  }
+}

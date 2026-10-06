@@ -1,0 +1,33 @@
+# Development log: issues found, and what was done about them
+
+This project was built by repeatedly testing its own claims against real data and live
+infrastructure. Each row is something that turned out to be wrong, weak or misleading, how it was
+detected, and whether it was **fixed**, **recalibrated** (the claim was changed to match the
+evidence), or **left open**. Commits are cited so each entry can be checked.
+
+| Date | Issue | How it was found | Resolution |
+|---|---|---|---|
+| 09-07 | First real run failed on live data: IDs inferred as int64 and rejected by the data contract; FK constraint blocked table replace; idle Neon connections went stale; SSL mode missing ([`c1799cb`](https://github.com/HerschCode/operations-performance/commit/c1799cb)) | Ran the pipeline against real BPI 2019 + Neon Postgres instead of fixtures | **Fixed** (explicit string cast, `DROP … CASCADE`, `pool_pre_ping`, `DB_SSLMODE`) |
+| 09-08 | Dockerfile retry loop silently shipped a broken image — a `for` loop's exit status is its last command's, not pip's ([`d2a0244`](https://github.com/HerschCode/operations-performance/commit/d2a0244)) | `docker build` exited 0 but `import mlflow` failed inside the built image | **Fixed** (explicit success flag; final check exits 1) |
+| 09-12/13 | Model table said logistic regression won; after adding features random forest did ([`c70ba2f`](https://github.com/HerschCode/operations-performance/commit/c70ba2f), [`c9ae193`](https://github.com/HerschCode/operations-performance/commit/c9ae193)) | Re-ran training after the feature-set change; README numbers no longer matched the run | **Recalibrated** (README rewritten to the reproduced numbers; stale duplicate section removed; LR `max_iter` raised for a convergence warning) |
+| 09-13 | Live dashboard: SLA-risk panel permanently empty, and "Top Bottlenecks" showed 74,567 h (8.5 years) ([`50b3136`](https://github.com/HerschCode/operations-performance/commit/50b3136)) | Looked at the deployed page, not just the tests. The model file was gitignored so Render never had it; bottleneck means came from 1–2-case stages | **Fixed** (model committed as a deliberate exception; `min_case_count=5` in Python and SQL) |
+| 09-14 | README still claimed BigQuery/GCP ([`7b48a13`](https://github.com/HerschCode/operations-performance/commit/7b48a13)); an ablation section still said LR was deployed ([`123828f`](https://github.com/HerschCode/operations-performance/commit/123828f)) | Consistency read of README against code | **Recalibrated** (unimplemented claim removed; stale section rewritten) |
+| 09-17 | "Random forest wins decisively" (0.986 vs 0.910) ([`4f858ba`](https://github.com/HerschCode/operations-performance/commit/4f858ba)) | Paired significance test over the same 5 time-ordered folds | **Recalibrated**: no significant difference (paired t p=0.93). RF stays deployed for a different, honest reason |
+| 09-19 | README said scores are available "at case creation time" ([`ffb04fa`](https://github.com/HerschCode/operations-performance/commit/ffb04fa)) | Checked when each feature is actually knowable | **Recalibrated**: ROC-AUC ~0.95 → ~0.69 → ~0.54–0.60 as completion-time features are removed; now described as a late-stage/triage score |
+| 09-19 | Headline metrics rested on a 97%-breach test set — 18 negatives in 600 ([`6560beb`](https://github.com/HerschCode/operations-performance/commit/6560beb)) | Measured the base rate behind the calibration/threshold claims | **Disclosed**, then re-evaluated (next row) |
+| 09-20 | Same model on realistic base rates ([`4d29e8f`](https://github.com/HerschCode/operations-performance/commit/4d29e8f), [`f72972d`](https://github.com/HerschCode/operations-performance/commit/f72972d)) | Breach redefined as training-window p50/p75 cycle time (no test leakage) | **Recalibrated**: 0.986 → **0.83–0.89** holdout ROC-AUC; headline table now carries this warning |
+| 09-20 | A README sentence said ~35% of flagged cases breach; its own table said 98.6% ([`3edb2e1`](https://github.com/HerschCode/operations-performance/commit/3edb2e1)) | Re-reading the threshold section against the table | **Fixed** |
+| 09-20 | External check on BPI 2012 ([`f220499`](https://github.com/HerschCode/operations-performance/commit/f220499)); first version reported a 0.92 base rate at k=10 | Base rate looked wrong in the output: elapsed time at event k already exceeded the threshold, so labels were determined | **Fixed before publishing** (only not-yet-breached cases scored). Finding replicated: full-case 0.93–0.995, creation-only ~0.62–0.65 |
+| 09-20 | Could an early-warning model fix the late-stage limitation on our own data? ([`prefix-model-bpi2019.md`](prefix-model-bpi2019.md)) | First-k-events model, same-rows baseline, paired bootstrap | **Result: only modestly** — +0.03 to +0.13 ROC-AUC over creation-only, absolute 0.62–0.76. Documented; deployed model unchanged |
+| 09-25 | **Served model's ranking was far worse than reported.** Probability calibration (isotonic) was fitted on the same rows the forest was trained on; a forest scores its own training rows near 0/1, so the isotonic step function collapsed to a handful of distinct scores (7 distinct values on 600 test cases) and served ROC-AUC fell to 0.665 while `meta.json` reported the raw forest's 0.986 | Building the ROI sensitivity grid: top-k by model risk showed no lift over random on the configured target, and the served bundle's AUC disagreed with the number in the metadata | **Fixed.** Forest fitted on the earliest 80% of the training window, Platt (sigmoid) calibration on the latest 20% (strictly monotonic, so served ROC-AUC = raw, asserted in `tests/test_calibration.py`); `meta.json` now records served and raw metrics separately; threshold analysis and Brier tables regenerated (calibration does **not** improve Brier on the 97% target). Lesson, the same mistake as the P2 fine-tune evaluated on answers that were in its training data: **never evaluate or fit a post-processing step on data the model has already seen.** Details: [`calibration.md`](calibration.md) |
+
+## Still open (stated, not hidden)
+
+- The deployed model is still trained on the configured 10–14 day target. Changing what "breach" means
+  is a product decision; the realistic-target numbers are reported alongside, not deployed.
+- Supplier-history features in the deployed model use earlier-*started* cases, not earlier-*ended*
+  ones (the prefix experiment uses the stricter version).
+- All evaluations are one time-ordered split with one seed. Intervals exist only for the prefix
+  experiment, and only over test-set sampling.
+- Data is BPI 2019 (3,000-case sample) plus BPI 2012 for one external check; nothing here has seen real
+  production traffic.

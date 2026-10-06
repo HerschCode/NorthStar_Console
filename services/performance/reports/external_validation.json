@@ -1,0 +1,61 @@
+{
+  "retail": {
+    "invoices": 36969,
+    "customers": 5878,
+    "credit_notes": 7901,
+    "invoice_total_gbp_quantiles": {
+      "0.5": 305.25,
+      "0.9": 851.67,
+      "0.99": 3697.92,
+      "0.999": 14417.64
+    },
+    "invoices_over_threshold": 75,
+    "base_rate_reversed": 0.0104,
+    "C4": {
+      "flagged_invoices": 343,
+      "flag_rate": 0.0093,
+      "flagged_later_reversed": 75,
+      "precision_vs_reversal_proxy": 0.2187,
+      "lift_over_base": 21.0,
+      "note": "reversal proxy is not a duplicate label: customers return goods for many reasons"
+    },
+    "C3": {
+      "flagged": 15,
+      "note": "threshold 10,000 applied to GBP totals unchanged"
+    },
+    "C6": {
+      "eligible_customers": 151,
+      "flagged": 84,
+      "flag_rate_among_eligible": 0.5563,
+      "null_expectation": 0.05
+    },
+    "benford_all_invoices": {
+      "n": 36969,
+      "chi2_p": 0.0,
+      "mad": 0.02018241000359726
+    }
+  },
+  "sec": {
+    "usd_values": 2101800,
+    "filers": 5938,
+    "benford_all": {
+      "n": 2101800,
+      "chi2_p": 9.681792418089347e-260,
+      "mad": 0.002293596118989787
+    },
+    "per_filing": {
+      "eligible_filings": 5841,
+      "flag_rate_p_lt_0.05": 0.5504,
+      "null_expectation": 0.05,
+      "median_n": 281,
+      "median_mad": 0.0209,
+      "flag_rate_p_lt_0.05_and_mad_gt_0.015": 0.5097,
+      "flag_rate_by_n": {
+        "30-100": 0.717,
+        "101-500": 0.5095,
+        "501-2000": 0.6741,
+        ">2000": 0.9107
+      }
+    }
+  }
+}

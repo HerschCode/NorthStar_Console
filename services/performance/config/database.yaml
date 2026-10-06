@@ -1,0 +1,10 @@
+default:
+  driver: postgresql+psycopg2
+  pool_size: 5
+  pool_timeout: 30
+  echo: false
+
+schemas:
+  raw: raw
+  staging: staging
+  analytics: analytics

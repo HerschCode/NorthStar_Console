@@ -1,0 +1,103 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        # prefect (not dbt-core/dbt-postgres) is needed here: tests/test_pipeline_flow.py
+        # imports flows/pipeline_flow.py at module level, which imports prefect -- but dbt is
+        # only ever invoked as a subprocess inside a task body, never imported directly, so it
+        # isn't needed for these (mocked, no live DB) unit tests to run. The full
+        # requirements-orchestration.txt (dbt-core + dbt-postgres + prefect) is only needed to
+        # actually run flows/pipeline_flow.py or dbt/, covered by .github/workflows/dbt.yml.
+        run: pip install -r requirements.txt prefect
+
+      - name: Run test suite
+        run: python -m pytest tests/ -v
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Lint
+        run: ruff check src/ tests/ scripts/ --output-format=github
+        continue-on-error: true  # non-blocking for now -- tighten once the codebase is lint-clean
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit dependencies for known vulnerabilities
+        run: pip-audit -r requirements.txt --desc
+        continue-on-error: true  # non-blocking initially -- a known vuln in a transitive
+        # dependency shouldn't silently block every PR; this surfaces findings in the
+        # Actions log for a human to triage, same non-blocking posture as the lint job
+        # above until there's a reason to make either one a hard gate.
+
+  openapi-contract:
+    # The console generates its typed client from openapi/p1.json and P2 reads these routes: a removed route, a removed response field or a newly required request
+    # field breaks them silently. The spec is compared with its version before this push (or before the pull request's base) using a pinned oasdiff, and a
+    # breaking change fails the build unless the commit message says `openapi-break-ok`, which turns the failure into a warning that someone chose it.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          fetch-depth: 0          # the previous version of the spec has to be in the history
+
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5.5.0
+        with:
+          go-version: "1.26"      # oasdiff v1.33.0 declares go 1.26 and toolchain go1.27.1; the go command fetches that toolchain
+
+      - name: Install oasdiff (pinned release)
+        run: go install github.com/oasdiff/oasdiff@v1.33.0
+
+      - name: No breaking change to openapi/p1.json
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE_SHA:openapi/p1.json" 2>/dev/null; then
+            echo "no earlier version of openapi/p1.json to compare with"; exit 0
+          fi
+          git show "$BASE_SHA:openapi/p1.json" > "$RUNNER_TEMP/base.json"
+          if "$(go env GOPATH)/bin/oasdiff" breaking "$RUNNER_TEMP/base.json" openapi/p1.json --fail-on ERR --format githubactions; then
+            exit 0
+          fi
+          if git log -1 --format=%B | grep -q "openapi-break-ok"; then
+            echo "::warning::breaking OpenAPI change, acknowledged by openapi-break-ok in the commit message"; exit 0
+          fi
+          echo "::error::breaking change to openapi/p1.json since $BASE_SHA. If it is intended, say openapi-break-ok in the commit message and update the console's pinned copy."
+          exit 1

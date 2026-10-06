@@ -1,0 +1,32 @@
+# Phase 6 intervention policy -- **SIMULATION ASSUMPTIONS, NOT MEASURED EFFECTS.**
+# No real intervention has ever been run on this data (it is a public event log), so nothing here
+# was estimated from an experiment. Every number below is an assumption a business owner would have
+# to supply; /roi/summary echoes them back with every result. See docs/uplift-method.md.
+
+# Share of cases (highest model risk first) the ops team has capacity to act on.
+capacity_pct: 0.20
+
+# Money value of one avoided SLA breach (assumed).
+breach_cost: 400.0
+
+types:
+  expedite_approval:
+    cost: 25.0            # assumed staff time per case
+    effect: 0.15          # assumed relative cut in breach probability (0.15 = 15% fewer breaches)
+  supplier_escalation:
+    cost: 60.0
+    effect: 0.30
+  reassign_owner:
+    cost: 10.0
+    effect: 0.05
+
+# Type the simulation applies when none is specified.
+default_type: expedite_approval
+
+# Randomized holdout (Upgrade 3). POST /interventions assigns each case to treat or holdout with
+# src/roi/randomizer.py (deterministic hash of experiment id + case id). Holdout cases are NOT treated;
+# comparing their outcomes with the treated arm is what turns assumed effects into measured uplift.
+# Change `id` to start a new experiment (re-randomizes every case).
+experiment:
+  id: "sla-triage-2026-q4"
+  holdout_share: 0.20

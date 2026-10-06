@@ -1,0 +1,9 @@
+{
+  "model": "random_forest",
+  "trained_at": "2026-09-13T07:24:17.564154+00:00",
+  "roc_auc": 0.9857,
+  "brier_score": 0.0215,
+  "feature_count": 541,
+  "train_rows": 2400,
+  "test_rows": 600
+}

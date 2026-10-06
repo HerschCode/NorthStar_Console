@@ -1,0 +1,23 @@
+name: operations_performance
+version: "1.0.0"
+config-version: 2
+
+profile: operations_performance
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  operations_performance:
+    staging:
+      +materialized: view
+      +schema: dbt_staging
+    intermediate:
+      +materialized: view
+      +schema: dbt_intermediate
+    marts:
+      +materialized: table
+      +schema: dbt_marts

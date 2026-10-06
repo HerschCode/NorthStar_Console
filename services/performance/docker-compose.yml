@@ -1,0 +1,14 @@
+# Local dev run: docker compose up
+#
+# The app connects to Neon Postgres via env vars -- copy .env.example to .env
+# and fill in your DB_HOST / DB_PASSWORD / API_KEY before running.
+# The database itself is external (Neon), so there's no db service here.
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    restart: unless-stopped

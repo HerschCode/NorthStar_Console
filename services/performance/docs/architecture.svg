@@ -1,0 +1,82 @@
+<svg viewBox="0 0 960 600" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5b7a9d"/>
+    </marker>
+  </defs>
+  <rect width="960" height="600" fill="#ffffff"/>
+
+  <!-- Orchestration band -->
+  <rect x="20" y="16" width="920" height="44" rx="8" fill="#f3ecfa" stroke="#8a5b9d"/>
+  <text x="480" y="36" text-anchor="middle" font-size="13" font-weight="600" fill="#5c1b7a">Prefect flow: ingest → validate (DQ gate) → dbt build → retrain gate → train → promote-if-better → report</text>
+  <text x="480" y="52" text-anchor="middle" font-size="11" fill="#8a5b9d">retrain gate = model age · case-volume growth · feature drift (PSI)</text>
+
+  <!-- Source -->
+  <rect x="20" y="84" width="200" height="56" rx="8" fill="#eef4fb" stroke="#5b7a9d"/>
+  <text x="120" y="108" text-anchor="middle" font-size="13" font-weight="600" fill="#1b3a5c">BPI 2019 event log</text>
+  <text x="120" y="126" text-anchor="middle" font-size="11" fill="#5b7a9d">public data, synthetic context</text>
+
+  <!-- ETL -->
+  <rect x="260" y="84" width="200" height="56" rx="8" fill="#eef7ea" stroke="#4d7a3a"/>
+  <text x="360" y="108" text-anchor="middle" font-size="13" font-weight="600" fill="#2c5222">Python ETL</text>
+  <text x="360" y="126" text-anchor="middle" font-size="11" fill="#4d7a3a">contract check → clean → cases</text>
+
+  <!-- Postgres -->
+  <rect x="500" y="84" width="200" height="56" rx="8" fill="#fbeee8" stroke="#b25f3d"/>
+  <text x="600" y="108" text-anchor="middle" font-size="13" font-weight="600" fill="#8a3a1c">PostgreSQL (Neon)</text>
+  <text x="600" y="126" text-anchor="middle" font-size="11" fill="#b25f3d">staging · analytics · interventions</text>
+
+  <!-- dbt -->
+  <rect x="740" y="84" width="200" height="56" rx="8" fill="#fff6e0" stroke="#a8842f"/>
+  <text x="840" y="108" text-anchor="middle" font-size="13" font-weight="600" fill="#8a6410">dbt (staging→marts)</text>
+  <text x="840" y="126" text-anchor="middle" font-size="11" fill="#a8842f">30 tests · fct_cases · lineage</text>
+
+  <!-- Analytics row -->
+  <rect x="20" y="200" width="210" height="70" rx="8" fill="#fff6e0" stroke="#a8842f"/>
+  <text x="125" y="224" text-anchor="middle" font-size="12" font-weight="600" fill="#8a6410">Analytical SQL</text>
+  <text x="125" y="242" text-anchor="middle" font-size="10" fill="#a8842f">10 window-function queries</text>
+  <text x="125" y="256" text-anchor="middle" font-size="10" fill="#a8842f">LAG · NTILE · RANGE frames</text>
+
+  <rect x="250" y="200" width="210" height="70" rx="8" fill="#fff6e0" stroke="#a8842f"/>
+  <text x="355" y="224" text-anchor="middle" font-size="12" font-weight="600" fill="#8a6410">SLA-risk model</text>
+  <text x="355" y="242" text-anchor="middle" font-size="10" fill="#a8842f">RF (deployed) · LR · GB</text>
+  <text x="355" y="256" text-anchor="middle" font-size="10" fill="#a8842f">temporal split · calibration · MLflow</text>
+
+  <rect x="480" y="200" width="210" height="70" rx="8" fill="#fff6e0" stroke="#a8842f"/>
+  <text x="585" y="224" text-anchor="middle" font-size="12" font-weight="600" fill="#8a6410">Early-case research</text>
+  <text x="585" y="242" text-anchor="middle" font-size="10" fill="#a8842f">prefix RF vs GRU/LSTM (k=1..5)</text>
+  <text x="585" y="256" text-anchor="middle" font-size="10" fill="#a8842f">not deployed — RF kept</text>
+
+  <rect x="710" y="200" width="230" height="70" rx="8" fill="#fff6e0" stroke="#a8842f"/>
+  <text x="825" y="224" text-anchor="middle" font-size="12" font-weight="600" fill="#8a6410">Drift + ROI</text>
+  <text x="825" y="242" text-anchor="middle" font-size="10" fill="#a8842f">per-feature PSI baselines</text>
+  <text x="825" y="256" text-anchor="middle" font-size="10" fill="#a8842f">intervention ledger (SIMULATION)</text>
+
+  <!-- API -->
+  <rect x="200" y="340" width="560" height="80" rx="8" fill="#eef4fb" stroke="#5b7a9d"/>
+  <text x="480" y="366" text-anchor="middle" font-size="14" font-weight="600" fill="#1b3a5c">FastAPI service (Render)</text>
+  <text x="480" y="386" text-anchor="middle" font-size="11" fill="#5b7a9d">/metrics/* · /orders/{id}/risk · /health/model · /health/drift/features</text>
+  <text x="480" y="404" text-anchor="middle" font-size="11" fill="#5b7a9d">POST /interventions · GET /roi/summary · /metrics (Prometheus) · /dashboard</text>
+
+  <!-- Consumers -->
+  <rect x="200" y="480" width="240" height="50" rx="8" fill="#eef7ea" stroke="#4d7a3a"/>
+  <text x="320" y="510" text-anchor="middle" font-size="12" font-weight="600" fill="#2c5222">Live dashboard</text>
+  <rect x="520" y="480" width="240" height="50" rx="8" fill="#f3ecfa" stroke="#8a5b9d"/>
+  <text x="640" y="510" text-anchor="middle" font-size="12" font-weight="600" fill="#5c1b7a">operations-assistant (agent tools)</text>
+
+  <!-- Arrows -->
+  <path d="M220 112 H258" stroke="#5b7a9d" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M460 112 H498" stroke="#5b7a9d" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M700 112 H738" stroke="#5b7a9d" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M600 140 V170 H125 V198" stroke="#5b7a9d" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M600 170 H355 V198" stroke="#5b7a9d" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M600 170 H585 V198" stroke="#5b7a9d" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M840 140 V170 H825 V198" stroke="#5b7a9d" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M125 270 V310 H400 V338" stroke="#5b7a9d" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M355 270 V338" stroke="#5b7a9d" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M825 270 V310 H560 V338" stroke="#5b7a9d" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M320 420 V478" stroke="#5b7a9d" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M640 420 V478" stroke="#5b7a9d" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+
+  <text x="20" y="580" font-size="11" fill="#9aa7b5">Cloud (BigQuery / Cloud Run) is intentionally not shown: Phase 8 is deferred and nothing in it has been run.</text>
+</svg>

@@ -1,0 +1,29 @@
+# dbt-postgres profile, credentials from the same DB_* env vars every other script in this
+# project already uses (src/api/db.py, scripts/setup_database.py) -- nothing new to configure.
+# dbt-bigquery target added later, per PLAN.md Phase 8 (deferred).
+operations_performance:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('DB_HOST') }}"
+      port: "{{ env_var('DB_PORT', '5432') | as_number }}"
+      user: "{{ env_var('DB_USER') }}"
+      pass: "{{ env_var('DB_PASSWORD') }}"
+      dbname: "{{ env_var('DB_NAME') }}"
+      schema: dbt
+      sslmode: "{{ env_var('DB_SSLMODE', 'prefer') }}"
+      threads: 4
+    ci:
+      # Used by .github/workflows/dbt.yml's postgres service container -- separate target so CI
+      # never needs the real Neon credentials (which aren't secrets CI has configured, same
+      # constraint docs/development-log.md already documents for the retrain workflow).
+      type: postgres
+      host: localhost
+      port: 5432
+      user: postgres
+      pass: postgres
+      dbname: dbt_ci
+      schema: dbt
+      sslmode: prefer
+      threads: 4

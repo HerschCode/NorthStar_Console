@@ -1,0 +1,52 @@
+# Thresholds for the AP controls (src/controls/ap_controls.py, docs/ap-controls.md).
+# All thresholds are stated assumptions, not derived from real Northstar policy (there is no real
+# Northstar) -- see docs/data-contract.md for exactly which parts of this are real vs. assumed.
+
+# C3 approval-threshold splitting: taken from operations-assistant's procurement-policy.md
+# Section 4.2 ("Purchase Orders above $10,000 ... require a second approval"). Applied to the
+# real EUR order-value field with NO currency conversion -- a disclosed assumption, not a fix.
+approval_threshold_eur: 10000
+split_window_days: 7          # same vendor + requester, POs within this window, summing >= threshold
+split_near_threshold_pct: 0.5 # an individual PO must be >= this fraction of the threshold to count
+                               # as a plausible split piece (found necessary 2026-09-28: without it,
+                               # routine small purchasing crosses the weekly threshold by volume alone)
+split_max_pos_in_window: 4    # a split is a handful of orders, not the vendor's whole order history
+
+# C4 possible duplicate invoice
+duplicate_amount_tolerance_pct: 0.01   # amounts within 1% of each other
+duplicate_window_days: 5               # invoice events within this many days of each other
+duplicate_max_recurring_count: 3       # a vendor's amount that recurs more than this many times
+                                        # across the WHOLE dataset is a routine/subscription charge
+                                        # (e.g. a monthly service fee), not a candidate duplicate --
+                                        # found necessary 2026-09-28: fixing the tolerance-check loop
+                                        # bug (see ap_controls.py) surfaced ~12,000 pairs, almost all
+                                        # recurring round-number service amounts
+
+# C6 Benford's law screen
+benford_min_invoices_per_vendor: 30    # vendors with fewer invoices are skipped (test has no power)
+benford_alert_p_value: 0.05            # chi-square p-value below this flags the vendor for review
+
+# Activity names this module keys off, real BPI 2019 labels (config/process.yaml documents the
+# same activities for the conformance check).
+activities:
+  create_po: "Create Purchase Order Item"
+  vendor_invoice: "Vendor creates invoice"
+  goods_receipt: "Record Goods Receipt"
+  invoice_receipt: "Record Invoice Receipt"
+  clear_invoice: "Clear Invoice"
+  remove_payment_block: "Remove Payment Block"
+
+# Activities that count as a re-approval step between a payment-block removal and clearing an
+# invoice (C5). None of BPI 2019's activity labels are literally "Approval" -- these are the
+# closest real steps (an SRM re-authorization or a repeated invoice-receipt check); documented as
+# an assumption, and C5's severity is downgraded (not dropped) when no such activity exists at all
+# in the log, since that would make every override look unapproved by construction.
+reapproval_activities:
+  - "SRM: Complete"
+  - "Record Invoice Receipt"
+
+# Working-capital metrics (src/analytics/working_capital.py, Phase F4). Stated assumptions -- BPI
+# 2019 has no payment-terms field.
+payment_terms_days: 30            # "net 30" assumption for late-payment exposure
+early_discount_pct: 0.02          # "2/10 net 30" assumption
+early_discount_window_days: 10

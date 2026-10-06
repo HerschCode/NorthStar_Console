@@ -1,0 +1,172 @@
+{
+  "vocab": {
+    "Block Purchase Order Item": 2,
+    "Cancel Goods Receipt": 3,
+    "Cancel Invoice Receipt": 4,
+    "Cancel Subsequent Invoice": 5,
+    "Change Approval for Purchase Order": 6,
+    "Change Delivery Indicator": 7,
+    "Change Price": 8,
+    "Change Quantity": 9,
+    "Change Storage Location": 10,
+    "Clear Invoice": 11,
+    "Create Purchase Order Item": 12,
+    "Create Purchase Requisition Item": 13,
+    "Delete Purchase Order Item": 14,
+    "Reactivate Purchase Order Item": 15,
+    "Receive Order Confirmation": 16,
+    "Record Goods Receipt": 17,
+    "Record Invoice Receipt": 18,
+    "Record Service Entry Sheet": 19,
+    "Record Subsequent Invoice": 20,
+    "Release Purchase Order": 21,
+    "Remove Payment Block": 22,
+    "SRM: Awaiting Approval": 23,
+    "SRM: Change was Transmitted": 24,
+    "SRM: Complete": 25,
+    "SRM: Created": 26,
+    "SRM: Deleted": 27,
+    "SRM: Document Completed": 28,
+    "SRM: In Transfer to Execution Syst.": 29,
+    "SRM: Ordered": 30,
+    "SRM: Transfer Failed (E.Sys.)": 31,
+    "Set Payment Block": 32,
+    "Update Order Confirmation": 33,
+    "Vendor creates debit memo": 34,
+    "Vendor creates invoice": 35
+  },
+  "categories": [
+    "Additives",
+    "CAPEX & SOCS",
+    "Chemicals & Intermediates",
+    "Commodity Resins",
+    "Enterprise Services",
+    "Latex & Monomers",
+    "Logistics",
+    "Marketing",
+    "Others",
+    "Packaging",
+    "Pigments & Colorants",
+    "Sales",
+    "Solvents",
+    "Specialty Resins",
+    "Spend Area Unidentified",
+    "Titanium Dioxides",
+    "Trading & End Products",
+    "UNKNOWN",
+    "Workforce Services"
+  ],
+  "static_columns": [
+    "hour",
+    "dow",
+    "month",
+    "supplier_hist",
+    "cat_Additives",
+    "cat_CAPEX & SOCS",
+    "cat_Chemicals & Intermediates",
+    "cat_Commodity Resins",
+    "cat_Enterprise Services",
+    "cat_Latex & Monomers",
+    "cat_Logistics",
+    "cat_Marketing",
+    "cat_Others",
+    "cat_Packaging",
+    "cat_Pigments & Colorants",
+    "cat_Sales",
+    "cat_Solvents",
+    "cat_Specialty Resins",
+    "cat_Spend Area Unidentified",
+    "cat_Titanium Dioxides",
+    "cat_Trading & End Products",
+    "cat_UNKNOWN",
+    "cat_Workforce Services"
+  ],
+  "target": {
+    "percentile": 75,
+    "targets_hours": {
+      "default": 2592.4125,
+      "Additives": 2202.0333333333333,
+      "CAPEX & SOCS": 1489.3291666666667,
+      "Latex & Monomers": 2044.6666666666667,
+      "Logistics": 8877.183333333332,
+      "Marketing": 4577.333333333333,
+      "Others": 1911.6083333333333,
+      "Packaging": 2828.266666666667,
+      "Pigments & Colorants": 2562.7,
+      "Sales": 1923.5,
+      "Solvents": 2064.016666666667,
+      "Specialty Resins": 2160.945833333333,
+      "Titanium Dioxides": 1937.6083333333331,
+      "Trading & End Products": 2590.35
+    },
+    "prior_breach_rate": 0.24800988196541313,
+    "definition": "cycle time above the training-window per-category p75"
+  },
+  "trained_at": "2026-09-29T05:16:38.281512+00:00",
+  "train_window_end": "2018-01-12 07:47:00+00:00",
+  "models": {
+    "2": {
+      "file": "gru_k2.onnx",
+      "platt_a": 1.0403972680613833,
+      "platt_b": -1.4772631943396826,
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "n_train": 6168,
+      "n_validation": 1089,
+      "n_test": 1813,
+      "base_rate": 0.24489795918367346,
+      "test_roc_auc": 0.6296130864246278,
+      "test_roc_auc_ci95": [
+        0.5991846546348774,
+        0.66091087475504
+      ],
+      "test_brier": 0.18322009796824587,
+      "onnx_vs_torch_max_abs_logit_diff": 9.5367431640625e-07
+    },
+    "3": {
+      "file": "gru_k3.onnx",
+      "platt_a": 0.8949739842595152,
+      "platt_b": -1.0426276147722173,
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "n_train": 5453,
+      "n_validation": 963,
+      "n_test": 1682,
+      "base_rate": 0.2544589774078478,
+      "test_roc_auc": 0.6870295428460702,
+      "test_roc_auc_ci95": [
+        0.6575735428993467,
+        0.7169701872237376
+      ],
+      "test_brier": 0.18017343108044875,
+      "onnx_vs_torch_max_abs_logit_diff": 4.76837158203125e-07
+    },
+    "5": {
+      "file": "gru_k5.onnx",
+      "platt_a": 0.7260742527143722,
+      "platt_b": -1.7133814391719664,
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "n_train": 4590,
+      "n_validation": 811,
+      "n_test": 1517,
+      "base_rate": 0.1964403427818062,
+      "test_roc_auc": 0.8309512142750961,
+      "test_roc_auc_ci95": [
+        0.807435939083656,
+        0.8517918058625011
+      ],
+      "test_brier": 0.12270734754375015,
+      "onnx_vs_torch_max_abs_logit_diff": 1.430511474609375e-06
+    }
+  }
+}

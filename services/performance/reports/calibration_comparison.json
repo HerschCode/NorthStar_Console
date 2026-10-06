@@ -1,0 +1,92 @@
+{
+  "configured": {
+    "target": "configured SLA targets",
+    "n_test": 1822,
+    "base_rate": 0.9621,
+    "negatives_in_test": 69,
+    "negatives_in_calibration_slice": 92,
+    "auto_choice": "sigmoid",
+    "methods": {
+      "raw": {
+        "brier": 0.05245,
+        "roc_auc": 0.9832,
+        "pr_auc": 0.9993,
+        "tied_scores": 1036,
+        "distinct_scores": 786
+      },
+      "old: isotonic fitted on training rows": {
+        "brier": 0.02072,
+        "roc_auc": 0.9352,
+        "pr_auc": 0.9952,
+        "tied_scores": 1803,
+        "distinct_scores": 19
+      },
+      "old: (its raw forest, full train)": {
+        "brier": 0.04949,
+        "roc_auc": 0.9819,
+        "pr_auc": 0.9993,
+        "tied_scores": 1039,
+        "distinct_scores": 783
+      },
+      "isotonic (held-out slice)": {
+        "brier": 0.02102,
+        "roc_auc": 0.8976,
+        "pr_auc": 0.9922,
+        "tied_scores": 1800,
+        "distinct_scores": 22
+      },
+      "sigmoid (held-out slice)": {
+        "brier": 0.02053,
+        "roc_auc": 0.9832,
+        "pr_auc": 0.9993,
+        "tied_scores": 1038,
+        "distinct_scores": 784
+      }
+    }
+  },
+  "p75": {
+    "target": "training-window per-category p75",
+    "n_test": 1822,
+    "base_rate": 0.2486,
+    "negatives_in_test": 1369,
+    "negatives_in_calibration_slice": 1246,
+    "auto_choice": "sigmoid",
+    "methods": {
+      "raw": {
+        "brier": 0.20664,
+        "roc_auc": 0.7894,
+        "pr_auc": 0.4712,
+        "tied_scores": 861,
+        "distinct_scores": 961
+      },
+      "old: isotonic fitted on training rows": {
+        "brier": 0.21003,
+        "roc_auc": 0.7878,
+        "pr_auc": 0.4682,
+        "tied_scores": 1789,
+        "distinct_scores": 33
+      },
+      "old: (its raw forest, full train)": {
+        "brier": 0.21157,
+        "roc_auc": 0.7905,
+        "pr_auc": 0.5113,
+        "tied_scores": 836,
+        "distinct_scores": 986
+      },
+      "isotonic (held-out slice)": {
+        "brier": 0.16558,
+        "roc_auc": 0.7932,
+        "pr_auc": 0.4702,
+        "tied_scores": 1788,
+        "distinct_scores": 34
+      },
+      "sigmoid (held-out slice)": {
+        "brier": 0.17614,
+        "roc_auc": 0.7894,
+        "pr_auc": 0.4712,
+        "tied_scores": 861,
+        "distinct_scores": 961
+      }
+    }
+  }
+}

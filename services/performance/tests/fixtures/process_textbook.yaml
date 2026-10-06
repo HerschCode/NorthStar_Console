@@ -1,0 +1,12 @@
+# Textbook P2P sequence used ONLY by the golden-fixture tests (tests/test_data_correctness.py), whose hand-built
+# cases use these activity names. The production config (config/process.yaml) uses BPI 2019's real activity
+# names; this file keeps the hand calculations independent of it.
+expected_sequence:
+  - Purchase Requisition
+  - Approval
+  - Purchase Order
+  - Goods Receipt
+  - Invoice Receipt
+  - Payment
+allowed_repeats:
+  - Goods Receipt

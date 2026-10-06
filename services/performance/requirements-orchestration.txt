@@ -1,0 +1,10 @@
+# Extra dependencies for flows/pipeline_flow.py and dbt/ -- NOT installed by the deployed API
+# (requirements.txt / the Dockerfile Render builds from). dbt and Prefect pull in a large,
+# unrelated dependency tree (git, protobuf, a full ASGI server for Prefect's own temporary API,
+# etc.) that the FastAPI service has no use for and shouldn't ship in its image.
+#
+# Install with: pip install -r requirements.txt -r requirements-orchestration.txt
+
+dbt-core>=1.12,<2.0
+dbt-postgres>=1.11,<2.0
+prefect>=3.8,<4.0

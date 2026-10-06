@@ -1,0 +1,22 @@
+# Expected Procure-to-Pay sequence used for conformance checking (src/analytics/conformance.py).
+# Any case whose activity sequence doesn't match this (skipped step, extra step, repeated step,
+# out-of-order step) is flagged as a deviation.
+#
+# Fixed 2026-09-26: this list used to be a textbook P2P path (Purchase Requisition -> Approval -> Purchase
+# Order -> Goods Receipt -> Invoice Receipt -> Payment). None of those activity names exist in the BPI 2019
+# event log, so every case "skipped" every step and conformance was 0.0% by construction. It is now the log's
+# most frequent variant (617 of 3,000 cases), i.e. the observed happy path of the 3-way-match flow -- a
+# data-driven reference, not a documented company standard. The second most common variant (413 cases) differs
+# only in whether the vendor invoice arrives before or after the goods receipt, and is flagged out_of_order.
+expected_sequence:
+  - Create Purchase Order Item
+  - Vendor creates invoice
+  - Record Goods Receipt
+  - Record Invoice Receipt
+  - Clear Invoice
+
+# Activities allowed to repeat without being counted as "rework" (multi-line deliveries and invoices).
+allowed_repeats:
+  - Record Goods Receipt
+  - Record Invoice Receipt
+  - Vendor creates invoice

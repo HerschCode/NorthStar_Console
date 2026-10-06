@@ -1,0 +1,20 @@
+# Prefect flow config (flows/pipeline_flow.py). Business/ops thresholds, not code -- same
+# pattern as config/sla.yaml.
+
+data_quality:
+  # Gate applied to src/cleaning/data_quality.py's DataQualityReport before training runs.
+  # These are deliberately looser than a from-scratch "is this data perfect" check would be --
+  # BPI 2019 is real, messy public data with known timestamp anomalies (docs/data-contract.md),
+  # so the gate should catch genuine pipeline breakage, not flag known, already-handled mess.
+  max_duplicate_rows: 50
+  max_out_of_order_events: 500
+  max_missing_resource_pct: 5.0
+
+promotion:
+  # A candidate model only replaces the deployed one if its ROC-AUC improves by at least this
+  # much on the SAME held-out temporal split. Deliberately small: docs/statistical-significance.md
+  # already found RF vs LR aren't significantly different at ~0.02-0.05 gaps on this data, so a
+  # margin smaller than that would "promote" on noise. 0.005 is a sanity floor against an outright
+  # regression, not a claim that a 0.005 gap is itself meaningful -- see docs/dbt-project.md's
+  # sibling honesty note on target sensitivity for the same caution applied elsewhere.
+  min_roc_auc_improvement: 0.005

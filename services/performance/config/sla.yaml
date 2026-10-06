@@ -1,0 +1,10 @@
+# Business SLA targets by category, in days.
+# Falls back to `default` when a case's category isn't listed here.
+default:
+  target_days: 10
+
+3-way match:
+  target_days: 10
+
+Consignment:
+  target_days: 14

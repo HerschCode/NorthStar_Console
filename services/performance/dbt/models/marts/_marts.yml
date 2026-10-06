@@ -1,0 +1,61 @@
+version: 2
+
+models:
+  - name: fct_cases
+    description: One row per case, joined to its SLA target/breach flag, rework flag, and process metadata.
+    columns:
+      - name: case_id
+        tests: [unique, not_null]
+      - name: supplier_id
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_supplier')
+                field: supplier_id
+              config:
+                # Not every case's supplier appears in analytics.suppliers -- this dataset's
+                # supplier dimension is populated only for suppliers referenced elsewhere
+                # (docs/data-contract.md's synthetic-fields note). severity: warn rather than
+                # error since this is a real, documented data gap, not a bug in this model --
+                # an error here would make `dbt build` fail on data that is correctly loaded.
+                severity: warn
+      - name: category
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_category')
+                field: category
+              config:
+                severity: warn
+
+  - name: dim_supplier
+    columns:
+      - name: supplier_id
+        tests: [unique, not_null]
+
+  - name: dim_category
+    columns:
+      - name: category
+        tests: [unique, not_null]
+
+  - name: mart_sla_daily
+    columns:
+      - name: day
+        tests: [not_null]
+
+  - name: mart_ap_control_exceptions
+    description: >
+      AP control exceptions (src/controls/ap_controls.py), joined to case supplier/category.
+      Python-computed source (stg_ap_control_exceptions) -- see that model's description.
+    columns:
+      - name: exception_id
+        tests: [unique, not_null]
+      - name: control_id
+        tests:
+          - accepted_values:
+              values: ["C1_three_way_match", "C2_invoice_gr_order_mismatch", "C3_threshold_splitting",
+                       "C4_possible_duplicate_invoice", "C5_payment_block_override", "C6_benford_deviation"]
+      - name: severity
+        tests:
+          - accepted_values:
+              values: ["low", "medium", "high"]

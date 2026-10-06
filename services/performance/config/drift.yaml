@@ -1,0 +1,17 @@
+# Feature-drift thresholds (src/ml/feature_drift.py). PSI conventions, not laws of nature:
+# <0.1 stable, 0.1-0.25 moderate shift, >0.25 major shift.
+psi_warn: 0.10
+psi_alert: 0.25
+
+# How many features must be in "alert" before the overall report is "alert" AND the retrain
+# trigger (src/ml/retrain_trigger.py) fires. One noisy feature shouldn't retrain the model;
+# several moving together is a real population change.
+retrain_min_alert_features: 2
+
+# The "current" population for GET /health/drift/features and the flow's retrain gate: the most
+# recent N cases by start_time, compared against the training-time baseline.
+current_window_cases: 500
+
+# Baseline construction (applied at train time)
+n_bins: 10
+max_categories: 30

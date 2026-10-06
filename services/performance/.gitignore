@@ -1,0 +1,36 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/raw/bpi2019_events.sample_method.json
+!data/processed/.gitkeep
+models/*
+!models/.gitkeep
+# The trained model IS committed (small, ~800KB) -- Render's build clones from git,
+# not the local disk, so a gitignored model file means the live deployment's
+# SLA Risk dashboard panel has nothing to load, ever. Retrain locally
+# (python -m src.ml.train) and commit the updated .joblib/.meta.json when the
+# feature set or training data changes -- this is a deliberate exception to
+# "don't commit build artifacts", not an oversight.
+!models/sla_risk_model.joblib
+!models/sla_risk_model.meta.json
+!models/early_risk/
+!models/early_risk/*
+*.log
+.ipynb_checkpoints/
+*.pbix
+mlflow.db
+mlruns/
+
+# External datasets are downloaded on demand (licence terms apply), never committed
+data/external/
+
+# Flow run reports -- generated, not committed
+reports/*
+!reports/roi_sensitivity.json
+!reports/sequence_model_results.json
+!reports/calibration_comparison.json
+!reports/uplift_validation.json

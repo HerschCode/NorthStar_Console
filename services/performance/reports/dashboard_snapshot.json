@@ -1,0 +1,573 @@
+{
+ "executive_overview": {
+  "available": true,
+  "case_count": 9108,
+  "mean_cycle_hours": 2073.3,
+  "median_cycle_hours": 1875.8,
+  "p90_cycle_hours": 3236.8,
+  "breach_rate_pct": 95.5
+ },
+ "bottlenecks": {
+  "available": true,
+  "stages": [
+   {
+    "stage": "Cancel Goods Receipt -> Cancel Invoice Receipt",
+    "avg_hours": 4483.452777777778,
+    "median_hours": 4381.433333333333,
+    "p90_hours": 8025.516666666667,
+    "case_count": 12,
+    "pct_of_total_delay": 2.38954200585529
+   },
+   {
+    "stage": "Clear Invoice -> SRM: In Transfer to Execution Syst.",
+    "avg_hours": 4036.3763440860216,
+    "median_hours": 3693.9333333333334,
+    "p90_hours": 7558.616666666667,
+    "case_count": 31,
+    "pct_of_total_delay": 2.151264060020889
+   },
+   {
+    "stage": "Clear Invoice -> Cancel Invoice Receipt",
+    "avg_hours": 2091.349485596708,
+    "median_hours": 1992.9,
+    "p90_hours": 5304.816666666667,
+    "case_count": 162,
+    "pct_of_total_delay": 1.11462475294189
+   },
+   {
+    "stage": "Vendor creates invoice -> SRM: Created",
+    "avg_hours": 1816.0066666666667,
+    "median_hours": 368.2583333333333,
+    "p90_hours": 6099.966666666667,
+    "case_count": 30,
+    "pct_of_total_delay": 0.9678755254034549
+   },
+   {
+    "stage": "Clear Invoice -> Vendor creates debit memo",
+    "avg_hours": 1676.89375,
+    "median_hours": 466.9916666666667,
+    "p90_hours": 3934.883333333333,
+    "case_count": 16,
+    "pct_of_total_delay": 0.8937326327695307
+   },
+   {
+    "stage": "Clear Invoice -> Record Subsequent Invoice",
+    "avg_hours": 1634.1055555555556,
+    "median_hours": 1139.0416666666665,
+    "p90_hours": 3763.0249999999996,
+    "case_count": 6,
+    "pct_of_total_delay": 0.870927845243614
+   },
+   {
+    "stage": "Change Approval for Purchase Order -> Clear Invoice",
+    "avg_hours": 1564.2833333333335,
+    "median_hours": 1564.2833333333333,
+    "p90_hours": 1564.2833333333333,
+    "case_count": 6,
+    "pct_of_total_delay": 0.8337147549732937
+   },
+   {
+    "stage": "Record Invoice Receipt -> Set Payment Block",
+    "avg_hours": 1499.8055555555554,
+    "median_hours": 1499.8333333333333,
+    "p90_hours": 1499.8333333333333,
+    "case_count": 12,
+    "pct_of_total_delay": 0.7993500887036136
+   }
+  ]
+ },
+ "suppliers": {
+  "available": true,
+  "suppliers": [
+   {
+    "supplier_id": "vendorID_0473",
+    "order_count": 4,
+    "avg_cycle_time_hours": 0.016666666666666666,
+    "cycle_time_std_hours": 0.0,
+    "sla_breach_rate": 0.0,
+    "rank_by_cycle_time": 1.0
+   },
+   {
+    "supplier_id": "vendorID_0472",
+    "order_count": 7,
+    "avg_cycle_time_hours": 0.17142857142857143,
+    "cycle_time_std_hours": 0.053328372785182036,
+    "sla_breach_rate": 0.0,
+    "rank_by_cycle_time": 2.0
+   },
+   {
+    "supplier_id": "vendorID_0363",
+    "order_count": 4,
+    "avg_cycle_time_hours": 6.008333333333333,
+    "cycle_time_std_hours": 11.97222480020596,
+    "sla_breach_rate": 0.0,
+    "rank_by_cycle_time": 3.0
+   },
+   {
+    "supplier_id": "vendorID_0364",
+    "order_count": 8,
+    "avg_cycle_time_hours": 27.008333333333333,
+    "cycle_time_std_hours": 29.896022191207027,
+    "sla_breach_rate": 0.0,
+    "rank_by_cycle_time": 4.0
+   },
+   {
+    "supplier_id": "vendorID_0548",
+    "order_count": 6,
+    "avg_cycle_time_hours": 73.47222222222221,
+    "cycle_time_std_hours": 53.55458447713435,
+    "sla_breach_rate": 0.0,
+    "rank_by_cycle_time": 5.0
+   },
+   {
+    "supplier_id": "vendorID_0399",
+    "order_count": 5,
+    "avg_cycle_time_hours": 160.93,
+    "cycle_time_std_hours": 27.615332395850913,
+    "sla_breach_rate": 0.0,
+    "rank_by_cycle_time": 6.0
+   },
+   {
+    "supplier_id": "vendorID_0320",
+    "order_count": 3,
+    "avg_cycle_time_hours": 287.4666666666667,
+    "cycle_time_std_hours": 168.6000098853299,
+    "sla_breach_rate": 0.6666666666666666,
+    "rank_by_cycle_time": 7.0
+   },
+   {
+    "supplier_id": "vendorID_0491",
+    "order_count": 11,
+    "avg_cycle_time_hours": 326.74848484848485,
+    "cycle_time_std_hours": 73.30366993031471,
+    "sla_breach_rate": 0.9090909090909091,
+    "rank_by_cycle_time": 8.0
+   }
+  ]
+ },
+ "conformance": {
+  "available": true,
+  "conformance_rate_pct": 24.5,
+  "total_cases": 9228,
+  "conformant_cases": 2264,
+  "deviation_breakdown": {
+   "unexpected_activity": 4570,
+   "repeated_activity": 701,
+   "out_of_order": 3914,
+   "skipped_step": 1393
+  }
+ },
+ "sla_risk": {
+  "available": true,
+  "total_scored": 9108,
+  "low": 453,
+  "medium": 74,
+  "high": 8581
+ },
+ "top_risk_cases": {
+  "available": true,
+  "cases": [
+   {
+    "case_id": "4507000546_00010",
+    "supplier_id": "vendorID_0174",
+    "breach_probability": 100,
+    "risk_level": "HIGH",
+    "top_reason": "Supplier risk profile",
+    "shap_factors": [
+     {
+      "label": "Supplier risk profile",
+      "shap": 4.3995,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Process complexity (many unique steps)",
+      "shap": 3.8631,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Final stage: Delete Purchase Order Item",
+      "shap": 0.3375,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Final stage: Clear Invoice",
+      "shap": 0.189,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Unusual process path",
+      "shap": 0.174,
+      "direction": "\u2191 risk"
+     }
+    ]
+   },
+   {
+    "case_id": "4507002434_00010",
+    "supplier_id": "vendorID_0191",
+    "breach_probability": 100,
+    "risk_level": "HIGH",
+    "top_reason": "Process complexity (many unique steps)",
+    "shap_factors": [
+     {
+      "label": "Process complexity (many unique steps)",
+      "shap": 3.7832,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Supplier risk profile",
+      "shap": 2.4758,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Final stage: Delete Purchase Order Item",
+      "shap": 0.3376,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Unusual process path",
+      "shap": 0.2427,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Final stage: Clear Invoice",
+      "shap": 0.189,
+      "direction": "\u2191 risk"
+     }
+    ]
+   },
+   {
+    "case_id": "4507001638_00010",
+    "supplier_id": "vendorID_0042",
+    "breach_probability": 100,
+    "risk_level": "HIGH",
+    "top_reason": "Process complexity (many unique steps)",
+    "shap_factors": [
+     {
+      "label": "Process complexity (many unique steps)",
+      "shap": 3.6859,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Supplier risk profile",
+      "shap": 2.1288,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Final stage: Delete Purchase Order Item",
+      "shap": 0.3375,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Unusual process path",
+      "shap": 0.2427,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Final stage: Clear Invoice",
+      "shap": 0.1281,
+      "direction": "\u2191 risk"
+     }
+    ]
+   },
+   {
+    "case_id": "4507002053_00010",
+    "supplier_id": "vendorID_0042",
+    "breach_probability": 100,
+    "risk_level": "HIGH",
+    "top_reason": "Process complexity (many unique steps)",
+    "shap_factors": [
+     {
+      "label": "Process complexity (many unique steps)",
+      "shap": 3.7432,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Supplier risk profile",
+      "shap": 2.1377,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Final stage: Delete Purchase Order Item",
+      "shap": 0.3366,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Unusual process path",
+      "shap": -0.2231,
+      "direction": "\u2193 risk"
+     },
+     {
+      "label": "Unusual start hour",
+      "shap": 0.1806,
+      "direction": "\u2191 risk"
+     }
+    ]
+   },
+   {
+    "case_id": "4507001377_00010",
+    "supplier_id": "vendorID_0484",
+    "breach_probability": 100,
+    "risk_level": "HIGH",
+    "top_reason": "Process complexity (many unique steps)",
+    "shap_factors": [
+     {
+      "label": "Process complexity (many unique steps)",
+      "shap": 3.7946,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Supplier risk profile",
+      "shap": 1.6066,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Final stage: Delete Purchase Order Item",
+      "shap": 0.3375,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Unusual process path",
+      "shap": 0.2432,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Final stage: Clear Invoice",
+      "shap": 0.189,
+      "direction": "\u2191 risk"
+     }
+    ]
+   },
+   {
+    "case_id": "2000000077_00001",
+    "supplier_id": "vendorID_0042",
+    "breach_probability": 100,
+    "risk_level": "HIGH",
+    "top_reason": "Process complexity (many unique steps)",
+    "shap_factors": [
+     {
+      "label": "Process complexity (many unique steps)",
+      "shap": 3.5941,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Supplier risk profile",
+      "shap": 2.1093,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Final stage: Delete Purchase Order Item",
+      "shap": 0.3509,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Unusual process path",
+      "shap": -0.1976,
+      "direction": "\u2193 risk"
+     },
+     {
+      "label": "Final stage: Clear Invoice",
+      "shap": 0.1282,
+      "direction": "\u2191 risk"
+     }
+    ]
+   },
+   {
+    "case_id": "4507002002_00010",
+    "supplier_id": "vendorID_0506",
+    "breach_probability": 100,
+    "risk_level": "HIGH",
+    "top_reason": "Process complexity (many unique steps)",
+    "shap_factors": [
+     {
+      "label": "Process complexity (many unique steps)",
+      "shap": 3.7918,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Supplier risk profile",
+      "shap": 0.976,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Final stage: Delete Purchase Order Item",
+      "shap": 0.3375,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Unusual process path",
+      "shap": 0.2427,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Final stage: Clear Invoice",
+      "shap": 0.189,
+      "direction": "\u2191 risk"
+     }
+    ]
+   },
+   {
+    "case_id": "4507002563_00010",
+    "supplier_id": "vendorID_0506",
+    "breach_probability": 100,
+    "risk_level": "HIGH",
+    "top_reason": "Process complexity (many unique steps)",
+    "shap_factors": [
+     {
+      "label": "Process complexity (many unique steps)",
+      "shap": 3.7916,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Supplier risk profile",
+      "shap": 0.976,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Final stage: Delete Purchase Order Item",
+      "shap": 0.3386,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Unusual process path",
+      "shap": 0.2425,
+      "direction": "\u2191 risk"
+     },
+     {
+      "label": "Final stage: Clear Invoice",
+      "shap": 0.189,
+      "direction": "\u2191 risk"
+     }
+    ]
+   }
+  ]
+ },
+ "ap_controls": {
+  "available": true,
+  "total_exceptions": 8267,
+  "controls": [
+   {
+    "control_id": "C2_invoice_gr_order_mismatch",
+    "count": 3035,
+    "total_exposure_eur": 158963635.0,
+    "high": 0,
+    "medium": 3035,
+    "low": 0
+   },
+   {
+    "control_id": "C4_possible_duplicate_invoice",
+    "count": 2812,
+    "total_exposure_eur": 10118440.0,
+    "high": 0,
+    "medium": 2812,
+    "low": 0
+   },
+   {
+    "control_id": "C5_payment_block_override",
+    "count": 2297,
+    "total_exposure_eur": 124673359.0,
+    "high": 0,
+    "medium": 0,
+    "low": 2297
+   },
+   {
+    "control_id": "C3_threshold_splitting",
+    "count": 90,
+    "total_exposure_eur": 1520435.0,
+    "high": 90,
+    "medium": 0,
+    "low": 0
+   },
+   {
+    "control_id": "C6_benford_deviation",
+    "count": 29,
+    "total_exposure_eur": 7562103.0,
+    "high": 0,
+    "medium": 0,
+    "low": 29
+   },
+   {
+    "control_id": "C1_three_way_match",
+    "count": 4,
+    "total_exposure_eur": 34614.0,
+    "high": 4,
+    "medium": 0,
+    "low": 0
+   }
+  ]
+ },
+ "working_capital": {
+  "available": true,
+  "late_payment": {
+   "n_cases": 7836,
+   "n_late": 7005,
+   "late_rate_pct": 89.4,
+   "exposure_eur": 168735374.0,
+   "payment_terms_days": 30
+  },
+  "early_discount_scenario": {
+   "n_eligible": 7836,
+   "n_captured": 16,
+   "captured_discount_eur": 1416.54,
+   "potential_discount_eur": 3969653.06,
+   "missed_discount_eur": 3968236.52,
+   "discount_pct": 0.02,
+   "discount_window_days": 10
+  },
+  "dpo_by_spend_area": [
+   {
+    "sub_spend_area": "Consulting",
+    "case_count": 4,
+    "mean_days": 211.5769097222222,
+    "median_days": 75.51631944444443
+   },
+   {
+    "sub_spend_area": "Media",
+    "case_count": 1,
+    "mean_days": 127.54791666666667,
+    "median_days": 127.54791666666667
+   },
+   {
+    "sub_spend_area": "Process Automation & Instrumentation",
+    "case_count": 2,
+    "mean_days": 123.08194444444445,
+    "median_days": 123.08194444444445
+   },
+   {
+    "sub_spend_area": "Digital Marketing",
+    "case_count": 13,
+    "mean_days": 95.17922008547008,
+    "median_days": 75.42777777777778
+   },
+   {
+    "sub_spend_area": "Labels",
+    "case_count": 2057,
+    "mean_days": 93.75032072057473,
+    "median_days": 100.42569444444445
+   },
+   {
+    "sub_spend_area": "Tubes",
+    "case_count": 9,
+    "mean_days": 90.75871913580247,
+    "median_days": 76.71944444444445
+   },
+   {
+    "sub_spend_area": "Biocides",
+    "case_count": 33,
+    "mean_days": 88.07037037037037,
+    "median_days": 79.61875
+   },
+   {
+    "sub_spend_area": "Organic Pigments",
+    "case_count": 6,
+    "mean_days": 87.69560185185185,
+    "median_days": 77.4263888888889
+   }
+  ]
+ },
+ "snapshot": {
+  "as_of": "2026-10-04T06:02:31+00:00",
+  "source": "local event log via the same pipeline and section functions as the live dashboard",
+  "n_cases": 9228,
+  "n_events": 69271
+ }
+}

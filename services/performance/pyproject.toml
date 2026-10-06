@@ -1,0 +1,16 @@
+[project]
+name = "operations-performance"
+version = "0.1.0"
+description = "Operations analytics and process-intelligence platform for a Procure-to-Pay process."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]

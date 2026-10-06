@@ -1,0 +1,4 @@
+# Extra dependency for src/ml/sequence_model.py (Phase 5). NOT installed by the deployed API.
+# CPU build: pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch>=2.2
+onnx>=1.15          # export only (scripts/export_early_risk.py); serving uses onnxruntime

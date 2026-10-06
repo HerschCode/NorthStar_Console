@@ -1,0 +1,110 @@
+{
+  "full_model": {
+    "trained_on": "all categories",
+    "roc_auc": 0.9857,
+    "train_rows": 2400,
+    "test_rows": 600
+  },
+  "per_category_performance": {
+    "Packaging": {
+      "n": 1004,
+      "breach_rate": 0.979,
+      "roc_auc": 0.9919,
+      "brier_score": 0.0095
+    },
+    "Sales": {
+      "n": 757,
+      "breach_rate": 0.857,
+      "roc_auc": 0.9999,
+      "brier_score": 0.0025
+    },
+    "Additives": {
+      "n": 230,
+      "breach_rate": 0.957,
+      "roc_auc": 0.9975,
+      "brier_score": 0.0106
+    },
+    "CAPEX & SOCS": {
+      "n": 182,
+      "breach_rate": 0.967,
+      "roc_auc": 0.75,
+      "brier_score": 0.0173
+    },
+    "Logistics": {
+      "n": 133,
+      "breach_rate": 0.827,
+      "roc_auc": 0.9057,
+      "brier_score": 0.0622
+    },
+    "Latex & Monomers": {
+      "n": 81,
+      "breach_rate": 0.938,
+      "roc_auc": 0.9789,
+      "brier_score": 0.027
+    },
+    "Others": {
+      "n": 50,
+      "breach_rate": 0.98,
+      "roc_auc": 0.5,
+      "brier_score": 0.02
+    },
+    "Solvents": {
+      "n": 43,
+      "breach_rate": 0.907,
+      "roc_auc": 1.0,
+      "brier_score": 0.0097
+    },
+    "Marketing": {
+      "n": 40,
+      "breach_rate": 0.975,
+      "roc_auc": 0.5,
+      "brier_score": 0.025
+    },
+    "Workforce Services": {
+      "n": 38,
+      "breach_rate": 0.947,
+      "roc_auc": 0.5,
+      "brier_score": 0.0526
+    },
+    "Specialty Resins": {
+      "n": 35,
+      "breach_rate": 0.971,
+      "roc_auc": 1.0,
+      "brier_score": 0.0017
+    }
+  },
+  "per_category_auc_range": {
+    "min": 0.5,
+    "max": 1.0,
+    "std": 0.2136
+  },
+  "leave_majority_out": {
+    "train_categories": [
+      "Packaging",
+      "Sales"
+    ],
+    "test_categories": [
+      "Additives",
+      "CAPEX & SOCS",
+      "Commodity Resins",
+      "Enterprise Services",
+      "Latex & Monomers",
+      "Logistics",
+      "Marketing",
+      "Others",
+      "Pigments & Colorants",
+      "Real Estate",
+      "Solvents",
+      "Specialty Resins",
+      "Titanium Dioxides",
+      "Trading & End Products",
+      "Workforce Services"
+    ],
+    "train_n": 1761,
+    "test_n": 1239,
+    "test_breach_rate": 0.954,
+    "roc_auc": 0.838,
+    "brier_score": 0.0336
+  },
+  "interpretation": "Per-category ROC-AUC varies across process types. The leave-majority-out experiment trains on Packaging+Sales only (~59% of cases) and tests on all other categories -- a proxy for deploying to a different company whose process mix differs from the training distribution. AUC degradation quantifies the generalization gap."
+}

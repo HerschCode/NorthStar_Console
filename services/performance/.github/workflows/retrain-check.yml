@@ -1,0 +1,45 @@
+name: Retrain check
+
+# Wires src/ml/retrain_trigger.py's decision logic to an actual scheduler --
+# the piece its own docstring named as missing ("No scheduler is actually wired
+# up in this environment"). Runs daily; scripts/check_and_retrain.py fetches the
+# real current case count from the live database and only retrains if the
+# existing time/volume-based logic says it's warranted -- most days this is a
+# quick no-op, not a full retrain.
+on:
+  schedule:
+    - cron: "0 6 * * *"  # 06:00 UTC daily
+  workflow_dispatch: {}  # manual trigger from the Actions tab, for testing without waiting a day
+
+jobs:
+  check-and-retrain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check retrain need and retrain if warranted
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: "5432"
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_SSLMODE: require
+        run: python -m scripts.check_and_retrain
+
+      - name: Upload retrained model artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sla-risk-model
+          path: models/sla_risk_model.*
+          if-no-files-found: ignore
