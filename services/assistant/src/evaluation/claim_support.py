@@ -12,12 +12,15 @@ answers; this check is kept as the default because it is the better trade-off fo
 - at least `r` of the sentence's CONTENT words (stopwords removed, light stemming) must appear in the chunks --
   an answer about something the evidence does not cover fails this.
 
-It does not understand negation or polarity: "Yes." vs "No.", "included" vs "excluded" can pass. That limit is
-measured in reports/gate_labeled_eval.json, not assumed away.
+Polarity: an antonym pair used the wrong way round against the evidence (src/evaluation/polarity.py) blocks the sentence. A flipped leading
+"Yes."/"No." still passes (see scripts/polarity_eval.py); that limit is measured, not assumed away.
 """
 from __future__ import annotations
 
+import os
 import re
+
+from .polarity import polarity_conflicts
 
 _WORDS = {"zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
           "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "fourteen": 14, "fifteen": 15, "twenty": 20}
@@ -102,16 +105,21 @@ def sentence_support(sentence: str, chunks: list[str]) -> dict:
     missing_keys = sorted(key_terms(sentence) - ev_words)
     s_words = content_words(sentence)
     recall = len(s_words & ev_words) / len(s_words) if s_words else 1.0
-    return {"numbers_supported": not missing_claims, "key_terms_supported": not missing_keys,
+    conflicts = polarity_conflicts(sentence, chunks)
+    return {"numbers_supported": not missing_claims, "key_terms_supported": not missing_keys, "polarity_conflicts": conflicts,
             "content_recall": round(recall, 3), "missing_number_claims": missing_claims,
             "missing_key_terms": missing_keys, "missing_words": sorted(s_words - ev_words)}
 
 
-def answer_supported(answer: str, chunks: list[str], min_recall: float) -> tuple[bool, list[dict]]:
+def answer_supported(answer: str, chunks: list[str], min_recall: float, enforce_polarity: bool | None = None) -> tuple[bool, list[dict]]:
+    """`enforce_polarity` (default: env GATE_POLARITY=1) also blocks antonym conflicts. Off by default: on the 32-answer labelled set it
+    cut wrong-fact passes 25% -> 16% but blocked 2 more correct answers (72% -> 66% pass); reports/polarity_eval.json."""
+    if enforce_polarity is None:
+        enforce_polarity = os.environ.get("GATE_POLARITY") == "1"
     sents = split_sentences(answer)
     detail = [dict(sentence=s, **sentence_support(s, chunks)) for s in sents]
     ok = bool(sents) and all(d["numbers_supported"] and d["key_terms_supported"] and d["content_recall"] >= min_recall
-                             for d in detail)
+                             and not (enforce_polarity and d["polarity_conflicts"]) for d in detail)
     return ok, detail
 
 

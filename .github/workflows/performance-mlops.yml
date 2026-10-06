@@ -1,0 +1,52 @@
+name: Performance / MLOps and model supply chain
+
+# Gate on the model lifecycle code and on the model files themselves: the registry/gate/cycle tests, the leakage-safe split and conformal tests,
+# the lakehouse/streaming tests, and a manifest + restricted-unpickler check of every file under models/.
+on:
+  push:
+    branches: [main]
+    paths:
+      - services/performance/models/**
+      - services/performance/src/mlops/**
+      - services/performance/src/dataeng/**
+      - services/performance/tests/test_mlops.py
+      - services/performance/tests/test_conformal.py
+      - services/performance/tests/test_splits.py
+      - services/performance/tests/test_dataeng.py
+      - .github/workflows/performance-mlops.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - services/performance/models/**
+      - services/performance/src/mlops/**
+      - services/performance/src/dataeng/**
+      - services/performance/tests/test_mlops.py
+      - services/performance/tests/test_conformal.py
+      - services/performance/tests/test_splits.py
+      - services/performance/tests/test_dataeng.py
+      - .github/workflows/performance-mlops.yml
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: services/performance
+
+jobs:
+  mlops:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: "services/performance/requirements*.txt"
+      - run: pip install -r requirements.txt -r requirements-dataeng.txt pytest
+      - name: Model files match the manifest and load under the restricted unpickler
+        run: python -m scripts.verify_models
+      - name: MLOps, conformal, split and lakehouse/streaming tests
+        run: python -m pytest tests/test_mlops.py tests/test_conformal.py tests/test_splits.py tests/test_dataeng.py -q
+      - name: The whole loop on synthetic data (promote, reject, rollback)
+        run: python -m scripts.mlops_cycle demo
