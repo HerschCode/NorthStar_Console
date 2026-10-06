@@ -5,6 +5,11 @@
 **Raw results:** `data/evaluation/ragas_results.json`  
 **Baseline:** `data/evaluation/faithfulness_results.json` (32 in-domain questions, NLI scores)
 
+> **Caveat added 2026-10-06 — the NLI side of this comparison is not valid as written.** The baseline NLI scores were produced with the cross-encoder given `(answer sentence, source chunk)`, premise
+> and hypothesis swapped (see the correction in [`gate-calibration.md`](gate-calibration.md)). The 45.2% direction agreement, the per-category NLI means (including "paraphrase: NLI = 0.000") and the
+> "NLI domain mismatch" explanations below describe that swapped scoring, not the model's behaviour on procurement text. Not re-run: it needs `faithfulness_results.json` re-scored evidence-first
+> (offline, free) and the Ragas side compared again (the Ragas scores already stored can be reused). Treat the findings below as unverified until then.
+
 ---
 
 ## Why compare two tools?

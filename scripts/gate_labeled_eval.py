@@ -60,7 +60,7 @@ def nli_scores(sentences, chunks):
 
     if not sentences:
         return np.zeros((0, 3))
-    pairs = [(s, c) for s in sentences for c in chunks]
+    pairs = [(c, s) for s in sentences for c in chunks]      # premise (the evidence) first, then the claim; (s, c) asks whether the sentence entails the chunk
     sc = np.array(_load_nli_model().predict(pairs, apply_softmax=True)).reshape(len(sentences), len(chunks), 3)
     return np.stack([sc[:, :, 0].max(1), sc[:, :, 1].max(1)], axis=1)   # [max contradiction, max entailment]
 

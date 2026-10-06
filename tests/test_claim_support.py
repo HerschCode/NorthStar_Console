@@ -51,11 +51,21 @@ def test_polarity_flip_is_a_known_limitation():
     assert answer_supported("Yes. SLA targets are reviewed quarterly by Operations leadership.", CHUNKS, 0.65)[0]
 
 
-def test_committed_labeled_eval_support_gate_beats_nli_on_held_out_questions():
+def test_committed_labeled_eval_says_what_is_true_of_the_two_gates_on_held_out_questions():
+    """Evidence-first NLI (the corrected evaluation) discriminates, passes more correct answers than claim support, and lets through more wrong-fact answers; both block off-context answers.
+    The first version of this test asserted the retracted result (NLI passing 18.8% of everything), which came from premise and hypothesis swapped."""
     d = json.loads(Path("reports/gate_labeled_eval.json").read_text(encoding="utf-8"))
     g = d["gates"]
-    nli = g["nli@0.05 (deployed)"]["held_out_even_ids"]
     sup = g[f"support@{d['chosen_support_recall']}"]["held_out_even_ids"]
-    assert sup["correct_pass_rate"] > nli["correct_pass_rate"] + 0.3
-    assert sup["off_context_pass_rate"] <= nli["off_context_pass_rate"]
-    assert sup["wrong_fact_pass_rate"] <= nli["wrong_fact_pass_rate"]
+    for name in ("nli@0.05 (deployed)", "nli@0.5"):
+        nli = g[name]["held_out_even_ids"]
+        assert nli["correct_pass_rate"] > nli["off_context_pass_rate"] + 0.3, f"{name} does not discriminate: the NLI pairs are probably in the wrong order again"
+        assert sup["wrong_fact_pass_rate"] <= nli["wrong_fact_pass_rate"]           # why claim support stays the default
+        assert nli["off_context_pass_rate"] <= 0.1 and sup["off_context_pass_rate"] <= 0.1
+
+
+def test_the_retracted_swapped_pairs_report_is_kept_and_labelled():
+    d = json.loads(Path("reports/gate_labeled_eval_reversed_pairs.json").read_text(encoding="utf-8"))
+    assert "PREMISE" in d["note"] and "wrong way round" in d["note"]
+    nli = d["gates"]["nli@0.5"]["held_out_even_ids"]
+    assert nli["correct_pass_rate"] == nli["wrong_fact_pass_rate"] == nli["off_context_pass_rate"]       # the artifact: everything passed at one rate

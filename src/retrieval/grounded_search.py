@@ -31,8 +31,8 @@ from dataclasses import dataclass, field
 GROUNDED_GATE_ENABLED = os.environ.get("GROUNDED_GATE_ENABLED", "true").lower() in ("true", "1", "yes")
 FAITHFULNESS_GATE_THRESHOLD = float(os.environ.get("FAITHFULNESS_GATE_THRESHOLD", "0.05"))
 # GATE_METHOD: "support" (default since 2026-09-26) = lexical claim-support check (src/evaluation/claim_support.py);
-# "nli" = the original NLI gate. On a labeled set (reports/gate_labeled_eval.json) the NLI gate passed correct,
-# wrong-fact and off-context answers at the SAME rate (18.8% each on held-out questions) -- it did not discriminate.
+# "nli" = the original NLI gate. Its first labeled evaluation (18.8% for everything) used NLI pairs in the wrong order and is retracted (docs/gate-calibration.md, 2026-10-06);
+# evidence-first it passes more correct answers than claim support but about twice as many wrong-fact ones, which is why "support" stays the default.
 GATE_METHOD = os.environ.get("GATE_METHOD", "support").lower()
 SUPPORT_MIN_RECALL = float(os.environ.get("SUPPORT_MIN_RECALL", "0.65"))   # chosen on odd question ids only  # calibrated 2026-09-24; see reports/gate-calibration.md
 INSUFFICIENT_DATA_MSG = (

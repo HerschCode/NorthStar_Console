@@ -1,9 +1,8 @@
 """Lexical claim-support check for the answer gate.
 
-The NLI model (trained on MNLI/SNLI/FEVER) scores correct procurement answers as contradictions (e.g. "Manual
-Credit Review is performed by the Vendor Risk team" vs a chunk saying exactly that), and on a labeled set it passes
-correct and wrong answers at the same rate (reports/gate_labeled_eval.json). This check asks narrower questions
-that fail in the right places:
+The NLI gate this replaced was first measured with premise and hypothesis swapped (answer sentence as premise), which made it look indiscriminate: correct, wrong-fact and off-context answers all
+passed at 18.8%. Evidence-first (corrected 2026-10-06, docs/gate-calibration.md) it does discriminate, passes more correct answers than this check, and lets through about twice as many wrong-fact
+answers; this check is kept as the default because it is the better trade-off for a changed number or term. It asks narrower questions that fail in the right places:
 
 - every NUMBER in the sentence must appear in the retrieved chunks with the same unit near it ('5 business days';
   a table header counts), not just anywhere; list markers, section and step numbers are ignored -- a changed

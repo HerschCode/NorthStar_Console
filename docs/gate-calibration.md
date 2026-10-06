@@ -6,6 +6,39 @@
 
 ---
 
+## Correction, 2026-10-06: the NLI results in this document were measured with premise and hypothesis reversed
+
+`score_faithfulness` and `scripts/gate_labeled_eval.py` gave the NLI cross-encoder `(answer sentence, source chunk)`. An NLI model reads `(premise, hypothesis)`, so that asked whether the *sentence
+entails the chunk*, which a short claim essentially never does. It was found while scoring the gates on RAGTruth (on 500 responses the same model gets ROC-AUC 0.51 in the order it was deployed
+and 0.62 evidence-first) and is fixed in `src/evaluation/faithfulness.py` and `scripts/gate_labeled_eval.py`; a test pins the order.
+
+**What this retracts:** "the NLI gate passes correct, wrong-fact and off-context answers at the same rate", "18.8%: same as random", and the explanation that the model "assigns contradiction
+probabilities near 1 to correct procurement sentences" because of domain mismatch. Those numbers came from the swapped pairs. The old report is kept as
+`reports/gate_labeled_eval_reversed_pairs.json`.
+
+**The same 32 questions x 3 conditions, re-run evidence-first** (`reports/gate_labeled_eval.json`; passed = the answer got through the gate; lower is better in the last two columns):
+
+| Gate | Correct passed (all 32 / held-out 16) | Wrong fact passed | Off-context passed |
+|---|---|---|---|
+| NLI, t = 0.05 | 87.5% / 87.5% | 59.4% / 50.0% | 12.5% / 6.2% |
+| NLI, t = 0.5 | 81.2% / 81.2% | 50.0% / 43.8% | 6.2% / 0.0% |
+| NLI, t = 1.0 (every sentence entailed) | 56.2% / 62.5% | 21.9% / 12.5% | 3.1% / 0.0% |
+| Claim support, r = 0.65 (deployed; the original run, unchanged) | 68.8% / 68.8% | 21.9% / 18.8% | 3.1% / 6.2% |
+| Claim support, r = 0.4 (what the script's own tuning picked on this run) | 75.0% / 75.0% | 25.0% / 18.8% | 3.1% / 6.2% |
+
+**What stands.** The claim-support numbers and the deployed default (`GATE_METHOD=support`, r = 0.65) are not affected: the lexical features do not use the NLI model. (The script's pick moved from 0.65
+to 0.4 because the two tie on the tuning half, 0.8127 each, and ties go to the lower r; retrieval for the same questions also differs slightly from September's. It is not evidence against 0.65.)
+**What changes is the reason.** The NLI gate does discriminate: evidence-first it blocks almost every off-context answer, as claim support does, and it lets more correct answers through (81% vs 69-75%
+at t = 0.5). But at those settings it also lets through twice as many wrong-fact answers (44-50% vs 19-25%); only at t = 1.0 does it match claim support on wrong facts, and then it passes fewer correct
+answers (56-62% vs 69-75%). So claim support remains the better trade-off for catching a changed number or term, which is what the gate is for, but "the NLI gate cannot tell right from wrong" was false.
+Sixteen held-out questions per cell is small: treat differences under about 15 points as noise. A gate that requires *both* (claim support and NLI) was not evaluated; it is the obvious next experiment,
+and the choice of default is the owner's.
+
+**Not re-run, and therefore still resting on the swapped pairs:** the Ragas-vs-NLI comparison in `docs/eval-tooling-comparison.md`, `scripts/calibrate_gate.py` and
+`scripts/analyze_hard_negatives.py` (they read the scores stored in `data/evaluation/faithfulness_results.json`, produced before the fix), and the table further down this page.
+
+---
+
 ## Current gate: claim-support (deployed)
 
 The gate is `src/evaluation/claim_support.py` — a deterministic lexical check, no model.
@@ -17,7 +50,7 @@ Activate with `GATE_METHOD=support` (default); restore old NLI gate with `GATE_M
 - ≥ 65% content-word recall against the chunks (`SUPPORT_MIN_RECALL`, default 0.65)
 - Reports *why* it blocked: missing number / missing key term / low word recall
 
-**Why the NLI gate was replaced:** see [Archived: NLI gate analysis](#archived-nli-gate-analysis) below.
+**Why the NLI gate was replaced:** see [Archived: NLI gate analysis](#archived-nli-gate-analysis) below, **read with the correction above**: part of that analysis rested on NLI pairs given in the wrong order.
 
 ---
 
@@ -34,13 +67,13 @@ The threshold parameter (`r`) was tuned on odd-id questions only; the table belo
 
 | Gate | Correct passed | Wrong fact passed | Off-context passed |
 |---|---|---|---|
-| NLI, t = 0.05 (was deployed) | 18.8% | 18.8% | 18.8% |
-| NLI, t = 0.5 | 18.8% | 18.8% | 18.8% |
+| NLI, t = 0.05 (was deployed) — **swapped pairs: retracted, see the correction above** | 18.8% | 18.8% | 18.8% |
+| NLI, t = 0.5 — **swapped pairs: retracted** | 18.8% | 18.8% | 18.8% |
 | **Claim support, r = 0.65 (now default)** | **68.8%** | **18.8%** | **6.2%** |
 | No gate | 100% | 100% | 100% |
 
 On all 32 questions: claim-support passes 68.8% correct / 21.9% wrong-fact / 3.1% off-context.  
-NLI (t=0.05): 37.5% correct / 31.2% wrong-fact / 21.9% off-context — indiscriminate.
+NLI (t=0.05), swapped pairs: 37.5% correct / 31.2% wrong-fact / 21.9% off-context — "indiscriminate" is **retracted** (see the correction at the top: evidence-first it is 87.5% / 59.4% / 12.5%).
 
 **Key numbers at a glance:**
 
@@ -49,7 +82,7 @@ NLI (t=0.05): 37.5% correct / 31.2% wrong-fact / 21.9% off-context — indiscrim
 | Gate coverage (correct answers that pass) | **68.8%** at r=0.65 |
 | Wrong-fact pass rate (false negatives) | **18.8%–21.9%** |
 | Off-context pass rate (false positives) | **3.1%–6.2%** |
-| NLI coverage (was deployed) | 18.8% — same as random |
+| NLI coverage (was deployed) | 18.8% with the pairs swapped (**retracted**: 81.2% at t=0.5 evidence-first, with more wrong facts passing) |
 
 **What it still gets wrong.** All wrong facts that pass are polarity flips (Yes↔No,
 included↔excluded) — a lexical check cannot see sign changes. The correct answers
@@ -109,6 +142,8 @@ scores are pre-computed in `faithfulness_results.json`).
 
 ## Archived: NLI gate analysis
 
+> **Correction (2026-10-06): the NLI numbers and the "domain mismatch" explanation in this section were produced with premise and hypothesis swapped; see the correction at the top of this page.**
+>
 > **This section is superseded.** The NLI gate (`GATE_METHOD=nli`) was the original
 > deployment. Three problems found in the 2026-09-26 re-evaluation caused it to be
 > replaced by the claim-support gate:

@@ -111,8 +111,10 @@ def score_faithfulness(answer: str, retrieved_chunks: list[str]) -> Faithfulness
 
         # Build all (sentence, chunk) pairs for batch inference —
         # more efficient than calling model.predict() per sentence.
+        # An NLI cross-encoder reads (premise, hypothesis): the EVIDENCE comes first and the answer sentence is the claim being tested against it. This was (sentence, chunk), i.e. "does the
+        # sentence entail the chunk", until 2026-10-06; see docs/gate-calibration.md for what that did to the earlier NLI results. The order of the pairs (sentence-major) is unchanged.
         pairs = [
-            (sentence, chunk)
+            (chunk, sentence)
             for sentence in sentences
             for chunk in retrieved_chunks
         ]

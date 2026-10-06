@@ -157,7 +157,7 @@ def nli_scores(rows: list[dict]) -> tuple[np.ndarray, np.ndarray]:
     """Resumable: each response's result is kept in data/external/ragtruth/nli_cache.json, so a crash (a CUDA 'unknown error' ended one 40-minute run at 900 of 2,700) is re-run, not lost.
     The cache is keyed by response id, and is only valid for the model and thresholds named in its header."""
     from src.evaluation import faithfulness
-    header = {"model": faithfulness.NLI_MODEL, "entailment": faithfulness.ENTAILMENT_THRESHOLD, "chunk_words": CHUNK_WORDS, "chunk_overlap": CHUNK_OVERLAP}
+    header = {"model": faithfulness.NLI_MODEL, "entailment": faithfulness.ENTAILMENT_THRESHOLD, "chunk_words": CHUNK_WORDS, "chunk_overlap": CHUNK_OVERLAP, "pair_order": "evidence first"}
     cache = {}
     if NLI_CACHE.exists():
         stored = json.loads(NLI_CACHE.read_text(encoding="utf-8"))

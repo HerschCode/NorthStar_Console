@@ -68,6 +68,23 @@ def _mock_nli_scores(entailment_probs: list[float], n_chunks: int = 1):
 
 
 @patch("src.evaluation.faithfulness._load_nli_model")
+def test_the_nli_model_is_given_the_evidence_as_premise_and_the_answer_sentence_as_hypothesis(mock_load):
+    """(sentence, chunk) asks whether the sentence entails the chunk, which a short claim never does; found on 2026-10-06 and why the pair order is pinned here."""
+    faith_module.FAITHFULNESS_BACKEND = "nli"
+    faith_module._load_nli_model.cache_clear()
+    mock_model = MagicMock()
+    mock_model.predict.return_value = _mock_nli_scores([0.9, 0.9], n_chunks=2)
+    mock_load.return_value = mock_model
+    try:
+        score_faithfulness("Orders above ten thousand euros need approval. Payments are released after receipt.", ["chunk A about approval limits", "chunk B about receipts"])
+        pairs = mock_model.predict.call_args[0][0]
+        assert pairs == [("chunk A about approval limits", "Orders above ten thousand euros need approval."), ("chunk B about receipts", "Orders above ten thousand euros need approval."),
+                         ("chunk A about approval limits", "Payments are released after receipt."), ("chunk B about receipts", "Payments are released after receipt.")]
+    finally:
+        faith_module._load_nli_model.cache_clear()
+
+
+@patch("src.evaluation.faithfulness._load_nli_model")
 def test_score_faithfulness_all_entailed(mock_load):
     faith_module.FAITHFULNESS_BACKEND = "nli"
     faith_module._load_nli_model.cache_clear()
