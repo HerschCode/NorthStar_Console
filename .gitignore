@@ -1,0 +1,8 @@
+# Secrets never live in this repo: copy .env.example to .env (ignored) or use Secret Manager.
+.env
+.env.*
+!.env.example
+*.tfstate
+*.tfstate.*
+.terraform/
+service-account*.json

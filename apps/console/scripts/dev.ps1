@@ -5,8 +5,8 @@
 #   powershell -ExecutionPolicy Bypass -File scripts\dev.ps1 -Fresh          # start with empty state (ledger, approvals, audit, traces)
 #   powershell -ExecutionPolicy Bypass -File scripts\dev.ps1 -Stop           # stop what this script started
 #
-# Sibling repos are expected at ..\operations-performance and ..\operations-assistant; the gateway is at $env:NORTHSTAR_P3_DIR or
-# D:\0_Project3\llm-security-gateway (override any with -P1Dir / -P2Dir / -P3Dir). Everything runs on this machine with local, throw-away
+# Services live in the monorepo at ..\..\services\{performance,assistant,gateway}; the gateway is at $env:NORTHSTAR_P3_DIR or
+# (override any with -P1Dir / -P2Dir / -P3Dir). Everything runs on this machine with local, throw-away
 # secrets: nothing here is a real credential. P1 is pointed at a closed database port on purpose, so it serves its committed snapshot
 # (the "SNAPSHOT" pill): set P1_REAL_DB=1 to use your own .env database settings instead. If ANTHROPIC_API_KEY is already in your
 # environment P2 uses it; otherwise -Ollama, otherwise templates.
@@ -14,9 +14,9 @@
 # State of a run (P2's ledger, traces and spend; the gateway's approvals, audit logs and governance store) lives in .dev-state\ and logs in
 # .dev-logs\, both ignored by git, so a run never touches the other repositories' own data. -Fresh empties .dev-state first.
 param(
-  [string]$P1Dir = (Join-Path $PSScriptRoot '..\..\operations-performance'),
-  [string]$P2Dir = (Join-Path $PSScriptRoot '..\..\operations-assistant'),
-  [string]$P3Dir = $(if ($env:NORTHSTAR_P3_DIR) { $env:NORTHSTAR_P3_DIR } else { 'D:\0_Project3\llm-security-gateway' }),
+  [string]$P1Dir = (Join-Path $PSScriptRoot '..\..\..\services\performance'),
+  [string]$P2Dir = (Join-Path $PSScriptRoot '..\..\..\services\assistant'),
+  [string]$P3Dir = $(if ($env:NORTHSTAR_P3_DIR) { $env:NORTHSTAR_P3_DIR } else { Join-Path $PSScriptRoot '..\..\..\services\gateway' }),
   [switch]$Ollama,
   [switch]$Fresh,
   [switch]$Stop

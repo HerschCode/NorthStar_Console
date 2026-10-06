@@ -4,7 +4,7 @@
 //   node scripts/sync-specs.mjs --check --local    compare with sibling checkouts instead
 //   node scripts/sync-specs.mjs [--local]          overwrite the pinned copies, then run `npm run gen:api` and commit both
 //
-// Sibling checkouts: ../operations-performance and ../operations-assistant, and NORTHSTAR_P3_DIR (default ../llm-security-gateway); override
+// Monorepo siblings: ../../services/performance, ../../services/assistant and ../../services/gateway; override
 // with NORTHSTAR_P1_DIR / NORTHSTAR_P2_DIR. Specs are compared as parsed JSON, so formatting and line endings never count as drift.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -14,9 +14,9 @@ const check = args.has('--check')
 const local = args.has('--local')
 
 const SERVICES = {
-  p1: { repo: 'operations-performance', dir: process.env.NORTHSTAR_P1_DIR ?? '../operations-performance' },
-  p2: { repo: 'operations-assistant', dir: process.env.NORTHSTAR_P2_DIR ?? '../operations-assistant' },
-  p3: { repo: 'llm-security-gateway', dir: process.env.NORTHSTAR_P3_DIR ?? '../llm-security-gateway' },
+  p1: { repo: 'operations-performance', dir: process.env.NORTHSTAR_P1_DIR ?? '../../services/performance' },
+  p2: { repo: 'operations-assistant', dir: process.env.NORTHSTAR_P2_DIR ?? '../../services/assistant' },
+  p3: { repo: 'llm-security-gateway', dir: process.env.NORTHSTAR_P3_DIR ?? '../../services/gateway' },
 }
 
 async function producerSpec(svc, { repo, dir }) {
