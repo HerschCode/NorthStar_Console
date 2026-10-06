@@ -1,0 +1,434 @@
+{
+ "accuracy": 1.0,
+ "n": 40,
+ "rows": [
+  {
+   "q": "Show me orders above 50k",
+   "ok": true,
+   "expected": {
+    "min_value": 50000
+   },
+   "got": {
+    "min_value": 50000.0
+   },
+   "source": "rules"
+  },
+  {
+   "q": "cases worth more than 10,000 euros",
+   "ok": true,
+   "expected": {
+    "min_value": 10000
+   },
+   "got": {
+    "min_value": 10000.0
+   },
+   "source": "rules"
+  },
+  {
+   "q": "high value orders over \u20ac250k",
+   "ok": true,
+   "expected": {
+    "min_value": 250000
+   },
+   "got": {
+    "min_value": 250000.0
+   },
+   "source": "rules"
+  },
+  {
+   "q": "anything over 1.5 million",
+   "ok": true,
+   "expected": {
+    "min_value": 1500000
+   },
+   "got": {
+    "min_value": 1500000.0
+   },
+   "source": "rules"
+  },
+  {
+   "q": "orders for supplier vendorID_0108",
+   "ok": true,
+   "expected": {
+    "supplier": "vendorID_0108"
+   },
+   "got": {
+    "supplier": "vendorID_0108"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "what is open for vendorID_0472 above 5000",
+   "ok": true,
+   "expected": {
+    "supplier": "vendorID_0472",
+    "min_value": 5000
+   },
+   "got": {
+    "min_value": 5000.0,
+    "supplier": "vendorID_0472"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "cases stuck in invoicing",
+   "ok": true,
+   "expected": {
+    "stage": "invoicing"
+   },
+   "got": {
+    "stage": "invoicing"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "orders waiting at goods receipt",
+   "ok": true,
+   "expected": {
+    "stage": "receipt"
+   },
+   "got": {
+    "stage": "receipt"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "open cases in approval",
+   "ok": true,
+   "expected": {
+    "stage": "approval"
+   },
+   "got": {
+    "stage": "approval"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "cases with a payment block",
+   "ok": true,
+   "expected": {
+    "stage": "block"
+   },
+   "got": {
+    "stage": "block"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "top 10 cases",
+   "ok": true,
+   "expected": {
+    "limit": 10
+   },
+   "got": {
+    "limit": 10
+   },
+   "source": "rules"
+  },
+  {
+   "q": "show the 25 worst orders",
+   "ok": true,
+   "expected": {
+    "limit": 25
+   },
+   "got": {
+    "limit": 25
+   },
+   "source": "rules"
+  },
+  {
+   "q": "top 5 invoicing cases above 20k",
+   "ok": true,
+   "expected": {
+    "stage": "invoicing",
+    "min_value": 20000,
+    "limit": 5
+   },
+   "got": {
+    "min_value": 20000.0,
+    "stage": "invoicing",
+    "limit": 5
+   },
+   "source": "rules"
+  },
+  {
+   "q": "show me the first 50 cases at goods receipt",
+   "ok": true,
+   "expected": {
+    "stage": "receipt",
+    "limit": 50
+   },
+   "got": {
+    "stage": "receipt",
+    "limit": 50
+   },
+   "source": "rules"
+  },
+  {
+   "q": "orders over 100000 in the approval stage",
+   "ok": true,
+   "expected": {
+    "stage": "approval",
+    "min_value": 100000
+   },
+   "got": {
+    "min_value": 100000.0,
+    "stage": "approval"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "what's at risk for supplier vendorID_0364",
+   "ok": true,
+   "expected": {
+    "supplier": "vendorID_0364"
+   },
+   "got": {
+    "supplier": "vendorID_0364"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "orders in order creation stage",
+   "ok": true,
+   "expected": {
+    "stage": "order"
+   },
+   "got": {
+    "stage": "order"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "cases being changed or renegotiated",
+   "ok": true,
+   "expected": {
+    "stage": "changes"
+   },
+   "got": {
+    "stage": "changes"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "clearing and payment stage orders",
+   "ok": true,
+   "expected": {
+    "stage": "payment"
+   },
+   "got": {
+    "stage": "payment"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "orders worth at least 75k",
+   "ok": true,
+   "expected": {
+    "min_value": 75000
+   },
+   "got": {
+    "min_value": 75000.0
+   },
+   "source": "rules"
+  },
+  {
+   "q": "rank suppliers by breach rate",
+   "ok": true,
+   "expected": {
+    "sort": "breach_rate"
+   },
+   "got": {
+    "sort": "breach_rate"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "suppliers with the worst breach rates",
+   "ok": true,
+   "expected": {
+    "sort": "breach_rate"
+   },
+   "got": {
+    "sort": "breach_rate"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "which suppliers have the most expected loss",
+   "ok": true,
+   "expected": {
+    "sort": "expected_loss"
+   },
+   "got": {
+    "sort": "expected_loss"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "busiest suppliers by volume",
+   "ok": true,
+   "expected": {
+    "sort": "volume"
+   },
+   "got": {
+    "sort": "volume"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "suppliers with at least 50 cases",
+   "ok": true,
+   "expected": {
+    "min_n": 50
+   },
+   "got": {
+    "min_n": 50
+   },
+   "source": "rules"
+  },
+  {
+   "q": "suppliers with more than 30 closed cases ranked by volume",
+   "ok": true,
+   "expected": {
+    "min_n": 30,
+    "sort": "volume"
+   },
+   "got": {
+    "sort": "volume",
+    "min_n": 30
+   },
+   "source": "rules"
+  },
+  {
+   "q": "list suppliers",
+   "ok": true,
+   "expected": {},
+   "got": {},
+   "source": "rules"
+  },
+  {
+   "q": "suppliers sorted by exposure with at least 10 cases",
+   "ok": true,
+   "expected": {
+    "sort": "expected_loss",
+    "min_n": 10
+   },
+   "got": {
+    "sort": "expected_loss",
+    "min_n": 10
+   },
+   "source": "rules"
+  },
+  {
+   "q": "how do suppliers rank statistically",
+   "ok": true,
+   "expected": {
+    "sort": "ci_lower"
+   },
+   "got": {
+    "sort": "ci_lower"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "all open cases",
+   "ok": true,
+   "expected": {},
+   "got": {},
+   "source": "rules"
+  },
+  {
+   "q": "orders above fifty thousand euros",
+   "ok": true,
+   "expected": {
+    "min_value": 50000
+   },
+   "got": {
+    "min_value": 50000.0
+   },
+   "source": "rules"
+  },
+  {
+   "q": "the twenty biggest cases",
+   "ok": true,
+   "expected": {
+    "limit": 20
+   },
+   "got": {
+    "limit": 20
+   },
+   "source": "rules"
+  },
+  {
+   "q": "cases over 2 million euros",
+   "ok": true,
+   "expected": {
+    "min_value": 2000000
+   },
+   "got": {
+    "min_value": 2000000.0
+   },
+   "source": "rules"
+  },
+  {
+   "q": "orders for vendorID_0001 stuck at receipt",
+   "ok": true,
+   "expected": {
+    "supplier": "vendorID_0001",
+    "stage": "receipt"
+   },
+   "got": {
+    "supplier": "vendorID_0001",
+    "stage": "receipt"
+   },
+   "source": "rules"
+  },
+  {
+   "q": "show orders due next week",
+   "ok": true,
+   "expected": "REJECT",
+   "got": "REJECT",
+   "source": "rules"
+  },
+  {
+   "q": "only cases assigned to Maria",
+   "ok": true,
+   "expected": "REJECT",
+   "got": "REJECT",
+   "source": "rules"
+  },
+  {
+   "q": "orders from German suppliers",
+   "ok": true,
+   "expected": "REJECT",
+   "got": "REJECT",
+   "source": "rules"
+  },
+  {
+   "q": "cases created in March",
+   "ok": true,
+   "expected": "REJECT",
+   "got": "REJECT",
+   "source": "rules"
+  },
+  {
+   "q": "orders above 10k from suppliers in Europe",
+   "ok": true,
+   "expected": "REJECT",
+   "got": "REJECT",
+   "source": "rules"
+  },
+  {
+   "q": "suppliers ranked by exposure",
+   "ok": true,
+   "expected": {
+    "sort": "expected_loss"
+   },
+   "got": {
+    "sort": "expected_loss"
+   },
+   "source": "rules"
+  }
+ ]
+}

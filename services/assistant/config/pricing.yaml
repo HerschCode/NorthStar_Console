@@ -1,0 +1,48 @@
+# Claude API pricing, USD per million tokens. NOT fetched from Anthropic's official
+# pricing page programmatically -- verify at https://claude.com/pricing before relying
+# on this for real budgeting. Rates below reflect third-party aggregator consensus as
+# of early September 2026 for the specific model this project's config/agent.yaml
+# pins (claude-sonnet-4-6), not necessarily the newest model generation, since pricing
+# for newer models (e.g. Claude Sonnet 5) was actively changing at the time this was
+# written and multiple sources disagreed on the exact current rate.
+#
+# Kept in config, not hardcoded in Python, specifically so updating a rate doesn't
+# require a code change -- this file is the one place that should need editing when
+# Anthropic changes pricing.
+
+models:
+  # Claude 5.x family — verified from https://claude.com/pricing (2026-10-04)
+  claude-sonnet-5-5:
+    input_per_million: 2.00
+    output_per_million: 10.00
+  claude-opus-5-5:
+    input_per_million: 4.00
+    output_per_million: 20.00
+  # claude-haiku-4-5 (full model ID; both short form and timestamped form resolve)
+  claude-haiku-4-5:
+    input_per_million: 1.00
+    output_per_million: 5.00
+  claude-haiku-4-5-20251001:
+    input_per_million: 1.00
+    output_per_million: 5.00
+  # Claude 4.x family (kept for backward compat with existing evals)
+  claude-sonnet-4-6:
+    input_per_million: 3.00
+    output_per_million: 15.00
+  claude-opus-4-6:
+    input_per_million: 5.00
+    output_per_million: 25.00
+  # Groq — used by the live Render deployment (AGENT_PROVIDER=groq)
+  openai/gpt-oss-120b:
+    input_per_million: 0.15
+    output_per_million: 0.60
+  openai/gpt-oss-20b:
+    input_per_million: 0.05
+    output_per_million: 0.20
+
+# Batch API applies a flat 50% discount to both input and output (Anthropic docs).
+# Prompt cache reads are ~90% cheaper; not modeled separately since cache hit rates
+# vary by workload — treat batch_discount as the floor for batch eval runs.
+batch_discount: 0.5
+
+default_model: claude-sonnet-5-5

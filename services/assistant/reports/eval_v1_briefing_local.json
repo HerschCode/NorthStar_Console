@@ -1,0 +1,81 @@
+{
+ "summary": {
+  "model": "ollama:qwen2.5:7b-instruct",
+  "provider": "ollama",
+  "label": "local 7B pipeline proof: a free, weak model run through the real pipeline. Not a headline result and not comparable with a Claude run.",
+  "runs": 16,
+  "used": 13,
+  "used_rate": 0.812,
+  "failures_by_reason": {
+   "a figure is not in the facts it cites": 3
+  },
+  "identical_across_repeats": 7,
+  "variants": 8
+ },
+ "rows": [
+  {
+   "variant": "all facts",
+   "n_facts": 7,
+   "outcomes": [
+    "used",
+    "used"
+   ]
+  },
+  {
+   "variant": "without open",
+   "n_facts": 6,
+   "outcomes": [
+    "used",
+    "used"
+   ]
+  },
+  {
+   "variant": "without late",
+   "n_facts": 6,
+   "outcomes": [
+    "used",
+    "used"
+   ]
+  },
+  {
+   "variant": "without risk",
+   "n_facts": 6,
+   "outcomes": [
+    "used",
+    "used"
+   ]
+  },
+  {
+   "variant": "without loss",
+   "n_facts": 6,
+   "outcomes": [
+    "used",
+    "used"
+   ]
+  },
+  {
+   "variant": "without top1",
+   "n_facts": 6,
+   "outcomes": [
+    "a figure is not in the facts it cites",
+    "a figure is not in the facts it cites"
+   ]
+  },
+  {
+   "variant": "without top2",
+   "n_facts": 6,
+   "outcomes": [
+    "used",
+    "used"
+   ]
+  },
+  {
+   "variant": "without top3",
+   "n_facts": 6,
+   "outcomes": [
+    "used",
+    "a figure is not in the facts it cites"
+   ]
+  }
+ ]
+}

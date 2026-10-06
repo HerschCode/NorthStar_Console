@@ -1,0 +1,43 @@
+# Render Blueprint -- reproducible deploy, no dashboard clicking required.
+# In the Render dashboard: New + -> Blueprint -> point at this repo. It reads this
+# file and creates the service below, prompting for the `sync: false` secrets
+# (never stored in this file/repo) at creation time.
+#
+# Free tier notes: 512MB RAM, spins down after ~15 min idle. src/tools/client.py's
+# 60s tool-call timeout exists specifically to survive a cold operations-performance
+# instance waking up -- see PLAN.md for how that was found (a real timeout, not a
+# config bug).
+services:
+  - type: web
+    name: operations-assistant
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: AGENT_PROVIDER
+        value: "groq"
+      - key: AGENT_MODEL
+        value: "llama-3.3-70b-versatile"
+      - key: GROQ_API_KEY
+        sync: false  # free key from console.groq.com
+      # Disable torch-dependent backends on Render's 512 MB free tier.
+      # sentence-transformers + torch is ~2 GB and OOM-crashes the container.
+      # The bi-encoder embedding already uses ONNX (chromadb's DefaultEmbeddingFunction)
+      # and is unaffected. Cross-encoder reranking falls back to hybrid BM25/semantic order;
+      # NLI faithfulness returns a null result and the claim-support gate is used instead.
+      - key: RERANKER_BACKEND
+        value: "none"
+      - key: FAITHFULNESS_BACKEND
+        value: "none"
+      - key: OPS_PERFORMANCE_API_URL
+        value: "https://operations-performance.onrender.com"
+      - key: OPS_PERFORMANCE_API_KEY
+        sync: false  # must exactly match operations-performance's own API_KEY
+      - key: CHROMA_PERSIST_DIR
+        value: "./data/chroma"
+      - key: API_KEY
+        sync: false  # generate a real secret -- see .env.example
+      - key: API_ALLOWED_ORIGINS
+        value: "*"

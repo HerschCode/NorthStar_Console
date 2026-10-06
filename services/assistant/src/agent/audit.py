@@ -1,0 +1,350 @@
+"""
+AP controls audit investigation mode.
+
+POST /investigate/audit is a deterministic pipeline (no LLM tool-selection loop):
+  1. Fetch AP exception data directly from P1 via the AP controls tools
+  2. Retrieve relevant policy clauses via hybrid_search
+  3. LLM compile (forced tool-use): data + chunks -> structured audit report
+  4. Claim-support gate on policy_clauses ONLY — P1 figures in data_evidence
+     are not in policy documents and must never be gated against them
+
+This separation (data evidence vs document evidence, gate on doc section only)
+is the fix for the "gate isn't on the live agent path" gap: we can now run the
+gate without blocking correct P1 figures that wouldn't survive a doc-chunk check.
+"""
+from __future__ import annotations
+
+import json
+import re
+from dataclasses import dataclass, field
+
+from src.tools.ap_controls import get_control_exceptions
+from src.retrieval.search import hybrid_search
+from src.agent.agent import load_agent_config
+from src.evaluation.claim_support import sentence_support, split_sentences
+from src.tools.client import OpsPerformanceUnavailable
+
+_SUPPORT_MIN_RECALL = 0.65   # same as grounded_search.py SUPPORT_MIN_RECALL
+
+COMPILE_AUDIT_TOOL = {
+    "name": "compile_audit_report",
+    "description": "Compile AP controls audit findings into a structured report.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "exception_summary": {
+                "type": "string",
+                "description": "One sentence: what was found and which control (C1–C6) was triggered.",
+            },
+            "policy_clauses": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": (
+                    "Direct quotes or close paraphrases from the policy context, each ending with "
+                    "'(Source: <document title>, <section>)'. Only quote what is in the context above."
+                ),
+            },
+            "risk_assessment": {
+                "type": "string",
+                "description": "Severity level and EUR exposure taken directly from the data evidence.",
+            },
+            "recommended_action": {
+                "type": "string",
+                "description": (
+                    "One proposed action for human review — a PROPOSAL, not a decision. "
+                    "Example: 'Propose a payment hold on <case_id> pending AP Supervisor review, "
+                    "citing C4 and Section 4.2 of the AP Controls Policy.' "
+                    "Never say the action has been or will be executed."
+                ),
+            },
+            "limitations": {
+                "type": "string",
+                "description": (
+                    "Caveats. Must include: this report flags an anomaly; it is not proof of "
+                    "fraud or misconduct. Also note any data gaps (P1 unavailable, no matching records)."
+                ),
+            },
+        },
+        "required": [
+            "exception_summary", "policy_clauses", "risk_assessment",
+            "recommended_action", "limitations",
+        ],
+    },
+}
+
+
+@dataclass
+class AuditReport:
+    exception_summary: str
+    data_evidence: list[dict] = field(default_factory=list)
+    policy_clauses: list[str] = field(default_factory=list)
+    flagged_clauses: list[dict] = field(default_factory=list)
+    risk_assessment: str = ""
+    recommended_action: str = ""
+    limitations: str = ""
+    gate_applied: bool = True
+
+
+@dataclass
+class AuditResult:
+    report: AuditReport
+    p1_unavailable: bool = False
+    parse_failed: bool = False
+
+
+def _build_policy_query(exceptions: list[dict]) -> str:
+    """Build a hybrid-search query from the control IDs in the exception data."""
+    controls = {e.get("control_id") or e.get("control") for e in exceptions if isinstance(e, dict)} - {None}
+    parts = []
+    if "C1" in controls:
+        parts.append("three-way match purchase order invoice goods receipt tolerance")
+    if "C2" in controls:
+        parts.append("invoice before goods receipt exception approval")
+    if "C3" in controls:
+        parts.append("approval threshold splitting same vendor requester")
+    if "C4" in controls:
+        parts.append("duplicate invoice same vendor amount 30 days")
+    if "C5" in controls:
+        parts.append("payment block removal segregation of duties AP Supervisor")
+    if "C6" in controls:
+        parts.append("Benford law invoice amount anomaly screening")
+    return " ".join(parts) if parts else "accounts payable controls payment block approval policy"
+
+
+def _compile_report(client, config: dict, compile_prompt: str) -> dict | None:
+    """Compile the audit report via forced tool-use (Anthropic) or JSON-mode chat (Groq/Ollama).
+
+    Returns the dict of report fields, or None if the call or parsing failed.
+    """
+    model = config["model"]
+    max_tokens = config.get("max_tokens", 1500)
+
+    # Anthropic: forced tool-use guarantees valid JSON matching our schema
+    if hasattr(client, "messages"):
+        resp = client.messages.create(
+            model=model,
+            max_tokens=max_tokens,
+            temperature=0.0,
+            messages=[{"role": "user", "content": compile_prompt}],
+            tools=[COMPILE_AUDIT_TOOL],
+            tool_choice={"type": "tool", "name": "compile_audit_report"},
+        )
+        tool_blocks = [b for b in resp.content if getattr(b, "type", None) == "tool_use"]
+        return tool_blocks[0].input if tool_blocks else None
+
+    # Groq / Ollama (OpenAI-compatible): use JSON-mode and parse the response
+    json_prompt = (
+        compile_prompt
+        + "\n\nRespond with a JSON object only. Required keys: "
+        + "exception_summary, policy_clauses (array), risk_assessment, recommended_action, limitations."
+    )
+    resp = client.chat.completions.create(
+        model=model,
+        max_tokens=max_tokens,
+        temperature=0.0,
+        messages=[{"role": "user", "content": json_prompt}],
+        response_format={"type": "json_object"},
+    )
+    raw = resp.choices[0].message.content or ""
+    # strip any markdown fences the model may add
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = re.sub(r"^```[a-z]*\s*", "", raw, flags=re.MULTILINE)
+        raw = re.sub(r"\s*```$", "", raw)
+    import json as _json  # noqa: PLC0415
+    data = _json.loads(raw)
+    # normalise: policy_clauses must be a list
+    if isinstance(data.get("policy_clauses"), str):
+        data["policy_clauses"] = [data["policy_clauses"]]
+    return data
+
+
+_CITATION_SUFFIX = re.compile(r"\s*\(Source:[^)]*\)\s*$", re.IGNORECASE)
+
+
+def _strip_citation(clause: str) -> str:
+    """Removes a trailing '(Source: <document>, <section>)' annotation before gating.
+
+    Real bug, found while re-running the evaluation after fixing _compile_report: every
+    properly-formatted clause (the schema explicitly asks the model to append this suffix)
+    failed the gate 100% of the time, because '(Source: AP Controls Policy, 4.2)' was split
+    off as its own "sentence" and checked for claim support against the retrieved chunks --
+    which of course never contain their own citation string. The citation is provenance
+    metadata, not a factual claim, and was never meant to be verified against the chunk text."""
+    return _CITATION_SUFFIX.sub("", clause).strip()
+
+
+def _gate_clauses(
+    clauses: list[str], chunks: list[str]
+) -> tuple[list[str], list[dict]]:
+    """Apply the claim-support gate to each policy clause's CONTENT (its trailing citation, if
+    any, is stripped first -- see _strip_citation).
+
+    Clauses where every sentence passes the gate go to `supported` (with the original,
+    citation-included text). Failing clauses go to `flagged` with a per-sentence reason so the
+    caller can audit which specific claim wasn't in the retrieved text.
+    """
+    supported: list[str] = []
+    flagged: list[dict] = []
+    for clause in clauses:
+        sentences = split_sentences(_strip_citation(clause))
+        if not sentences:
+            supported.append(clause)
+            continue
+        clause_reasons: list[str] = []
+        for sent in sentences:
+            result = sentence_support(sent, chunks)
+            ok = (
+                result["numbers_supported"]
+                and result["key_terms_supported"]
+                and result["content_recall"] >= _SUPPORT_MIN_RECALL
+            )
+            if not ok:
+                parts = []
+                if result["missing_number_claims"]:
+                    parts.append(f"unsupported numbers: {result['missing_number_claims']}")
+                if result["missing_key_terms"]:
+                    parts.append(f"unsupported terms: {result['missing_key_terms']}")
+                if result["content_recall"] < _SUPPORT_MIN_RECALL:
+                    parts.append(f"low recall: {result['content_recall']:.0%}")
+                clause_reasons.append("; ".join(parts))
+        if not clause_reasons:
+            supported.append(clause)
+        else:
+            flagged.append({"clause": clause, "reasons": clause_reasons})
+    return supported, flagged
+
+
+def run_audit(
+    case_id: str | None = None,
+    vendor: str | None = None,
+    config_path: str = "config/agent.yaml",
+    client=None,
+) -> AuditResult:
+    if not case_id and not vendor:
+        raise ValueError("At least one of case_id or vendor must be provided.")
+
+    config = load_agent_config(config_path)
+
+    # ── 1. Gather data evidence from P1 ──────────────────────────────────────
+    try:
+        raw_exceptions = get_control_exceptions(vendor=vendor, top_n=20)
+        if case_id and isinstance(raw_exceptions, list):
+            filtered = [
+                e for e in raw_exceptions
+                if isinstance(e, dict) and (
+                    e.get("case_id") == case_id
+                    or e.get("document_id") == case_id
+                    or case_id in str(e.get("evidence", ""))
+                )
+            ]
+            raw_exceptions = filtered or raw_exceptions
+        p1_unavailable = False
+    except OpsPerformanceUnavailable:
+        raw_exceptions = []
+        p1_unavailable = True
+
+    # ── 2. Retrieve relevant policy chunks ───────────────────────────────────
+    policy_query = _build_policy_query(raw_exceptions)
+    try:
+        policy_hits = hybrid_search(policy_query, top_k=6)
+        chunks = [r.text for r in policy_hits]
+        chunk_refs = [r.citation for r in policy_hits]
+    except Exception:
+        chunks = []
+        chunk_refs = []
+
+    # ── 3. LLM compile ───────────────────────────────────────────────────────
+    # Real bug, found re-running the F4 evaluation: this placeholder used to say "(P1 unavailable
+    # or no matching records)" for BOTH states, and the LLM would parrot that exact ambiguous
+    # phrase back into exception_summary even on a clean case where P1 was perfectly reachable and
+    # correctly returned zero exceptions -- conflating "the system failed" with "nothing was found"
+    # right in the prompt, not just in a fallback string.
+    if raw_exceptions:
+        data_text = json.dumps(raw_exceptions[:5], default=str, indent=2)
+    elif p1_unavailable:
+        data_text = "P1 (operations-performance) was unreachable -- no exception data could be retrieved."
+    else:
+        data_text = "No AP control exceptions were found for this case/vendor. State clearly that none were found; do not imply a system failure."
+    policy_text = "\n\n---\n\n".join(
+        f"[{ref}]\n{chunk}" for ref, chunk in zip(chunk_refs, chunks)
+    ) or "No policy clauses retrieved."
+
+    compile_prompt = (
+        "You are compiling an AP controls audit report. "
+        "Do not add any facts beyond what the data evidence and policy context provide.\n\n"
+        f"Audit scope: case_id={case_id!r}, vendor={vendor!r}\n\n"
+        f"## Data evidence (P1 controls layer — treat as ground truth, do not rephrase numbers):\n"
+        f"{data_text}\n\n"
+        f"## Policy context (retrieved from policy documents — only quote what is here):\n"
+        f"{policy_text}\n\n"
+        "Rules:\n"
+        "- policy_clauses must only quote or closely paraphrase the policy context above.\n"
+        "- recommended_action must be a PROPOSAL for human review, not an executed decision.\n"
+        "- limitations MUST state this is an anomaly flag, not proof of fraud or misconduct."
+    )
+
+    report_data: dict | None = None
+    parse_failed = False
+    try:
+        from src.agent.agent import _default_client  # noqa: PLC0415
+        _client = client or _default_client()
+        report_data = _compile_report(_client, config, compile_prompt)
+    except Exception:
+        parse_failed = True
+
+    if report_data is None:
+        parse_failed = True
+        exc_count = len(raw_exceptions)
+        report_data = {
+            "exception_summary": (
+                f"Found {exc_count} exception(s) for "
+                f"{'case ' + case_id if case_id else 'vendor ' + (vendor or '?')}."
+                if exc_count else
+                ("No exception data available (P1 unavailable)." if p1_unavailable
+                 else "No exceptions found for this case/vendor.")
+            ),
+            "policy_clauses": [],
+            "risk_assessment": f"{exc_count} exception(s) found." if raw_exceptions else "No data.",
+            "recommended_action": "Manual review required.",
+            "limitations": (
+                "Report compilation failed (LLM unavailable). "
+                "This is an anomaly flag, not proof of fraud or misconduct."
+            ),
+        }
+
+    # Deterministic override: no exceptions + P1 available → no action warranted.
+    if not raw_exceptions and not p1_unavailable and not parse_failed:
+        report_data["recommended_action"] = (
+            "No AP control exceptions found for this vendor/case. No action required."
+        )
+
+    # Enforce mandatory phrase: limitations must always flag this as an anomaly, not proof of fraud.
+    limitations = report_data.get("limitations", "")
+    _mandatory = "anomaly, not proof of fraud or misconduct"
+    if _mandatory not in limitations.lower():
+        if not any(p in limitations.lower() for p in ["not proof of fraud", "not evidence of fraud", "anomaly"]):
+            limitations = limitations.rstrip(". ") + ". Anomaly flag, not proof of fraud or misconduct."
+            report_data["limitations"] = limitations
+
+    # ── 4. Gate policy_clauses against retrieved policy chunks ───────────────
+    raw_clauses: list[str] = report_data.get("policy_clauses") or []
+    if chunks and raw_clauses:
+        supported_clauses, flagged_clauses = _gate_clauses(raw_clauses, chunks)
+    else:
+        supported_clauses, flagged_clauses = raw_clauses, []
+
+    return AuditResult(
+        report=AuditReport(
+            exception_summary=report_data.get("exception_summary", ""),
+            data_evidence=raw_exceptions,
+            policy_clauses=supported_clauses,
+            flagged_clauses=flagged_clauses,
+            risk_assessment=report_data.get("risk_assessment", ""),
+            recommended_action=report_data.get("recommended_action", ""),
+            limitations=report_data.get("limitations", "Anomaly flag, not proof of fraud or misconduct."),
+            gate_applied=bool(chunks),
+        ),
+        p1_unavailable=p1_unavailable,
+        parse_failed=parse_failed,
+    )

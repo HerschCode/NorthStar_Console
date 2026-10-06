@@ -1,0 +1,526 @@
+[
+  {
+    "question_id": "A001",
+    "category": "planted_exception",
+    "description": "C4 duplicate invoice — same vendor, same amount, 28 days apart",
+    "input": {"vendor": "Acme Supplies"},
+    "mock_p1": [
+      {
+        "control_id": "C4",
+        "vendor": "Acme Supplies",
+        "severity": "high",
+        "exposure_eur": 12450.0,
+        "evidence": "INV-2024-089 matches INV-2024-072: same vendor, EUR 12,450, 28 days apart, same line items"
+      }
+    ],
+    "expected": {
+      "controls": ["C4"],
+      "clause_keywords": ["duplicate"],
+      "recommendation_keywords": ["hold", "payment"],
+      "no_fraud_claim": true,
+      "abstain": false
+    }
+  },
+  {
+    "question_id": "A002",
+    "category": "planted_exception",
+    "description": "C1 three-way match violation — invoice EUR 500 above PO+GR",
+    "input": {"case_id": "INV-2024-211"},
+    "mock_p1": [
+      {
+        "control_id": "C1",
+        "vendor": "TechParts GmbH",
+        "severity": "medium",
+        "exposure_eur": 500.0,
+        "evidence": "INV-2024-211: invoice EUR 18,500 vs PO EUR 18,000 — variance EUR 500 exceeds 3.3% / EUR 150 tolerance"
+      }
+    ],
+    "expected": {
+      "controls": ["C1"],
+      "clause_keywords": ["three-way match", "tolerance"],
+      "recommendation_keywords": ["review", "hold"],
+      "no_fraud_claim": true,
+      "abstain": false
+    }
+  },
+  {
+    "question_id": "A003",
+    "category": "planted_exception",
+    "description": "C3 approval-threshold splitting — two invoices from same vendor totalling $19,800 within 7 days",
+    "input": {"vendor": "Office Depot"},
+    "mock_p1": [
+      {
+        "control_id": "C3",
+        "vendor": "Office Depot",
+        "severity": "high",
+        "exposure_eur": 19800.0,
+        "evidence": "INV-2024-301 (EUR 9,900) and INV-2024-302 (EUR 9,850) submitted by same requester within 7 days; combined EUR 19,750 exceeds $10k threshold"
+      }
+    ],
+    "expected": {
+      "controls": ["C3"],
+      "clause_keywords": ["threshold", "splitting"],
+      "recommendation_keywords": ["review", "hold"],
+      "no_fraud_claim": true,
+      "abstain": false
+    }
+  },
+  {
+    "question_id": "A004",
+    "category": "planted_exception",
+    "description": "C5 SoD violation — AP Clerk who created invoice also removed payment block",
+    "input": {"case_id": "INV-2024-188"},
+    "mock_p1": [
+      {
+        "control_id": "C5",
+        "vendor": "Logistics Partners",
+        "severity": "critical",
+        "exposure_eur": 45000.0,
+        "evidence": "User JSMITH created invoice INV-2024-188 on 2024-09-10 and removed payment block on same document on 2024-09-12 — SOD-04 violation"
+      }
+    ],
+    "expected": {
+      "controls": ["C5"],
+      "clause_keywords": ["segregation", "payment block", "SOD"],
+      "recommendation_keywords": ["escalate", "review", "hold"],
+      "no_fraud_claim": true,
+      "abstain": false
+    }
+  },
+  {
+    "question_id": "A005",
+    "category": "planted_exception",
+    "description": "C6 Benford's law anomaly — leading digit 9 at 41% vs expected 4.6%",
+    "input": {"vendor": "FastPrint Ltd"},
+    "mock_p1": [
+      {
+        "control_id": "C6",
+        "vendor": "FastPrint Ltd",
+        "severity": "medium",
+        "exposure_eur": 8300.0,
+        "evidence": "Q3 Benford screen: leading digit 9 appears in 41% of invoices (expected 4.6%); 14 invoices reviewed"
+      }
+    ],
+    "expected": {
+      "controls": ["C6"],
+      "clause_keywords": ["benford", "anomaly", "screening"],
+      "recommendation_keywords": ["review", "investigate"],
+      "no_fraud_claim": true,
+      "abstain": false
+    }
+  },
+  {
+    "question_id": "A006",
+    "category": "planted_exception",
+    "description": "C4 duplicate invoice — different document IDs, same vendor and amount, 18 days apart",
+    "input": {"vendor": "CleanPro Services"},
+    "mock_p1": [
+      {
+        "control_id": "C4",
+        "vendor": "CleanPro Services",
+        "severity": "high",
+        "exposure_eur": 3200.0,
+        "evidence": "INV-2024-441 (EUR 3,200) and INV-2024-467 (EUR 3,200) from same vendor, 18 days apart — duplicate flag triggered"
+      }
+    ],
+    "expected": {
+      "controls": ["C4"],
+      "clause_keywords": ["duplicate"],
+      "recommendation_keywords": ["hold", "review"],
+      "no_fraud_claim": true,
+      "abstain": false
+    }
+  },
+  {
+    "question_id": "A007",
+    "category": "planted_exception",
+    "description": "C2 invoice before goods receipt — invoice posted 5 days before GR",
+    "input": {"case_id": "INV-2024-355"},
+    "mock_p1": [
+      {
+        "control_id": "C2",
+        "vendor": "Nordic Steel",
+        "severity": "medium",
+        "exposure_eur": 22000.0,
+        "evidence": "INV-2024-355 posted 2024-08-01; GR recorded 2024-08-06 — invoice precedes goods receipt by 5 days"
+      }
+    ],
+    "expected": {
+      "controls": ["C2"],
+      "clause_keywords": ["goods receipt", "invoice"],
+      "recommendation_keywords": ["hold", "review"],
+      "no_fraud_claim": true,
+      "abstain": false
+    }
+  },
+  {
+    "question_id": "A008",
+    "category": "planted_exception",
+    "description": "C1 + C4 compound — both three-way match violation and duplicate flag on same vendor",
+    "input": {"vendor": "Meridian Consulting"},
+    "mock_p1": [
+      {
+        "control_id": "C1",
+        "vendor": "Meridian Consulting",
+        "severity": "high",
+        "exposure_eur": 750.0,
+        "evidence": "INV-2024-500: variance EUR 750 exceeds tolerance"
+      },
+      {
+        "control_id": "C4",
+        "vendor": "Meridian Consulting",
+        "severity": "high",
+        "exposure_eur": 15000.0,
+        "evidence": "INV-2024-500 matches INV-2024-488 (same vendor, EUR 15,000, 12 days apart)"
+      }
+    ],
+    "expected": {
+      "controls": ["C1", "C4"],
+      "clause_keywords": ["duplicate", "match"],
+      "recommendation_keywords": ["hold"],
+      "no_fraud_claim": true,
+      "abstain": false
+    }
+  },
+  {
+    "question_id": "A009",
+    "category": "planted_exception",
+    "description": "C4 duplicate — within EUR 1 tolerance; low exposure",
+    "input": {"vendor": "Stationery World"},
+    "mock_p1": [
+      {
+        "control_id": "C4",
+        "vendor": "Stationery World",
+        "severity": "low",
+        "exposure_eur": 420.0,
+        "evidence": "INV-2024-601 (EUR 420.00) and INV-2024-598 (EUR 420.50) — EUR 0.50 difference, within EUR 1 tolerance; flagged by auto-block"
+      }
+    ],
+    "expected": {
+      "controls": ["C4"],
+      "clause_keywords": ["duplicate"],
+      "recommendation_keywords": ["review", "hold"],
+      "no_fraud_claim": true,
+      "abstain": false
+    }
+  },
+  {
+    "question_id": "A010",
+    "category": "planted_exception",
+    "description": "C5 SoD + C3 threshold splitting — compound exception with critical severity",
+    "input": {"vendor": "Alpha Corp"},
+    "mock_p1": [
+      {
+        "control_id": "C5",
+        "vendor": "Alpha Corp",
+        "severity": "critical",
+        "exposure_eur": 28000.0,
+        "evidence": "AP Clerk RBROWN removed payment block on INV-2024-700 which they also created — SOD-04 violation"
+      },
+      {
+        "control_id": "C3",
+        "vendor": "Alpha Corp",
+        "severity": "high",
+        "exposure_eur": 28000.0,
+        "evidence": "Two invoices from Alpha Corp: EUR 14,200 and EUR 13,800 within 6 days, same requester RBROWN"
+      }
+    ],
+    "expected": {
+      "controls": ["C5", "C3"],
+      "clause_keywords": ["payment block", "threshold"],
+      "recommendation_keywords": ["escalate", "hold"],
+      "no_fraud_claim": true,
+      "abstain": false
+    }
+  },
+  {
+    "question_id": "B001",
+    "category": "clean_case",
+    "description": "Clean case — no exceptions, all three-way matches pass",
+    "input": {"vendor": "Reliable Supplies Co"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": [],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": true
+    }
+  },
+  {
+    "question_id": "B002",
+    "category": "clean_case",
+    "description": "Clean case — vendor with high invoice volume, no flags",
+    "input": {"vendor": "Global Logistics"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": [],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": true
+    }
+  },
+  {
+    "question_id": "B003",
+    "category": "clean_case",
+    "description": "Clean case — recent new vendor, single invoice, no exceptions",
+    "input": {"case_id": "INV-2024-999"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": [],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": true
+    }
+  },
+  {
+    "question_id": "B004",
+    "category": "clean_case",
+    "description": "Clean case — small invoice below self-approval threshold, no exceptions",
+    "input": {"case_id": "INV-2024-100"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": [],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": true
+    }
+  },
+  {
+    "question_id": "B005",
+    "category": "clean_case",
+    "description": "Clean vendor — all invoices match, Benford screen passed",
+    "input": {"vendor": "SafeVendor Inc"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": [],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": true
+    }
+  },
+  {
+    "question_id": "B006",
+    "category": "clean_case",
+    "description": "Clean case — three-way match within EUR 150 tolerance (passes)",
+    "input": {"case_id": "INV-2024-200"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": [],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": true
+    }
+  },
+  {
+    "question_id": "B007",
+    "category": "clean_case",
+    "description": "Clean vendor — invoices spread over 60 days, no duplicate pattern",
+    "input": {"vendor": "Trusted Parts Co"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": [],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": true
+    }
+  },
+  {
+    "question_id": "B008",
+    "category": "clean_case",
+    "description": "Clean case — goods receipt confirmed before invoice, no exceptions",
+    "input": {"case_id": "INV-2024-300"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": [],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": true
+    }
+  },
+  {
+    "question_id": "B009",
+    "category": "clean_case",
+    "description": "Clean vendor — multiple invoices, all below $10k, different requesters",
+    "input": {"vendor": "TechSupply Direct"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": [],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": true
+    }
+  },
+  {
+    "question_id": "B010",
+    "category": "clean_case",
+    "description": "Clean case — invoice cleared by different person from creator (SoD satisfied)",
+    "input": {"case_id": "INV-2024-400"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": [],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": true
+    }
+  },
+  {
+    "question_id": "C001",
+    "category": "policy_only",
+    "description": "Who may remove a payment block?",
+    "input": {"vendor": "POLICY-QUERY-001"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": ["supervisor", "manager", "director"],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": false,
+      "policy_question": "Who may remove a payment block?"
+    }
+  },
+  {
+    "question_id": "C002",
+    "category": "policy_only",
+    "description": "What is the EUR tolerance for three-way match discrepancies?",
+    "input": {"vendor": "POLICY-QUERY-002"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": ["150", "3.3", "tolerance"],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": false,
+      "policy_question": "What is the EUR tolerance for three-way match discrepancies?"
+    }
+  },
+  {
+    "question_id": "C003",
+    "category": "policy_only",
+    "description": "Define SOD-04",
+    "input": {"vendor": "POLICY-QUERY-003"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": ["SOD-04", "invoice", "payment block"],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": false,
+      "policy_question": "What is SOD-04 and what does it prohibit?"
+    }
+  },
+  {
+    "question_id": "C004",
+    "category": "policy_only",
+    "description": "When does a duplicate invoice trigger an auto-block?",
+    "input": {"vendor": "POLICY-QUERY-004"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": ["duplicate", "30 days", "amount"],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": false,
+      "policy_question": "When does a duplicate invoice trigger an automated payment block?"
+    }
+  },
+  {
+    "question_id": "C005",
+    "category": "policy_only",
+    "description": "What is the secondary approval threshold for purchase requisitions?",
+    "input": {"vendor": "POLICY-QUERY-005"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": ["10,000", "$10k", "10k", "secondary"],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": false,
+      "policy_question": "What purchase value triggers secondary approval?"
+    }
+  },
+  {
+    "question_id": "C006",
+    "category": "policy_only",
+    "description": "How long may a temporary SoD exception last?",
+    "input": {"vendor": "POLICY-QUERY-006"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": ["5 business days", "business days"],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": false,
+      "policy_question": "What is the maximum duration of a temporary segregation of duties exception?"
+    }
+  },
+  {
+    "question_id": "C007",
+    "category": "policy_only",
+    "description": "How often does Benford screening run?",
+    "input": {"vendor": "POLICY-QUERY-007"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": ["quarterly"],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": false,
+      "policy_question": "How frequently is Benford's law screening performed?"
+    }
+  },
+  {
+    "question_id": "C008",
+    "category": "policy_only",
+    "description": "Can the requester also clear the invoice?",
+    "input": {"vendor": "POLICY-QUERY-008"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": ["SOD-06", "requester", "clear", "prohibited"],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": false,
+      "policy_question": "Is it permitted for the requester to also clear the invoice for payment?"
+    }
+  },
+  {
+    "question_id": "C009",
+    "category": "policy_only",
+    "description": "Who approves duplicate-alert resolution?",
+    "input": {"vendor": "POLICY-QUERY-009"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": ["supervisor", "manager"],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": false,
+      "policy_question": "Who is authorised to approve resolution of a duplicate invoice alert?"
+    }
+  },
+  {
+    "question_id": "C010",
+    "category": "policy_only",
+    "description": "What is the invoice-before-GR rule and when is it an exception?",
+    "input": {"vendor": "POLICY-QUERY-010"},
+    "mock_p1": [],
+    "expected": {
+      "controls": [],
+      "clause_keywords": ["goods receipt", "exception", "approval"],
+      "recommendation_keywords": [],
+      "no_fraud_claim": true,
+      "abstain": false,
+      "policy_question": "Under what circumstances may an invoice be recorded before goods receipt?"
+    }
+  }
+]

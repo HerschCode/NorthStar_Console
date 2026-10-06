@@ -1,0 +1,35 @@
+# Runs operations-assistant standalone. It still needs a running operations-performance
+# instance to actually answer data questions (OPS_PERFORMANCE_API_URL) -- this file
+# expects it running on the host, reached via host.docker.internal (the extra_hosts
+# entry below makes that resolve on Linux too, where it isn't automatic like on
+# Mac/Windows). operations-performance does now have its own Dockerfile; the
+# llm-security-gateway repo's docker-compose.trilogy.yml is the shared-network version
+# that runs both projects (plus a Postgres container) together instead of expecting
+# operations-performance on the host -- use that for a full local trilogy run.
+
+services:
+  operations-assistant:
+    build: .
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      # Overridable default -- set OPS_PERFORMANCE_API_URL in .env to point elsewhere
+      # (a real deployed URL, a shared Docker network's service name, etc.)
+      OPS_PERFORMANCE_API_URL: ${OPS_PERFORMANCE_API_URL:-http://host.docker.internal:8000}
+      CHROMA_PERSIST_DIR: /app/data/chroma
+      # Local development only: with no API_KEY/API_KEYS set, the API now refuses requests
+      # (503) unless this is 1. Never set it on a deployed service.
+      ALLOW_UNAUTHENTICATED: ${ALLOW_UNAUTHENTICATED:-1}
+    volumes:
+      # Vector store persists across container restarts -- without this, every restart
+      # would need scripts/index_documents.py run again before /chat could answer
+      # policy questions.
+      - ./data/chroma:/app/data/chroma
+      # Documents mounted read-only: the container can read them for indexing but
+      # shouldn't be the place documents get edited.
+      - ./data/documents:/app/data/documents:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

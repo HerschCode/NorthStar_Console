@@ -1,0 +1,81 @@
+# Changelog
+
+## Unreleased
+
+- **Free-model chain: Gemini (Google AI Studio) + Groq, two keys only** (`src/v1/free_llm.py`, `src/v1/limits.py`, `config/free_models.yaml`,
+  `docs/free-models.md`). Limits are parsed from each provider's 429 (scope: minute / day / tokens / request size, and when it clears),
+  persisted as cooldowns (SQLite, or Firestore with `P2_USAGE_BACKEND=firestore`), enforced as optional soft caps, and surfaced to the
+  user in plain words; a model the key cannot call is remembered and skipped. `GET /v1/limits`, `scripts/check_free_models.py`. Vertex AI
+  is wired but off. The rule parser answers NL filters first, so the model is asked only when the rules find nothing.
+
+- **Round 10: `/v1` copilot API** (`src/v1/`, `docs/v1-copilot-api.md`): context-aware `/v1/ask` with claim-level
+  verification against numbered evidence, persisted investigations (Markdown/PDF export), executive briefing with fact-id
+  checks, schema-validated natural-language filters, an intervention ledger routed through P3's action firewall with
+  separation of duties and write-back to P1, per-request traces, and a persisted spend guard (429 on exhaustion).
+  The new-surface evals (`scripts/eval_v1_ask.py`, `scripts/eval_v1_nl_filter.py`) are written; the model-backed runs are pending a key.
+
+- Added Gemini as an injectable LLM-gate evaluation provider and tightened parsing so
+  truncated or malformed labels are retried/fail closed, not counted as successful blocks.
+- Excluded API/parse failures from judge classification metrics and report them separately.
+- Added a SHA-256-bound frozen retrieval-context snapshot for repeatable gate evaluation.
+- Updated Gemini's default judge model and stopped retrying permanent provider 4xx errors;
+  the configured AI Studio project currently denies generation access (403). Each result
+  now persists immediately, and `--resume` retries operational failures.
+- Removed Anthropic from the public demo's provider choices and restricted both demo chat
+  endpoints to Groq/Gemini, defaulting omitted provider selections to Groq. The question
+  guide now has a clear scroll affordance and its own visible, height-limited scrollbar.
+
+## v1.0.0 -- Freeze
+
+All 24 originally-planned phases have been touched; 22 are genuinely complete (Phase 19 remains
+an explicit first pass, documented as such in `docs/evaluation.md`). Phases 25-31 (audit,
+correctness cross-checks, end-to-end scenarios, agent-report tooling, performance, and this
+production-readiness review) are also complete. This is the frozen v1.0 baseline.
+
+**To actually tag this once the repo is under real git version control:**
+```
+git init   # if not already
+git add -A && git commit -m "v1.0.0 -- Operations Assistant"
+git tag -a v1.0.0 -m "Frozen baseline after Phases 13-31"
+```
+
+### What's in v1.0.0
+- Document ingestion: 4 real synthetic policy documents, section-aware chunking, local embeddings,
+  Chroma vector store, safe re-indexing
+- Retrieval with a real evaluation set and citation formatting
+- 6 controlled, input-validated tools wrapping `operations-performance`'s API
+- Agent orchestration with an enforced tool-call budget, full turn/round/tool-call logging
+- Investigation mode with structured JSON-report compilation and defensive parsing (fenced JSON,
+  invalid JSON, missing keys all handled without crashing)
+- Structural (not just prompt-based) anti-injection defense, proven by regression test
+- Dockerfile with a real health check, docker-compose bridging to the companion project
+- 5 canonical end-to-end business scenarios traced through real code (2 with a real ephemeral
+  vector store and real retrieval, not mocked)
+- 103 tests, all passing
+
+### Real bugs found and fixed during the build (kept for the record)
+1. `load_all_documents()` was indexing `README.md` as if it were a policy document
+2. A `get_management_report` draft awkwardly bypassed the client module instead of extending it
+   properly -- caught and fixed before shipping, not after
+3. `load_agent_config()` silently dropped the nested `investigation:` config section
+4. A fragile monkeypatch-based config override was recognized as wrong and replaced with a
+   proper `config_override` parameter before any test was written against the fragile version
+5. `config/tools.yaml`'s `max_result_rows` was documentation-only for 4 phases -- never enforced
+   in code until Phase 20
+6. `client.py` never caught `json.JSONDecodeError` -- a malformed 200 response would crash
+   instead of degrading to the same clean error every other failure mode produced
+7. A `caplog`-vs-`capsys` testing lesson: `configure_logging()` clears handlers `caplog` relies on
+8. Every documented script invocation was broken (`python scripts/index_documents.py` failed on
+   import) -- the same class of bug the companion project's Phase 30 found, checked here and
+   confirmed present, fixed the same way
+
+### Known limitations, stated plainly
+- No conversational context across `/chat` turns yet (`conversation_id` accepted, not yet used)
+- No automated citation-correctness or groundedness scoring (Phase 19's explicit gap)
+- No real load/concurrency testing (Phase 23's explicit gap -- this environment can't run a live
+  server to test against)
+- No cost/token tracking (needs a real API key to have real numbers to track)
+- **Never run against a real `ANTHROPIC_API_KEY` or a live `operations-performance` instance** --
+  every test mocks the LLM and/or the downstream API. This is the one thing every phase since 17
+  has pointed at with increasing specificity, and it remains the single most important unknown
+  in this entire project.

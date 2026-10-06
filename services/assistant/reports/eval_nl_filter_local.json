@@ -1,0 +1,493 @@
+{
+ "model": "ollama:qwen2.5:7b-instruct",
+ "label": "local 7B pipeline proof: a free, weak model run through the real pipeline. Not a headline result and not comparable with a Claude run.",
+ "accuracy": 0.525,
+ "n": 40,
+ "failures_by_kind": {
+  "rejected a valid request": 4,
+  "added constraints the user did not ask for": 14,
+  "wrong target or values": 1
+ },
+ "rows": [
+  {
+   "q": "Show me orders above 50k",
+   "ok": false,
+   "kind": "rejected a valid request",
+   "expected": {
+    "min_value": 50000
+   },
+   "got": "REJECT",
+   "source": "model"
+  },
+  {
+   "q": "cases worth more than 10,000 euros",
+   "ok": true,
+   "kind": null,
+   "expected": {
+    "min_value": 10000
+   },
+   "got": {
+    "min_value": 10000
+   },
+   "source": "model"
+  },
+  {
+   "q": "high value orders over \u20ac250k",
+   "ok": true,
+   "kind": null,
+   "expected": {
+    "min_value": 250000
+   },
+   "got": {
+    "min_value": 250000
+   },
+   "source": "model"
+  },
+  {
+   "q": "anything over 1.5 million",
+   "ok": false,
+   "kind": "rejected a valid request",
+   "expected": {
+    "min_value": 1500000
+   },
+   "got": "REJECT",
+   "source": "model"
+  },
+  {
+   "q": "orders for supplier vendorID_0108",
+   "ok": false,
+   "kind": "added constraints the user did not ask for",
+   "expected": {
+    "supplier": "vendorID_0108"
+   },
+   "got": {
+    "supplier": "vendorID_0108",
+    "stage": "order"
+   },
+   "source": "model"
+  },
+  {
+   "q": "what is open for vendorID_0472 above 5000",
+   "ok": false,
+   "kind": "added constraints the user did not ask for",
+   "expected": {
+    "supplier": "vendorID_0472",
+    "min_value": 5000
+   },
+   "got": {
+    "min_value": 5000,
+    "supplier": "vendorID_0472",
+    "stage": "order"
+   },
+   "source": "model"
+  },
+  {
+   "q": "cases stuck in invoicing",
+   "ok": true,
+   "kind": null,
+   "expected": {
+    "stage": "invoicing"
+   },
+   "got": {
+    "stage": "invoicing"
+   },
+   "source": "model"
+  },
+  {
+   "q": "orders waiting at goods receipt",
+   "ok": true,
+   "kind": null,
+   "expected": {
+    "stage": "receipt"
+   },
+   "got": {
+    "stage": "receipt"
+   },
+   "source": "model"
+  },
+  {
+   "q": "open cases in approval",
+   "ok": false,
+   "kind": "added constraints the user did not ask for",
+   "expected": {
+    "stage": "approval"
+   },
+   "got": {
+    "stage": "approval",
+    "min_value": 0
+   },
+   "source": "model"
+  },
+  {
+   "q": "cases with a payment block",
+   "ok": true,
+   "kind": null,
+   "expected": {
+    "stage": "block"
+   },
+   "got": {
+    "stage": "block"
+   },
+   "source": "model"
+  },
+  {
+   "q": "top 10 cases",
+   "ok": true,
+   "kind": null,
+   "expected": {
+    "limit": 10
+   },
+   "got": {
+    "limit": 10
+   },
+   "source": "model"
+  },
+  {
+   "q": "show the 25 worst orders",
+   "ok": false,
+   "kind": "added constraints the user did not ask for",
+   "expected": {
+    "limit": 25
+   },
+   "got": {
+    "stage": "order",
+    "limit": 25,
+    "min_value": 0
+   },
+   "source": "model"
+  },
+  {
+   "q": "top 5 invoicing cases above 20k",
+   "ok": true,
+   "kind": null,
+   "expected": {
+    "stage": "invoicing",
+    "min_value": 20000,
+    "limit": 5
+   },
+   "got": {
+    "stage": "invoicing",
+    "min_value": 20000,
+    "limit": 5
+   },
+   "source": "model"
+  },
+  {
+   "q": "show me the first 50 cases at goods receipt",
+   "ok": true,
+   "kind": null,
+   "expected": {
+    "stage": "receipt",
+    "limit": 50
+   },
+   "got": {
+    "stage": "receipt",
+    "limit": 50
+   },
+   "source": "model"
+  },
+  {
+   "q": "orders over 100000 in the approval stage",
+   "ok": true,
+   "kind": null,
+   "expected": {
+    "stage": "approval",
+    "min_value": 100000
+   },
+   "got": {
+    "min_value": 100000,
+    "stage": "approval"
+   },
+   "source": "model"
+  },
+  {
+   "q": "what's at risk for supplier vendorID_0364",
+   "ok": false,
+   "kind": "rejected a valid request",
+   "expected": {
+    "supplier": "vendorID_0364"
+   },
+   "got": "REJECT",
+   "source": "model"
+  },
+  {
+   "q": "orders in order creation stage",
+   "ok": false,
+   "kind": "added constraints the user did not ask for",
+   "expected": {
+    "stage": "order"
+   },
+   "got": {
+    "stage": "order",
+    "min_value": 0
+   },
+   "source": "model"
+  },
+  {
+   "q": "cases being changed or renegotiated",
+   "ok": false,
+   "kind": "added constraints the user did not ask for",
+   "expected": {
+    "stage": "changes"
+   },
+   "got": {
+    "stage": "changes",
+    "limit": 50
+   },
+   "source": "model"
+  },
+  {
+   "q": "clearing and payment stage orders",
+   "ok": false,
+   "kind": "added constraints the user did not ask for",
+   "expected": {
+    "stage": "payment"
+   },
+   "got": {
+    "stage": "payment",
+    "min_value": 0
+   },
+   "source": "model"
+  },
+  {
+   "q": "orders worth at least 75k",
+   "ok": true,
+   "kind": null,
+   "expected": {
+    "min_value": 75000
+   },
+   "got": {
+    "min_value": 75000
+   },
+   "source": "model"
+  },
+  {
+   "q": "rank suppliers by breach rate",
+   "ok": true,
+   "kind": null,
+   "expected": {
+    "sort": "breach_rate"
+   },
+   "got": {
+    "sort": "breach_rate"
+   },
+   "source": "model"
+  },
+  {
+   "q": "suppliers with the worst breach rates",
+   "ok": false,
+   "kind": "added constraints the user did not ask for",
+   "expected": {
+    "sort": "breach_rate"
+   },
+   "got": {
+    "sort": "breach_rate",
+    "min_n": 10
+   },
+   "source": "model"
+  },
+  {
+   "q": "which suppliers have the most expected loss",
+   "ok": false,
+   "kind": "added constraints the user did not ask for",
+   "expected": {
+    "sort": "expected_loss"
+   },
+   "got": {
+    "sort": "expected_loss",
+    "min_n": 100
+   },
+   "source": "model"
+  },
+  {
+   "q": "busiest suppliers by volume",
+   "ok": false,
+   "kind": "added constraints the user did not ask for",
+   "expected": {
+    "sort": "volume"
+   },
+   "got": {
+    "sort": "volume",
+    "min_n": 100
+   },
+   "source": "model"
+  },
+  {
+   "q": "suppliers with at least 50 cases",
+   "ok": true,
+   "kind": null,
+   "expected": {
+    "min_n": 50
+   },
+   "got": {
+    "min_n": 50
+   },
+   "source": "model"
+  },
+  {
+   "q": "suppliers with more than 30 closed cases ranked by volume",
+   "ok": true,
+   "kind": null,
+   "expected": {
+    "min_n": 30,
+    "sort": "volume"
+   },
+   "got": {
+    "sort": "volume",
+    "min_n": 30
+   },
+   "source": "model"
+  },
+  {
+   "q": "list suppliers",
+   "ok": false,
+   "kind": "added constraints the user did not ask for",
+   "expected": {},
+   "got": {
+    "sort": "ci_lower",
+    "min_n": 1
+   },
+   "source": "model"
+  },
+  {
+   "q": "suppliers sorted by exposure with at least 10 cases",
+   "ok": true,
+   "kind": null,
+   "expected": {
+    "sort": "expected_loss",
+    "min_n": 10
+   },
+   "got": {
+    "sort": "expected_loss",
+    "min_n": 10
+   },
+   "source": "model"
+  },
+  {
+   "q": "how do suppliers rank statistically",
+   "ok": false,
+   "kind": "wrong target or values",
+   "expected": {
+    "sort": "ci_lower"
+   },
+   "got": {
+    "sort": "expected_loss",
+    "min_n": 100
+   },
+   "source": "model"
+  },
+  {
+   "q": "all open cases",
+   "ok": false,
+   "kind": "added constraints the user did not ask for",
+   "expected": {},
+   "got": {
+    "stage": "order",
+    "min_value": 0
+   },
+   "source": "model"
+  },
+  {
+   "q": "orders above fifty thousand euros",
+   "ok": true,
+   "kind": null,
+   "expected": {
+    "min_value": 50000
+   },
+   "got": {
+    "min_value": 50000
+   },
+   "source": "model"
+  },
+  {
+   "q": "the twenty biggest cases",
+   "ok": true,
+   "kind": null,
+   "expected": {
+    "limit": 20
+   },
+   "got": {
+    "limit": 20
+   },
+   "source": "model"
+  },
+  {
+   "q": "cases over 2 million euros",
+   "ok": false,
+   "kind": "rejected a valid request",
+   "expected": {
+    "min_value": 2000000
+   },
+   "got": "REJECT",
+   "source": "model"
+  },
+  {
+   "q": "orders for vendorID_0001 stuck at receipt",
+   "ok": false,
+   "kind": "added constraints the user did not ask for",
+   "expected": {
+    "supplier": "vendorID_0001",
+    "stage": "receipt"
+   },
+   "got": {
+    "min_value": 0,
+    "supplier": "vendorID_0001",
+    "stage": "receipt"
+   },
+   "source": "model"
+  },
+  {
+   "q": "show orders due next week",
+   "ok": true,
+   "kind": null,
+   "expected": "REJECT",
+   "got": "REJECT",
+   "source": "rules"
+  },
+  {
+   "q": "only cases assigned to Maria",
+   "ok": true,
+   "kind": null,
+   "expected": "REJECT",
+   "got": "REJECT",
+   "source": "rules"
+  },
+  {
+   "q": "orders from German suppliers",
+   "ok": true,
+   "kind": null,
+   "expected": "REJECT",
+   "got": "REJECT",
+   "source": "rules"
+  },
+  {
+   "q": "cases created in March",
+   "ok": true,
+   "kind": null,
+   "expected": "REJECT",
+   "got": "REJECT",
+   "source": "rules"
+  },
+  {
+   "q": "orders above 10k from suppliers in Europe",
+   "ok": true,
+   "kind": null,
+   "expected": "REJECT",
+   "got": "REJECT",
+   "source": "rules"
+  },
+  {
+   "q": "suppliers ranked by exposure",
+   "ok": false,
+   "kind": "added constraints the user did not ask for",
+   "expected": {
+    "sort": "expected_loss"
+   },
+   "got": {
+    "sort": "expected_loss",
+    "min_n": 100
+   },
+   "source": "model"
+  }
+ ]
+}

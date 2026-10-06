@@ -1,0 +1,2388 @@
+{
+  "design": "Evaluate the answer gate as a CLASSIFIER against labeled answers, not as a \"coverage\" number.\n\nWhy: the earlier calibration counted every blocked in-domain answer as either a caught hallucination or an\nover-block using the NLI scores themselves (circular), and its OOD set had empty answers (the gate fired on the\nempty-answer rule, never on NLI). Here every answer has a label that does not come from the gate:\n\n- correct (32): the stored in-domain answers (data/evaluation/faithfulness_results.json), each hand-checked\n  against the policy documents (data/evaluation/gate_labels.json; same author -- disclosed).\n- wrong_fact (32): each correct answer with ONE claim deterministically mutated (a number changed, or a key term\n  swapped: team, frequency, yes/no, role) -- the realistic in-domain hallucination.\n- off_context (32): each correct answer scored against the chunks retrieved for a DIFFERENT, unrelated question --\n  an answer the retrieved evidence does not support.\n\nGates compared (an answer PASSES or is BLOCKED):\n- nli@t: deployed gate. Sentence grounded if max NLI entailment >= 0.5; answer passes if the fraction of grounded\n  sentences >= t (deployed t = 0.05).\n- support@r: new lexical claim-support gate (src/evaluation/claim_support.py). Every number must occur in the chunks attached to the same\n  unit, every key term (name/team/role/frequency) must occur, and >= r of its content words must too; answer passes if every sentence is supported.\n- support+nli: support@r AND no sentence with NLI contradiction >= 0.9 unless it is also lexically supported\n  (i.e. NLI can veto only unsupported sentences).\nr is chosen on the ODD question ids only; all results are reported on the EVEN ids (held out) and on all.\n\n",
+  "chosen_support_recall": 0.4,
+  "tuning_curve_odd_ids": {
+    "0.0": 0.7709999999999999,
+    "0.05": 0.7709999999999999,
+    "0.1": 0.7709999999999999,
+    "0.15": 0.7709999999999999,
+    "0.2": 0.7709999999999999,
+    "0.25": 0.7919999999999999,
+    "0.3": 0.7919999999999999,
+    "0.35": 0.7919999999999999,
+    "0.4": 0.8126666666666665,
+    "0.45": 0.8126666666666665,
+    "0.5": 0.8126666666666665,
+    "0.55": 0.8126666666666665,
+    "0.6": 0.8126666666666665,
+    "0.65": 0.8126666666666665,
+    "0.7": 0.8123333333333335,
+    "0.75": 0.8123333333333335,
+    "0.8": 0.8126666666666665,
+    "0.85": 0.7706666666666667,
+    "0.9": 0.7293333333333333,
+    "0.95": 0.7293333333333333
+  },
+  "gates": {
+    "nli@0.05 (deployed)": {
+      "held_out_even_ids": {
+        "correct_pass_rate": 0.875,
+        "wrong_fact_pass_rate": 0.5,
+        "off_context_pass_rate": 0.062,
+        "n": 48
+      },
+      "all": {
+        "correct_pass_rate": 0.875,
+        "wrong_fact_pass_rate": 0.594,
+        "off_context_pass_rate": 0.125,
+        "n": 96
+      }
+    },
+    "nli@0.5": {
+      "held_out_even_ids": {
+        "correct_pass_rate": 0.812,
+        "wrong_fact_pass_rate": 0.438,
+        "off_context_pass_rate": 0.0,
+        "n": 48
+      },
+      "all": {
+        "correct_pass_rate": 0.812,
+        "wrong_fact_pass_rate": 0.5,
+        "off_context_pass_rate": 0.062,
+        "n": 96
+      }
+    },
+    "nli@1.0": {
+      "held_out_even_ids": {
+        "correct_pass_rate": 0.625,
+        "wrong_fact_pass_rate": 0.125,
+        "off_context_pass_rate": 0.0,
+        "n": 48
+      },
+      "all": {
+        "correct_pass_rate": 0.562,
+        "wrong_fact_pass_rate": 0.219,
+        "off_context_pass_rate": 0.031,
+        "n": 96
+      }
+    },
+    "support@0.4": {
+      "held_out_even_ids": {
+        "correct_pass_rate": 0.75,
+        "wrong_fact_pass_rate": 0.188,
+        "off_context_pass_rate": 0.062,
+        "n": 48
+      },
+      "all": {
+        "correct_pass_rate": 0.75,
+        "wrong_fact_pass_rate": 0.25,
+        "off_context_pass_rate": 0.031,
+        "n": 96
+      }
+    },
+    "no gate": {
+      "held_out_even_ids": {
+        "correct_pass_rate": 1.0,
+        "wrong_fact_pass_rate": 1.0,
+        "off_context_pass_rate": 1.0,
+        "n": 48
+      },
+      "all": {
+        "correct_pass_rate": 1.0,
+        "wrong_fact_pass_rate": 1.0,
+        "off_context_pass_rate": 1.0,
+        "n": 96
+      }
+    }
+  },
+  "rows": [
+    {
+      "id": 1,
+      "label": "correct",
+      "answer": "The approval target for standard purchase orders is **within 5 business days of requisition submission**.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.00436736922711134
+        ],
+        "contra": [
+          0.011003512889146805
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          1.0
+        ]
+      }
+    },
+    {
+      "id": 1,
+      "label": "wrong_fact",
+      "answer": "The approval target for standard purchase orders is **within 7 business days of requisition submission**.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.002703694626688957
+        ],
+        "contra": [
+          0.012762309052050114
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          1.0
+        ]
+      }
+    },
+    {
+      "id": 1,
+      "label": "off_context",
+      "answer": "The approval target for standard purchase orders is **within 5 business days of requisition submission**.",
+      "partner": 2,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.0009656554902903736
+        ],
+        "contra": [
+          0.033420201390981674
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.75
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "label": "correct",
+      "answer": "The SLA target for 3‑way match category orders is **10 business days**.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.976440966129303
+        ],
+        "contra": [
+          0.13436447083950043
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          1.0
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "label": "wrong_fact",
+      "answer": "The SLA target for 3‑way match category orders is **15 business days**.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.027749964967370033
+        ],
+        "contra": [
+          0.7134932279586792
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          1.0
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "label": "off_context",
+      "answer": "The SLA target for 3‑way match category orders is **10 business days**.",
+      "partner": 4,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.008114481344819069
+        ],
+        "contra": [
+          0.3747878074645996
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.429
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "label": "correct",
+      "answer": "The SLA target for Consignment orders is **14 business days**.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9563504457473755
+        ],
+        "contra": [
+          0.0927450954914093
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          1.0
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "label": "wrong_fact",
+      "answer": "The SLA target for Consignment orders is **21 business days**.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.0019909909460693598
+        ],
+        "contra": [
+          0.3024387061595917
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          1.0
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "label": "off_context",
+      "answer": "The SLA target for Consignment orders is **14 business days**.",
+      "partner": 4,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.001080776914022863
+        ],
+        "contra": [
+          0.3419838845729828
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.6
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "label": "correct",
+      "answer": "Manual Credit Review is performed by the Vendor Risk team.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9870622754096985
+        ],
+        "contra": [
+          0.04025962948799133
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          1.0
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "label": "wrong_fact",
+      "answer": "Manual Credit Review is performed by the Finance team.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.00028038572054356337
+        ],
+        "contra": [
+          0.9986497759819031
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.833
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "label": "off_context",
+      "answer": "Manual Credit Review is performed by the Vendor Risk team.",
+      "partner": 5,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.0007342214812524617
+        ],
+        "contra": [
+          0.9668458700180054
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.714
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "label": "correct",
+      "answer": "Each escalation level has **2 business days** to act before the case is automatically escalated to the next level.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.04189923033118248
+        ],
+        "contra": [
+          0.614273726940155
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.875
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "label": "wrong_fact",
+      "answer": "Each escalation level has **4 business days** to act before the case is automatically escalated to the next level.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.005309999454766512
+        ],
+        "contra": [
+          0.997016191482544
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.875
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "label": "off_context",
+      "answer": "Each escalation level has **2 business days** to act before the case is automatically escalated to the next level.",
+      "partner": 8,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.0008111054776236415
+        ],
+        "contra": [
+          0.04908895120024681
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.375
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "label": "correct",
+      "answer": "SLA targets are reviewed **quarterly** by Operations leadership.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9943205118179321
+        ],
+        "contra": [
+          0.007929735817015171
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          1.0
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "label": "wrong_fact",
+      "answer": "SLA targets are reviewed **monthly** by Operations leadership.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.0023241150192916393
+        ],
+        "contra": [
+          0.9980326294898987
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.833
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "label": "off_context",
+      "answer": "SLA targets are reviewed **quarterly** by Operations leadership.",
+      "partner": 7,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.0004649888433050364
+        ],
+        "contra": [
+          0.006733814720064402
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.5
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "label": "correct",
+      "answer": "A purchase order requires secondary approval when its value exceeds **$10,000**.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9959773421287537
+        ],
+        "contra": [
+          0.12620200216770172
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.833
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "label": "wrong_fact",
+      "answer": "A purchase order requires secondary approval when its value exceeds **$25,000**.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.004101274069398642
+        ],
+        "contra": [
+          0.12827152013778687
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.833
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "label": "off_context",
+      "answer": "A purchase order requires secondary approval when its value exceeds **$10,000**.",
+      "partner": 8,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.00038573204074054956
+        ],
+        "contra": [
+          0.059598177671432495
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.5
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "label": "correct",
+      "answer": "A supplier must have **at least three prior completed orders** to avoid being automatically routed to Manual Credit Review.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.0033738836646080017
+        ],
+        "contra": [
+          0.9403404593467712
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.7
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "label": "wrong_fact",
+      "answer": "A supplier must have **at least five prior completed orders** to avoid being automatically routed to Manual Credit Review.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.0032119061797857285
+        ],
+        "contra": [
+          0.9828867316246033
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.7
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "label": "off_context",
+      "answer": "A supplier must have **at least three prior completed orders** to avoid being automatically routed to Manual Credit Review.",
+      "partner": 9,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.0008226406644098461
+        ],
+        "contra": [
+          0.11625213176012039
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.4
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "label": "correct",
+      "answer": "Escalation is triggered when a case breaches its SLA target by **more than 5 business days**.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.983022153377533
+        ],
+        "contra": [
+          0.207840695977211
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          1.0
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "label": "wrong_fact",
+      "answer": "Escalation is triggered when a case breaches its SLA target by **more than 7 business days**.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9044376611709595
+        ],
+        "contra": [
+          0.1696692705154419
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          1.0
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "label": "off_context",
+      "answer": "Escalation is triggered when a case breaches its SLA target by **more than 5 business days**.",
+      "partner": 12,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.0014420561492443085
+        ],
+        "contra": [
+          0.8814154267311096
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.429
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "label": "correct",
+      "answer": "Escalation is triggered when a case has undergone **more than 2 rounds of PO Change Approval**.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9881331324577332
+        ],
+        "contra": [
+          0.008888352662324905
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          1.0
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "label": "wrong_fact",
+      "answer": "Escalation is triggered when a case has undergone **more than 4 rounds of PO Change Approval**.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9417604804039001
+        ],
+        "contra": [
+          0.016349751502275467
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          1.0
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "label": "off_context",
+      "answer": "Escalation is triggered when a case has undergone **more than 2 rounds of PO Change Approval**.",
+      "partner": 12,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.027270661666989326
+        ],
+        "contra": [
+          0.86548912525177
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.167
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "label": "correct",
+      "answer": "Escalation is triggered when a supplier is unresponsive for **more than 3 business days** during the Manual Credit Review.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9828845262527466
+        ],
+        "contra": [
+          0.018080411478877068
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.889
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "label": "wrong_fact",
+      "answer": "Escalation is triggered when a supplier is unresponsive for **more than 6 business days** during the Manual Credit Review.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9610501527786255
+        ],
+        "contra": [
+          0.019461805000901222
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.889
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "label": "off_context",
+      "answer": "Escalation is triggered when a supplier is unresponsive for **more than 3 business days** during the Manual Credit Review.",
+      "partner": 16,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.003608818631619215
+        ],
+        "contra": [
+          0.19201551377773285
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.444
+        ]
+      }
+    },
+    {
+      "id": 12,
+      "label": "correct",
+      "answer": "A department must file the retroactive Purchase Requisition within **2 business days** after an emergency purchase.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9284371733665466
+        ],
+        "contra": [
+          0.10147935152053833
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.875
+        ]
+      }
+    },
+    {
+      "id": 12,
+      "label": "wrong_fact",
+      "answer": "A department must file the retroactive Purchase Requisition within **4 business days** after an emergency purchase.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.0006084676715545356
+        ],
+        "contra": [
+          0.9890823364257812
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.875
+        ]
+      }
+    },
+    {
+      "id": 12,
+      "label": "off_context",
+      "answer": "A department must file the retroactive Purchase Requisition within **2 business days** after an emergency purchase.",
+      "partner": 13,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.0002560826833359897
+        ],
+        "contra": [
+          0.7876585125923157
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.5
+        ]
+      }
+    },
+    {
+      "id": 13,
+      "label": "correct",
+      "answer": "Yes. PO Change Approval time is included in the cycle‑time calculation, even though it falls outside the standard approval SLA.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9936479926109314
+        ],
+        "contra": [
+          0.8448965549468994
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.667
+        ]
+      }
+    },
+    {
+      "id": 13,
+      "label": "wrong_fact",
+      "answer": "No. PO Change Approval time is included in the cycle‑time calculation, even though it falls outside the standard approval SLA.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9936479926109314
+        ],
+        "contra": [
+          0.8448965549468994
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.667
+        ]
+      }
+    },
+    {
+      "id": 13,
+      "label": "off_context",
+      "answer": "Yes. PO Change Approval time is included in the cycle‑time calculation, even though it falls outside the standard approval SLA.",
+      "partner": 19,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.0013111421139910817
+        ],
+        "contra": [
+          0.9321343302726746
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.25
+        ]
+      }
+    },
+    {
+      "id": 14,
+      "label": "correct",
+      "answer": "No. Escalation does not override any approval requirements in the Procurement Policy, including the secondary approval needed for high‑value or high‑risk purchase orders. It only speeds up attention to a stalled case and does not skip required approval steps.",
+      "f": {
+        "n": 2,
+        "entail": [
+          0.0023182008881121874,
+          0.9967713952064514
+        ],
+        "contra": [
+          0.9977096319198608,
+          0.9990022778511047
+        ],
+        "num_ok": [
+          true,
+          true
+        ],
+        "recall": [
+          0.727,
+          0.857
+        ]
+      }
+    },
+    {
+      "id": 14,
+      "label": "wrong_fact",
+      "answer": "Yes. Escalation does not override any approval requirements in the Procurement Policy, including the secondary approval needed for high‑value or high‑risk purchase orders. It only speeds up attention to a stalled case and does not skip required approval steps.",
+      "f": {
+        "n": 2,
+        "entail": [
+          0.0023182008881121874,
+          0.9967713952064514
+        ],
+        "contra": [
+          0.9977096319198608,
+          0.9990022778511047
+        ],
+        "num_ok": [
+          true,
+          true
+        ],
+        "recall": [
+          0.727,
+          0.857
+        ]
+      }
+    },
+    {
+      "id": 14,
+      "label": "off_context",
+      "answer": "No. Escalation does not override any approval requirements in the Procurement Policy, including the secondary approval needed for high‑value or high‑risk purchase orders. It only speeds up attention to a stalled case and does not skip required approval steps.",
+      "partner": 18,
+      "f": {
+        "n": 2,
+        "entail": [
+          0.1311814785003662,
+          0.005124534480273724
+        ],
+        "contra": [
+          0.5917103886604309,
+          0.9876354336738586
+        ],
+        "num_ok": [
+          true,
+          true
+        ],
+        "recall": [
+          0.364,
+          0.429
+        ]
+      }
+    },
+    {
+      "id": 15,
+      "label": "correct",
+      "answer": "No. Manual Credit Review time is **included** in the cycle‑time measurement; it is not paused or excluded even though it falls outside the standard approval SLA.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9938921928405762
+        ],
+        "contra": [
+          0.9370319247245789
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.75
+        ]
+      }
+    },
+    {
+      "id": 15,
+      "label": "wrong_fact",
+      "answer": "Yes. Manual Credit Review time is **included** in the cycle‑time measurement; it is not paused or excluded even though it falls outside the standard approval SLA.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9938921928405762
+        ],
+        "contra": [
+          0.9370319247245789
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.75
+        ]
+      }
+    },
+    {
+      "id": 15,
+      "label": "off_context",
+      "answer": "No. Manual Credit Review time is **included** in the cycle‑time measurement; it is not paused or excluded even though it falls outside the standard approval SLA.",
+      "partner": 16,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.001726345857605338
+        ],
+        "contra": [
+          0.8992822170257568
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.312
+        ]
+      }
+    },
+    {
+      "id": 16,
+      "label": "correct",
+      "answer": "When a released Purchase Order is changed, the **entire original approval chain must be re‑run**—the changed PO does not keep any of its prior approvals.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9965847730636597
+        ],
+        "contra": [
+          0.9961876273155212
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.8
+        ]
+      }
+    },
+    {
+      "id": 16,
+      "label": "wrong_fact",
+      "answer": "When a released Purchase Order is changed, the **entire Legal department sign-off must be re‑run**—the changed PO does not keep any of its prior approvals.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9529358744621277
+        ],
+        "contra": [
+          0.9922728538513184
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.636
+        ]
+      }
+    },
+    {
+      "id": 16,
+      "label": "off_context",
+      "answer": "When a released Purchase Order is changed, the **entire original approval chain must be re‑run**—the changed PO does not keep any of its prior approvals.",
+      "partner": 17,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.03343275934457779
+        ],
+        "contra": [
+          0.9725527763366699
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.2
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "label": "correct",
+      "answer": "Yes. When a supplier disputes an order’s terms after the PO is released, the case is placed on hold and that time **does not count toward SLA breach metrics**. This is the sole documented exception to the rule that all process time normally counts toward the SLA.",
+      "f": {
+        "n": 2,
+        "entail": [
+          0.9954156875610352,
+          0.009151390753686428
+        ],
+        "contra": [
+          0.9871184825897217,
+          0.13779158890247345
+        ],
+        "num_ok": [
+          true,
+          true
+        ],
+        "recall": [
+          0.833,
+          0.8
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "label": "wrong_fact",
+      "answer": "No. When a supplier disputes an order’s terms after the PO is released, the case is placed on hold and that time **does not count toward SLA breach metrics**. This is the sole documented exception to the rule that all process time normally counts toward the SLA.",
+      "f": {
+        "n": 2,
+        "entail": [
+          0.9954156875610352,
+          0.009151390753686428
+        ],
+        "contra": [
+          0.9871184825897217,
+          0.13779158890247345
+        ],
+        "num_ok": [
+          true,
+          true
+        ],
+        "recall": [
+          0.833,
+          0.8
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "label": "off_context",
+      "answer": "Yes. When a supplier disputes an order’s terms after the PO is released, the case is placed on hold and that time **does not count toward SLA breach metrics**. This is the sole documented exception to the rule that all process time normally counts toward the SLA.",
+      "partner": 19,
+      "f": {
+        "n": 2,
+        "entail": [
+          0.002977830357849598,
+          0.00030212520505301654
+        ],
+        "contra": [
+          0.09090454131364822,
+          0.0031144763343036175
+        ],
+        "num_ok": [
+          true,
+          true
+        ],
+        "recall": [
+          0.333,
+          0.2
+        ]
+      }
+    },
+    {
+      "id": 18,
+      "label": "correct",
+      "answer": "The only documented exception is when a supplier disputes an order’s terms after the purchase‑order (PO) has been released. In that situation the case is placed on hold (not cancelled) pending resolution, and the time the case spends on hold does **not** count toward SLA breach metrics.",
+      "f": {
+        "n": 2,
+        "entail": [
+          0.053739283233881,
+          0.9968955516815186
+        ],
+        "contra": [
+          0.01720178872346878,
+          0.8131099939346313
+        ],
+        "num_ok": [
+          true,
+          true
+        ],
+        "recall": [
+          0.714,
+          0.769
+        ]
+      }
+    },
+    {
+      "id": 18,
+      "label": "wrong_fact",
+      "answer": "The only documented exception is when a supplier disputes an order’s terms after the purchase‑order (PO) has been released. In that situation the case is placed cancelled (not cancelled) pending resolution, and the time the case spends on hold does **not** count toward SLA breach metrics.",
+      "f": {
+        "n": 2,
+        "entail": [
+          0.053739283233881,
+          0.9951500296592712
+        ],
+        "contra": [
+          0.01720178872346878,
+          0.9970670342445374
+        ],
+        "num_ok": [
+          true,
+          true
+        ],
+        "recall": [
+          0.714,
+          0.769
+        ]
+      }
+    },
+    {
+      "id": 18,
+      "label": "off_context",
+      "answer": "The only documented exception is when a supplier disputes an order’s terms after the purchase‑order (PO) has been released. In that situation the case is placed on hold (not cancelled) pending resolution, and the time the case spends on hold does **not** count toward SLA breach metrics.",
+      "partner": 19,
+      "f": {
+        "n": 2,
+        "entail": [
+          0.0010286183096468449,
+          0.008948867209255695
+        ],
+        "contra": [
+          0.9917723536491394,
+          0.03539050742983818
+        ],
+        "num_ok": [
+          true,
+          true
+        ],
+        "recall": [
+          0.286,
+          0.231
+        ]
+      }
+    },
+    {
+      "id": 19,
+      "label": "correct",
+      "answer": "Yes. Even though an emergency purchase can bypass the normal requisition approval, Section 2 states that “Emergency purchases are still subject to Manual Credit Review if the supplier meets the criteria in Procurement Policy Section 5.” Section 5 defines the Manual Credit Review trigger as “Orders from a new supplier (fewer than 3 prior completed orders)… automatically route to Manual Credit Review.” A supplier with no prior orders is a new supplier, so the emergency purchase would still go through Manual Credit Review.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9916702508926392
+        ],
+        "contra": [
+          0.008781172335147858
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.778
+        ]
+      }
+    },
+    {
+      "id": 19,
+      "label": "wrong_fact",
+      "answer": "Yes. Even though an emergency purchase can bypass the normal requisition approval, Section 2 states that “Emergency purchases are still subject to Manual Credit Review if the supplier meets the criteria in Procurement Policy Section 7.” Section 5 defines the Manual Credit Review trigger as “Orders from a new supplier (fewer than 3 prior completed orders)… automatically route to Manual Credit Review.” A supplier with no prior orders is a new supplier, so the emergency purchase would still go through Manual Credit Review.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9868023991584778
+        ],
+        "contra": [
+          0.010314677841961384
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.778
+        ]
+      }
+    },
+    {
+      "id": 19,
+      "label": "off_context",
+      "answer": "Yes. Even though an emergency purchase can bypass the normal requisition approval, Section 2 states that “Emergency purchases are still subject to Manual Credit Review if the supplier meets the criteria in Procurement Policy Section 5.” Section 5 defines the Manual Credit Review trigger as “Orders from a new supplier (fewer than 3 prior completed orders)… automatically route to Manual Credit Review.” A supplier with no prior orders is a new supplier, so the emergency purchase would still go through Manual Credit Review.",
+      "partner": 20,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9828110933303833
+        ],
+        "contra": [
+          0.47033706307411194
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.222
+        ]
+      }
+    },
+    {
+      "id": 20,
+      "label": "correct",
+      "answer": "The policy says that any case that has breached its SLA target by **more than 5 business days** must be escalated. Since the breach is 6 business days, the case must be **escalated to Operations leadership**.",
+      "f": {
+        "n": 2,
+        "entail": [
+          0.989956796169281,
+          0.07008058577775955
+        ],
+        "contra": [
+          0.993911623954773,
+          0.9621793627738953
+        ],
+        "num_ok": [
+          true,
+          false
+        ],
+        "recall": [
+          0.857,
+          1.0
+        ]
+      }
+    },
+    {
+      "id": 20,
+      "label": "wrong_fact",
+      "answer": "The policy says that any case that has breached its SLA target by **more than 5 business days** must be escalated. Since the breach is 6 business days, the case must be **escalated to the Legal department**.",
+      "f": {
+        "n": 2,
+        "entail": [
+          0.989956796169281,
+          0.0006224170792847872
+        ],
+        "contra": [
+          0.993911623954773,
+          0.9955475330352783
+        ],
+        "num_ok": [
+          true,
+          false
+        ],
+        "recall": [
+          0.857,
+          0.667
+        ]
+      }
+    },
+    {
+      "id": 20,
+      "label": "off_context",
+      "answer": "The policy says that any case that has breached its SLA target by **more than 5 business days** must be escalated. Since the breach is 6 business days, the case must be **escalated to Operations leadership**.",
+      "partner": 22,
+      "f": {
+        "n": 2,
+        "entail": [
+          0.20713460445404053,
+          0.037190031260252
+        ],
+        "contra": [
+          0.5774117112159729,
+          0.5730282664299011
+        ],
+        "num_ok": [
+          false,
+          false
+        ],
+        "recall": [
+          0.429,
+          0.5
+        ]
+      }
+    },
+    {
+      "id": 21,
+      "label": "correct",
+      "answer": "The procedure calls for Operations leadership to conduct a specific review of that supplier’s process handling—rather than treating each escalation as an isolated incident—because the supplier has appeared in escalations more than twice in the quarter.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9976797699928284
+        ],
+        "contra": [
+          0.0041773696430027485
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.833
+        ]
+      }
+    },
+    {
+      "id": 21,
+      "label": "wrong_fact",
+      "answer": "The procedure calls for the Legal department to conduct a specific review of that supplier’s process handling—rather than treating each escalation as an isolated incident—because the supplier has appeared in escalations more than twice in the quarter.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.0013891785638406873
+        ],
+        "contra": [
+          0.994331955909729
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.778
+        ]
+      }
+    },
+    {
+      "id": 21,
+      "label": "off_context",
+      "answer": "The procedure calls for Operations leadership to conduct a specific review of that supplier’s process handling—rather than treating each escalation as an isolated incident—because the supplier has appeared in escalations more than twice in the quarter.",
+      "partner": 22,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.009447460062801838
+        ],
+        "contra": [
+          0.0021286027040332556
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.111
+        ]
+      }
+    },
+    {
+      "id": 22,
+      "label": "correct",
+      "answer": "The $15,000 purchase order must go through the following steps:\n\n1. **Approved Purchase Requisition** – Because the requisition is above $500, it must be reviewed and approved by Procurement before a PO can be issued.  \n2. **Standard approval** – The PO first receives single‑level approval from the requesting department’s budget owner (the normal approval for any PO).  \n3. **Secondary approval** – Since the PO exceeds $10,000, it then requires a second approval from Procurement leadership before the order can be released to the supplier.  \n\nNo other approval steps are",
+      "f": {
+        "n": 5,
+        "entail": [
+          0.008532370440661907,
+          0.005996827967464924,
+          0.5681557059288025,
+          0.9914968609809875,
+          0.0016380967572331429
+        ],
+        "contra": [
+          0.9889053106307983,
+          0.9850305914878845,
+          0.9960097074508667,
+          0.4440605938434601,
+          0.9938827753067017
+        ],
+        "num_ok": [
+          false,
+          false,
+          true,
+          false,
+          true
+        ],
+        "recall": [
+          0.333,
+          0.5,
+          0.7,
+          1.0,
+          0.5
+        ]
+      }
+    },
+    {
+      "id": 22,
+      "label": "wrong_fact",
+      "answer": "The $15,000 purchase order must go through the following steps:\n\n1. **Approved Purchase Requisition** – Because the requisition is above $500, it must be reviewed and approved by Procurement before a PO can be issued.  \n2. **Standard approval** – The PO first receives single‑level approval from the requesting department’s budget owner (the normal approval for any PO).  \n3. **Secondary approval** – Since the PO exceeds $10,000, it then requires a second approval from the CFO before the order can be released to the supplier.  \n\nNo other approval steps are",
+      "f": {
+        "n": 5,
+        "entail": [
+          0.008532370440661907,
+          0.005996827967464924,
+          0.5681557059288025,
+          0.0029675557743757963,
+          0.0016380967572331429
+        ],
+        "contra": [
+          0.9889053106307983,
+          0.9850305914878845,
+          0.9960097074508667,
+          0.13984747231006622,
+          0.9938827753067017
+        ],
+        "num_ok": [
+          false,
+          false,
+          true,
+          false,
+          true
+        ],
+        "recall": [
+          0.333,
+          0.5,
+          0.7,
+          0.875,
+          0.5
+        ]
+      }
+    },
+    {
+      "id": 22,
+      "label": "off_context",
+      "answer": "The $15,000 purchase order must go through the following steps:\n\n1. **Approved Purchase Requisition** – Because the requisition is above $500, it must be reviewed and approved by Procurement before a PO can be issued.  \n2. **Standard approval** – The PO first receives single‑level approval from the requesting department’s budget owner (the normal approval for any PO).  \n3. **Secondary approval** – Since the PO exceeds $10,000, it then requires a second approval from Procurement leadership before the order can be released to the supplier.  \n\nNo other approval steps are",
+      "partner": 23,
+      "f": {
+        "n": 5,
+        "entail": [
+          0.00010557724453974515,
+          0.0002311408898094669,
+          0.02495495043694973,
+          0.0003895023837685585,
+          0.0029481519013643265
+        ],
+        "contra": [
+          0.002858182182535529,
+          0.033199604600667953,
+          0.9993298053741455,
+          0.007975155487656593,
+          0.9717298746109009
+        ],
+        "num_ok": [
+          false,
+          false,
+          true,
+          false,
+          true
+        ],
+        "recall": [
+          1.0,
+          0.667,
+          0.4,
+          0.667,
+          1.0
+        ]
+      }
+    },
+    {
+      "id": 23,
+      "label": "correct",
+      "answer": "Since the PO has exceeded the “more than 2 rounds of PO Change Approval” threshold, it must be escalated.  \nThe escalation path is:\n\n1. **Requesting department manager** – has 2 business days to act.  \n2. If not resolved, it automatically escalates to the **Procurement Team Lead** – also 2 business days to act.  \n3. If still unresolved, it escalates to the **Operations Director**.",
+      "f": {
+        "n": 5,
+        "entail": [
+          0.9740755558013916,
+          0.9886425137519836,
+          0.9897187948226929,
+          0.007003189530223608,
+          0.0014005706179887056
+        ],
+        "contra": [
+          0.006432830821722746,
+          0.9957723021507263,
+          0.9865303635597229,
+          0.1132703348994255,
+          0.0027297362685203552
+        ],
+        "num_ok": [
+          true,
+          false,
+          true,
+          true,
+          true
+        ],
+        "recall": [
+          0.667,
+          0.5,
+          1.0,
+          0.778,
+          0.6
+        ]
+      }
+    },
+    {
+      "id": 23,
+      "label": "wrong_fact",
+      "answer": "Since the PO has exceeded the “more than 2 rounds of PO Change Approval” threshold, it must be escalated.  \nThe escalation path is:\n\n1. **Requesting department manager** – has 2 business days to act.  \n2. If not resolved, it automatically escalates to the **Procurement Team Lead** – also 2 business days to act.  \n3. If still unresolved, it escalates to the **Chief Executive**.",
+      "f": {
+        "n": 5,
+        "entail": [
+          0.9740755558013916,
+          0.9886425137519836,
+          0.9897187948226929,
+          0.007003189530223608,
+          0.0007497530314140022
+        ],
+        "contra": [
+          0.006432830821722746,
+          0.9957723021507263,
+          0.9865303635597229,
+          0.1132703348994255,
+          0.002394102280959487
+        ],
+        "num_ok": [
+          true,
+          false,
+          true,
+          true,
+          false
+        ],
+        "recall": [
+          0.667,
+          0.5,
+          1.0,
+          0.778,
+          0.2
+        ]
+      }
+    },
+    {
+      "id": 23,
+      "label": "off_context",
+      "answer": "Since the PO has exceeded the “more than 2 rounds of PO Change Approval” threshold, it must be escalated.  \nThe escalation path is:\n\n1. **Requesting department manager** – has 2 business days to act.  \n2. If not resolved, it automatically escalates to the **Procurement Team Lead** – also 2 business days to act.  \n3. If still unresolved, it escalates to the **Operations Director**.",
+      "partner": 24,
+      "f": {
+        "n": 5,
+        "entail": [
+          0.0032448803540319204,
+          0.006174780428409576,
+          0.0001493875461164862,
+          0.0002233471896033734,
+          0.00016448312089778483
+        ],
+        "contra": [
+          0.6176674962043762,
+          0.9934203028678894,
+          0.9982540011405945,
+          0.00538606708869338,
+          0.004075579810887575
+        ],
+        "num_ok": [
+          false,
+          true,
+          false,
+          false,
+          false
+        ],
+        "recall": [
+          0.333,
+          0.0,
+          0.5,
+          0.444,
+          0.2
+        ]
+      }
+    },
+    {
+      "id": 24,
+      "label": "correct",
+      "answer": "Orders that must receive two sign‑offs (a primary approval plus a secondary approval from Procurement leadership) before they are released to the supplier are:\n\n* **Purchase Orders over $10,000**, and  \n* **Any order that is flagged as high‑risk by the credit/vendor‑risk screening**.  \n\nThese orders require the additional, second approval prior to the supplier receiving the PO.",
+      "f": {
+        "n": 2,
+        "entail": [
+          0.9966719150543213,
+          0.9408097863197327
+        ],
+        "contra": [
+          0.9701316356658936,
+          0.9575682282447815
+        ],
+        "num_ok": [
+          false,
+          true
+        ],
+        "recall": [
+          0.647,
+          0.571
+        ]
+      }
+    },
+    {
+      "id": 24,
+      "label": "wrong_fact",
+      "answer": "Orders that must receive two sign‑offs (a primary approval plus a secondary approval from the CFO) before they are released to the supplier are:\n\n* **Purchase Orders over $10,000**, and  \n* **Any order that is flagged as high‑risk by the credit/vendor‑risk screening**.  \n\nThese orders require the additional, second approval prior to the supplier receiving the PO.",
+      "f": {
+        "n": 2,
+        "entail": [
+          0.006581301800906658,
+          0.9408097863197327
+        ],
+        "contra": [
+          0.9661043882369995,
+          0.9575682282447815
+        ],
+        "num_ok": [
+          false,
+          true
+        ],
+        "recall": [
+          0.562,
+          0.571
+        ]
+      }
+    },
+    {
+      "id": 24,
+      "label": "off_context",
+      "answer": "Orders that must receive two sign‑offs (a primary approval plus a secondary approval from Procurement leadership) before they are released to the supplier are:\n\n* **Purchase Orders over $10,000**, and  \n* **Any order that is flagged as high‑risk by the credit/vendor‑risk screening**.  \n\nThese orders require the additional, second approval prior to the supplier receiving the PO.",
+      "partner": 30,
+      "f": {
+        "n": 2,
+        "entail": [
+          0.2051832526922226,
+          0.008975367061793804
+        ],
+        "contra": [
+          0.44176334142684937,
+          0.010204245336353779
+        ],
+        "num_ok": [
+          false,
+          true
+        ],
+        "recall": [
+          0.294,
+          0.286
+        ]
+      }
+    },
+    {
+      "id": 25,
+      "label": "correct",
+      "answer": "A vendor’s risk profile adds an extra review step in two situations:\n\n1. **Manual Credit Review** – If the supplier is new (fewer than 3 completed orders) **or** its vendor‑risk score falls below the defined threshold, the order is automatically routed to Manual Credit Review, no matter how large the order is.\n\n2. **Secondary Approval** – If the credit/vendor‑risk screening flags the order as **high‑risk**, the purchase order must receive a second approval from Procurement leadership before it can be released to the supplier.",
+      "f": {
+        "n": 3,
+        "entail": [
+          0.9865505695343018,
+          0.0012276479974389076,
+          0.0010130575392395258
+        ],
+        "contra": [
+          0.01604032702744007,
+          0.9844203591346741,
+          0.0021972202230244875
+        ],
+        "num_ok": [
+          false,
+          false,
+          false
+        ],
+        "recall": [
+          0.333,
+          0.25,
+          0.214
+        ]
+      }
+    },
+    {
+      "id": 25,
+      "label": "wrong_fact",
+      "answer": "A vendor’s risk profile adds an extra review step in two situations:\n\n1. **Manual Credit Review** – If the supplier is new (fewer than 3 completed orders) **or** its vendor‑risk score falls below the defined threshold, the order is automatically routed to Manual Credit Review, no matter how large the order is.\n\n2. **Secondary Approval** – If the credit/vendor‑risk screening flags the order as **high‑risk**, the purchase order must receive a second approval from the CFO before it can be released to the supplier.",
+      "f": {
+        "n": 3,
+        "entail": [
+          0.9865505695343018,
+          0.0012276479974389076,
+          0.0005345498211681843
+        ],
+        "contra": [
+          0.01604032702744007,
+          0.9844203591346741,
+          0.0020711140241473913
+        ],
+        "num_ok": [
+          false,
+          false,
+          false
+        ],
+        "recall": [
+          0.333,
+          0.25,
+          0.154
+        ]
+      }
+    },
+    {
+      "id": 25,
+      "label": "off_context",
+      "answer": "A vendor’s risk profile adds an extra review step in two situations:\n\n1. **Manual Credit Review** – If the supplier is new (fewer than 3 completed orders) **or** its vendor‑risk score falls below the defined threshold, the order is automatically routed to Manual Credit Review, no matter how large the order is.\n\n2. **Secondary Approval** – If the credit/vendor‑risk screening flags the order as **high‑risk**, the purchase order must receive a second approval from Procurement leadership before it can be released to the supplier.",
+      "partner": 26,
+      "f": {
+        "n": 3,
+        "entail": [
+          0.95428067445755,
+          0.0006470389198511839,
+          0.9907526969909668
+        ],
+        "contra": [
+          0.0055353036150336266,
+          0.9966014623641968,
+          0.10451088100671768
+        ],
+        "num_ok": [
+          false,
+          false,
+          true
+        ],
+        "recall": [
+          0.333,
+          0.25,
+          0.786
+        ]
+      }
+    },
+    {
+      "id": 26,
+      "label": "correct",
+      "answer": "Leadership revisits the delivery timing benchmarks (SLA targets) on a **quarterly** basis.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9690014719963074
+        ],
+        "contra": [
+          0.00326523557305336
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.444
+        ]
+      }
+    },
+    {
+      "id": 26,
+      "label": "wrong_fact",
+      "answer": "Leadership revisits the delivery timing benchmarks (SLA targets) on a **monthly** basis.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.00270376680418849
+        ],
+        "contra": [
+          0.9983896017074585
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.333
+        ]
+      }
+    },
+    {
+      "id": 26,
+      "label": "off_context",
+      "answer": "Leadership revisits the delivery timing benchmarks (SLA targets) on a **quarterly** basis.",
+      "partner": 2,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.0005248761735856533
+        ],
+        "contra": [
+          0.023315276950597763
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.333
+        ]
+      }
+    },
+    {
+      "id": 27,
+      "label": "correct",
+      "answer": "A case is protected from being counted as an SLA breach when the supplier disputes the order’s terms after the PO has been released. In that situation the case is placed on **hold** (not cancelled) while the dispute is resolved, and the time it spends on hold is excluded from the SLA‑breach metrics. This is the sole documented exception to the rule that all process time normally counts toward SLA breaches.",
+      "f": {
+        "n": 3,
+        "entail": [
+          0.9917129278182983,
+          0.9967400431632996,
+          0.007592639420181513
+        ],
+        "contra": [
+          0.8945524096488953,
+          0.9707236886024475,
+          0.9976986050605774
+        ],
+        "num_ok": [
+          true,
+          true,
+          true
+        ],
+        "recall": [
+          0.875,
+          0.455,
+          0.818
+        ]
+      }
+    },
+    {
+      "id": 27,
+      "label": "wrong_fact",
+      "answer": "A case is protected from being counted as an SLA breach when the supplier disputes the order’s terms after the PO has been released. In that situation the case is placed cancelled** (not cancelled) while the dispute is resolved, and the time it spends on hold is excluded from the SLA‑breach metrics. This is the sole documented exception to the rule that all process time normally counts toward SLA breaches.",
+      "f": {
+        "n": 3,
+        "entail": [
+          0.9917129278182983,
+          0.9953070282936096,
+          0.007592639420181513
+        ],
+        "contra": [
+          0.8945524096488953,
+          0.9993070363998413,
+          0.9976986050605774
+        ],
+        "num_ok": [
+          true,
+          true,
+          true
+        ],
+        "recall": [
+          0.875,
+          0.455,
+          0.818
+        ]
+      }
+    },
+    {
+      "id": 27,
+      "label": "off_context",
+      "answer": "A case is protected from being counted as an SLA breach when the supplier disputes the order’s terms after the PO has been released. In that situation the case is placed on **hold** (not cancelled) while the dispute is resolved, and the time it spends on hold is excluded from the SLA‑breach metrics. This is the sole documented exception to the rule that all process time normally counts toward SLA breaches.",
+      "partner": 2,
+      "f": {
+        "n": 3,
+        "entail": [
+          0.013387623243033886,
+          0.01821225881576538,
+          0.00029986188746988773
+        ],
+        "contra": [
+          0.0065435320138931274,
+          0.9849189519882202,
+          0.00376725266687572
+        ],
+        "num_ok": [
+          true,
+          false,
+          true
+        ],
+        "recall": [
+          0.25,
+          0.091,
+          0.273
+        ]
+      }
+    },
+    {
+      "id": 28,
+      "label": "correct",
+      "answer": "The policy sets the following approval‑time targets:\n\n- **Standard purchase orders:** approval is targeted within **5 business days** of the requisition being submitted.  \n- **High‑value orders that need secondary approval:** approval is targeted within **10 business days** of the requisition being submitted.  \n\nThese are business‑goal targets, not contractual guarantees. (Emergency purchases have a separate requirement to file a retroactive requisition within 2 business days, but the standard approval targets are the 5‑day and 10‑day limits above.)",
+      "f": {
+        "n": 4,
+        "entail": [
+          0.006738186813890934,
+          0.0014648041687905788,
+          0.006303930189460516,
+          0.0005892260815016925
+        ],
+        "contra": [
+          0.29139992594718933,
+          0.9491838812828064,
+          0.6984602212905884,
+          0.005412761587649584
+        ],
+        "num_ok": [
+          true,
+          true,
+          true,
+          false
+        ],
+        "recall": [
+          0.636,
+          0.778,
+          0.75,
+          0.643
+        ]
+      }
+    },
+    {
+      "id": 28,
+      "label": "wrong_fact",
+      "answer": "The policy sets the following approval‑time targets:\n\n- **Standard purchase orders:** approval is targeted within **5 business days** of the requisition being submitted.  \n- **High‑value orders that need secondary approval:** approval is targeted within **15 business days** of the requisition being submitted.  \n\nThese are business‑goal targets, not contractual guarantees. (Emergency purchases have a separate requirement to file a retroactive requisition within 2 business days, but the standard approval targets are the 5‑day and 10‑day limits above.)",
+      "f": {
+        "n": 4,
+        "entail": [
+          0.006738186813890934,
+          0.00211446569301188,
+          0.006303930189460516,
+          0.0005892260815016925
+        ],
+        "contra": [
+          0.29139992594718933,
+          0.92648845911026,
+          0.6984602212905884,
+          0.005412761587649584
+        ],
+        "num_ok": [
+          true,
+          false,
+          true,
+          false
+        ],
+        "recall": [
+          0.636,
+          0.778,
+          0.75,
+          0.643
+        ]
+      }
+    },
+    {
+      "id": 28,
+      "label": "off_context",
+      "answer": "The policy sets the following approval‑time targets:\n\n- **Standard purchase orders:** approval is targeted within **5 business days** of the requisition being submitted.  \n- **High‑value orders that need secondary approval:** approval is targeted within **10 business days** of the requisition being submitted.  \n\nThese are business‑goal targets, not contractual guarantees. (Emergency purchases have a separate requirement to file a retroactive requisition within 2 business days, but the standard approval targets are the 5‑day and 10‑day limits above.)",
+      "partner": 30,
+      "f": {
+        "n": 4,
+        "entail": [
+          0.85235995054245,
+          0.0053464435040950775,
+          0.0041625043377280235,
+          0.002955065341666341
+        ],
+        "contra": [
+          0.9834240078926086,
+          0.9891695380210876,
+          0.8756360411643982,
+          0.829863429069519
+        ],
+        "num_ok": [
+          true,
+          false,
+          true,
+          false
+        ],
+        "recall": [
+          0.545,
+          0.444,
+          0.25,
+          0.357
+        ]
+      }
+    },
+    {
+      "id": 29,
+      "label": "correct",
+      "answer": "The approval requirements are:\n\n* **Standard approval (Section 4.1)** – Purchase Orders of **$10,000 or less** need a **single‑level approval** from the **budget owner of the requesting department**.\n\n* **Secondary approval (Section 4.2)** – Purchase Orders **over $10,000**, or any order flagged as **high‑risk** by credit/vendor‑risk screening, must receive a **second approval** from **Procurement leadership** before the order can be released to the supplier.\n\n* **Escalation (Section 3)** – Escalating a case does **not bypass** these approval steps; it only speeds up attention to a stalled case.",
+      "f": {
+        "n": 3,
+        "entail": [
+          0.9703503847122192,
+          0.8746036887168884,
+          0.0010040025226771832
+        ],
+        "contra": [
+          0.03023635409772396,
+          0.0026223151944577694,
+          0.008692104369401932
+        ],
+        "num_ok": [
+          false,
+          true,
+          true
+        ],
+        "recall": [
+          0.8,
+          0.857,
+          0.125
+        ]
+      }
+    },
+    {
+      "id": 29,
+      "label": "wrong_fact",
+      "answer": "The approval requirements are:\n\n* **Standard approval (Section 4.1)** – Purchase Orders of **$10,000 or less** need a **single‑level approval** from the **budget owner of the requesting department**.\n\n* **Secondary approval (Section 4.2)** – Purchase Orders **over $10,000**, or any order flagged as **high‑risk** by credit/vendor‑risk screening, must receive a **second approval** from **the CFO** before the order can be released to the supplier.\n\n* **Escalation (Section 3)** – Escalating a case does **not bypass** these approval steps; it only speeds up attention to a stalled case.",
+      "f": {
+        "n": 3,
+        "entail": [
+          0.9703502655029297,
+          0.001388878794386983,
+          0.0010040054330602288
+        ],
+        "contra": [
+          0.030236708000302315,
+          0.00542523292824626,
+          0.008692127652466297
+        ],
+        "num_ok": [
+          false,
+          false,
+          true
+        ],
+        "recall": [
+          0.8,
+          0.769,
+          0.125
+        ]
+      }
+    },
+    {
+      "id": 29,
+      "label": "off_context",
+      "answer": "The approval requirements are:\n\n* **Standard approval (Section 4.1)** – Purchase Orders of **$10,000 or less** need a **single‑level approval** from the **budget owner of the requesting department**.\n\n* **Secondary approval (Section 4.2)** – Purchase Orders **over $10,000**, or any order flagged as **high‑risk** by credit/vendor‑risk screening, must receive a **second approval** from **Procurement leadership** before the order can be released to the supplier.\n\n* **Escalation (Section 3)** – Escalating a case does **not bypass** these approval steps; it only speeds up attention to a stalled case.",
+      "partner": 30,
+      "f": {
+        "n": 3,
+        "entail": [
+          0.0017411140725016594,
+          0.010751210153102875,
+          0.012112347409129143
+        ],
+        "contra": [
+          0.7702863216400146,
+          0.6124449372291565,
+          0.6069446206092834
+        ],
+        "num_ok": [
+          false,
+          false,
+          true
+        ],
+        "recall": [
+          0.2,
+          0.357,
+          0.375
+        ]
+      }
+    },
+    {
+      "id": 30,
+      "label": "correct",
+      "answer": "An SLA breach is reported when a case’s cycle time exceeds the target for its category; such breaches are included in the weekly operations‑management report.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.9774935245513916
+        ],
+        "contra": [
+          0.008161277510225773
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.818
+        ]
+      }
+    },
+    {
+      "id": 30,
+      "label": "wrong_fact",
+      "answer": "An SLA breach is reported when a case’s cycle time exceeds the target for its category; such breaches are excluded in the weekly operations‑management report.",
+      "f": {
+        "n": 1,
+        "entail": [
+          0.0021480945870280266
+        ],
+        "contra": [
+          0.9856751561164856
+        ],
+        "num_ok": [
+          true
+        ],
+        "recall": [
+          0.818
+        ]
+      }
+    },
+    {
+      "id": 30,
+      "label": "off_context",
+      "answer": "An SLA breach is reported when a case’s cycle time exceeds the target for its category; such breaches are included in the weekly operations‑management report.",
+      "partner": 32,
+      "f": {
+        "n": 1,
+        "entail": [
+          0.002561293775215745
+        ],
+        "contra": [
+          0.9906161427497864
+        ],
+        "num_ok": [
+          false
+        ],
+        "recall": [
+          0.0
+        ]
+      }
+    },
+    {
+      "id": 31,
+      "label": "correct",
+      "answer": "You should escalate a case whenever **any** of the following triggers occur:\n\n1. **SLA breach** – the case has exceeded its SLA target by **more than 5 business days**.  \n2. **Repeated PO‑change approvals** – the case has gone through **more than 2 rounds** of PO Change Approval.  \n3. **Supplier non‑response** – during a Manual Credit Review the supplier has been **unresponsive for more than 3 business days**.\n\nWhen one of those conditions is met, follow the escalation path:\n\n- **Step 1:** Requesting department manager (has 2 business days to act)  \n- **Step 2:** If no action, automatically move to the Procurement Team Lead (2 business days)  \n- **Step 3:** If still no action, automatically move to the Operations Director.\n\nA single SLA breach alone does **not** trigger automatic escalation; only the specific triggers listed above require escalation.",
+      "f": {
+        "n": 6,
+        "entail": [
+          0.994353175163269,
+          0.9810711741447449,
+          0.7068389654159546,
+          0.9935165643692017,
+          0.9339595437049866,
+          0.035993415862321854
+        ],
+        "contra": [
+          0.966151773929596,
+          0.9888163805007935,
+          0.9850246906280518,
+          0.21077680587768555,
+          0.5849828124046326,
+          0.0762128010392189
+        ],
+        "num_ok": [
+          false,
+          true,
+          false,
+          true,
+          false,
+          true
+        ],
+        "recall": [
+          0.4,
+          1.0,
+          0.5,
+          0.875,
+          0.636,
+          0.6
+        ]
+      }
+    },
+    {
+      "id": 31,
+      "label": "wrong_fact",
+      "answer": "You should escalate a case whenever **any** of the following triggers occur:\n\n1. **SLA breach** – the case has exceeded its SLA target by **more than 5 business days**.  \n2. **Repeated PO‑change approvals** – the case has gone through **more than 2 rounds** of PO Change Approval.  \n3. **Supplier non‑response** – during a Manual Credit Review the supplier has been **unresponsive for more than 3 business days**.\n\nWhen one of those conditions is met, follow the escalation path:\n\n- **Step 1:** Requesting department manager (has 2 business days to act)  \n- **Step 2:** If no action, automatically move to the Procurement Team Lead (2 business days)  \n- **Step 3:** If still no action, automatically move to the Chief Executive.\n\nA single SLA breach alone does **not** trigger automatic escalation; only the specific triggers listed above require escalation.",
+      "f": {
+        "n": 6,
+        "entail": [
+          0.994353175163269,
+          0.9810711741447449,
+          0.7068389654159546,
+          0.9935165643692017,
+          0.7493644952774048,
+          0.035993415862321854
+        ],
+        "contra": [
+          0.966151773929596,
+          0.9888163805007935,
+          0.9850246906280518,
+          0.21077680587768555,
+          0.5346008539199829,
+          0.0762128010392189
+        ],
+        "num_ok": [
+          false,
+          true,
+          false,
+          true,
+          false,
+          true
+        ],
+        "recall": [
+          0.4,
+          1.0,
+          0.5,
+          0.875,
+          0.545,
+          0.6
+        ]
+      }
+    },
+    {
+      "id": 31,
+      "label": "off_context",
+      "answer": "You should escalate a case whenever **any** of the following triggers occur:\n\n1. **SLA breach** – the case has exceeded its SLA target by **more than 5 business days**.  \n2. **Repeated PO‑change approvals** – the case has gone through **more than 2 rounds** of PO Change Approval.  \n3. **Supplier non‑response** – during a Manual Credit Review the supplier has been **unresponsive for more than 3 business days**.\n\nWhen one of those conditions is met, follow the escalation path:\n\n- **Step 1:** Requesting department manager (has 2 business days to act)  \n- **Step 2:** If no action, automatically move to the Procurement Team Lead (2 business days)  \n- **Step 3:** If still no action, automatically move to the Operations Director.\n\nA single SLA breach alone does **not** trigger automatic escalation; only the specific triggers listed above require escalation.",
+      "partner": 32,
+      "f": {
+        "n": 6,
+        "entail": [
+          0.01656685769557953,
+          0.03844397887587547,
+          0.6499319076538086,
+          0.005284746643155813,
+          0.07665040343999863,
+          0.020233480259776115
+        ],
+        "contra": [
+          0.9764990210533142,
+          0.9958510398864746,
+          0.9842036962509155,
+          0.1622939109802246,
+          0.015359706245362759,
+          0.22939611971378326
+        ],
+        "num_ok": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "recall": [
+          0.2,
+          0.0,
+          0.333,
+          0.5,
+          0.136,
+          0.1
+        ]
+      }
+    },
+    {
+      "id": 32,
+      "label": "correct",
+      "answer": "When a released Purchase Order is changed—whether the quantity, price, or delivery date is altered—the original approval chain must be run again. The changed PO does not keep the approvals it had before the change.",
+      "f": {
+        "n": 2,
+        "entail": [
+          0.9962660670280457,
+          0.9963247179985046
+        ],
+        "contra": [
+          0.004891830496490002,
+          0.976100742816925
+        ],
+        "num_ok": [
+          true,
+          true
+        ],
+        "recall": [
+          0.714,
+          0.75
+        ]
+      }
+    },
+    {
+      "id": 32,
+      "label": "wrong_fact",
+      "answer": "When a released Purchase Order is changed—whether the quantity, price, or delivery date is altered—the Legal department sign-off must be run again. The changed PO does not keep the approvals it had before the change.",
+      "f": {
+        "n": 2,
+        "entail": [
+          0.0008246691431850195,
+          0.9963247179985046
+        ],
+        "contra": [
+          0.0065962160006165504,
+          0.976100742816925
+        ],
+        "num_ok": [
+          false,
+          true
+        ],
+        "recall": [
+          0.5,
+          0.75
+        ]
+      }
+    },
+    {
+      "id": 32,
+      "label": "off_context",
+      "answer": "When a released Purchase Order is changed—whether the quantity, price, or delivery date is altered—the original approval chain must be run again. The changed PO does not keep the approvals it had before the change.",
+      "partner": 2,
+      "f": {
+        "n": 2,
+        "entail": [
+          0.004353630356490612,
+          0.006295845378190279
+        ],
+        "contra": [
+          0.007662133779376745,
+          0.0864923819899559
+        ],
+        "num_ok": [
+          true,
+          true
+        ],
+        "recall": [
+          0.214,
+          0.25
+        ]
+      }
+    }
+  ]
+}
