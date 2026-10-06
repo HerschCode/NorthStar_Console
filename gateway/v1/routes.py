@@ -28,6 +28,7 @@ from gateway.actions.policy import DEFAULT_POLICY_PATH, Principal
 from gateway.ip_limits import ip_rate_limit
 from gateway.v1 import identity as ident
 from gateway.v1 import lab
+from gateway.v1 import quota
 from gateway.v1.identity import Identity, current_identity, require_identity, require_roles
 from gateway.v1.proxy import CapturingAdapter, P2Client, UpstreamError
 from gateway.v1.store import WINDOWS, GovernanceStore
@@ -112,9 +113,17 @@ def _gateway_block(res, request_id_hint: str | None, trace_id: str) -> dict:
             "pii_found": tr.get("pii_found"), "latency_ms": round(float(tr.get("total_latency_ms", 0) or 0), 2), "trace_id": trace_id}
 
 
+def _consume_quota(identity: Identity) -> None:
+    try:
+        quota.consume(identity.user_id)
+    except quota.QuotaExceeded as exc:
+        raise HTTPException(429, str(exc), headers={"Retry-After": str(exc.retry_after_s)})
+
+
 def _run_ai(request: Request, identity: Identity, path: str, prompt: str, build_body, text_of, route: str) -> dict:
     trace_id, tp = trace_context(request)
     adapter = CapturingAdapter(deps.p2_client(), path, build_body, text_of, identity, tp)
+    _consume_quota(identity)
     mw = deps.middleware
     session = hashlib.sha256(f"{identity.user_id}|{route}".encode()).hexdigest()[:24]
     t0 = time.perf_counter()
@@ -309,6 +318,18 @@ def reject(approval_id: str, body: DecideBody, request: Request, identity: Ident
     return _decide(approval_id, False, body, identity, trace_context(request)[0])
 
 
+@router.get("/limits")
+def limits(request: Request, identity: Identity | None = Depends(current_identity)):
+    """Free-tier model status (from the assistant) plus this gateway's own daily AI allowance, in one place for the console."""
+    _, tp = trace_context(request)
+    models = None
+    try:
+        models = deps.p2_client().request("GET", "/v1/limits", identity, tp).json()
+    except UpstreamError as exc:
+        models = {"summary": f"model status unavailable: {exc.detail}", "models": [], "mode": "unknown", "next_available_s": None, "notes": []}
+    return {"gateway": quota.status(identity.user_id if identity else None), "assistant": models}
+
+
 # ── read-only data passthrough to P1 (one public API in the cloud deployment) ──
 class _P1Data:
     http = None
@@ -485,6 +506,7 @@ def lab_run(body: LabRun, request: Request, identity: Identity = Depends(require
             raise HTTPException(422, "defenses can only be turned off against the undefended stub")
         if not deps.p2_client().configured:
             raise HTTPException(501, "target p2 needs P2_URL configured; use target=stub")
+        _consume_quota(identity)                      # target=p2 spends the shared model quota like any question
         _, tp = trace_context(request)
         p2_backend = CapturingAdapter(deps.p2_client(), "/v1/ask", lambda text: {"question": text, "context": {"page": "overview"}}, lambda r: r.get("answer") or "", identity, tp)
     out = lab.run(body.scenario_id, body.defenses == "on", body.target, deps.middleware, p2_backend=p2_backend, role="employee")

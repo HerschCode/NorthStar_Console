@@ -30,6 +30,8 @@ def env(monkeypatch, tmp_path):
     monkeypatch.setenv("GATEWAY_LOG_STDOUT", "0")
     monkeypatch.delenv("GATEWAY_REQUIRE_IDENTITY", raising=False)
     reset_for_tests()
+    from gateway.v1 import quota as _quota
+    _quota.reset_for_tests()
     routes._LAB_HITS.clear()
     fw = ActionFirewall(approvals=ApprovalQueue(tmp_path / "approvals.db"), audit_path=tmp_path / "actions.jsonl")
     actions_api.set_firewall(fw)
@@ -500,3 +502,36 @@ def test_p1_data_passthrough_is_get_only_allow_listed_and_carries_the_trace(monk
     assert client.post("/v1/data/v1/overview", json={}).status_code == 405       # read-only
     monkeypatch.delenv("P1_URL")
     assert client.get("/v1/data/v1/overview").status_code == 503
+
+
+# ── daily AI allowance (protects the shared free-tier quota) ──
+def test_daily_ai_allowance_per_user_and_overall(env, monkeypatch):
+    from gateway.v1 import quota
+    quota.reset_for_tests()
+    monkeypatch.setenv("GATEWAY_AI_DAILY_PER_USER", "2")
+    monkeypatch.setenv("GATEWAY_AI_DAILY_GLOBAL", "3")
+    h = login("analyst")
+    assert [client.post("/v1/ask", json={"question": "Which suppliers are slowest this quarter?"}, headers=h).status_code for _ in range(2)] == [200, 200]
+    over = client.post("/v1/ask", json={"question": "Which suppliers are slowest this quarter?"}, headers=h)
+    assert over.status_code == 429 and "allowance for this demo identity" in over.json()["detail"] and "Gemini/Groq free-tier quota" in over.json()["detail"]
+    assert int(over.headers["Retry-After"]) > 0
+    other = login("manager")
+    assert client.post("/v1/ask", json={"question": "Which suppliers are slowest this quarter?"}, headers=other).status_code == 200
+    third = client.post("/v1/ask", json={"question": "Which suppliers are slowest this quarter?"}, headers=login("viewer"))
+    assert third.status_code == 429 and "the whole demo" in third.json()["detail"]
+    quota.reset_for_tests()
+
+
+def test_limits_endpoint_combines_the_assistants_model_status_with_the_gateways_allowance(env, monkeypatch):
+    from gateway.v1 import quota
+    quota.reset_for_tests()
+
+    def handler(request):
+        if request.url.path == "/v1/limits":
+            return httpx.Response(200, json={"mode": "free-chain", "summary": "some free models are cooling down or have no key", "next_available_s": 42, "models": [{"provider": "gemini", "model": "m", "state": "cooling"}], "notes": []})
+        return httpx.Response(404, json={})
+    monkeypatch.setattr(routes.deps, "p2", P2Client("http://p2", httpx.Client(transport=httpx.MockTransport(handler))))
+    out = client.get("/v1/limits", headers=login("analyst")).json()
+    assert out["assistant"]["models"][0]["state"] == "cooling" and out["gateway"]["per_user_daily"] == 40 and out["gateway"]["used_by_you"] == 0
+    monkeypatch.setattr(routes.deps, "p2", P2Client(""))
+    assert "unavailable" in client.get("/v1/limits").json()["assistant"]["summary"]

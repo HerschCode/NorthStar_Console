@@ -2430,6 +2430,102 @@
     ]
    }
   },
+  "/v1/limits": {
+   "get": {
+    "description": "Free-tier model status (from the assistant) plus this gateway's own daily AI allowance, in one place for the console.",
+    "operationId": "limits_v1_limits_get",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     },
+     {
+      "in": "header",
+      "name": "X-Gateway-Identity-Token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Gateway-Identity-Token"
+      }
+     },
+     {
+      "in": "header",
+      "name": "X-Gateway-User-ID",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Gateway-User-Id"
+      }
+     },
+     {
+      "in": "header",
+      "name": "X-Gateway-Role",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Gateway-Role"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Limits",
+    "tags": [
+     "v1"
+    ]
+   }
+  },
   "/v1/me": {
    "get": {
     "operationId": "me_v1_me_get",
