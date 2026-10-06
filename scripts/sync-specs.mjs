@@ -22,9 +22,17 @@ const SERVICES = {
 async function producerSpec(svc, { repo, dir }) {
   if (local) return readFileSync(resolve(dir, 'openapi', `${svc}.json`), 'utf8')
   const url = `https://raw.githubusercontent.com/HerschCode/${repo}/main/openapi/${svc}.json`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`${url} answered ${res.status}`)
-  return res.text()
+  // A connect timeout to GitHub is transient and would turn a CI run red for no reason: retry a few times before giving up. A real answer (even a 404) is never retried.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(20_000) })
+      if (!res.ok) throw Object.assign(new Error(`${url} answered ${res.status}`), { final: true })
+      return await res.text()
+    } catch (err) {
+      if (err.final || attempt === 4) throw err
+      await new Promise((resolve) => setTimeout(resolve, 2000 * attempt))
+    }
+  }
 }
 
 const operations = (spec) => Object.entries(spec.paths ?? {}).flatMap(([path, item]) => Object.keys(item).filter((m) => ['get', 'post', 'put', 'patch', 'delete'].includes(m)).map((m) => `${m.toUpperCase()} ${path}`))
