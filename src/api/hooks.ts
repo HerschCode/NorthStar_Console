@@ -73,6 +73,7 @@ export const useGovEvents = (limit = 100) => {
 export const usePolicyMatrix = () => useQuery({ queryKey: ['policy-matrix'], staleTime: STALE, queryFn: () => unwrap<T.PolicyMatrix>(p3.GET('/v1/governance/policy-matrix'), 'p3') })
 export const useRules = () => useQuery({ queryKey: ['rules'], staleTime: STALE, queryFn: () => unwrap<{ rules: T.RuleRow[]; note: string }>(p3.GET('/v1/rules'), 'p3') })
 export const useGwConfig = () => useQuery({ queryKey: ['gw-config'], staleTime: STALE, queryFn: () => unwrap<T.GwConfig>(p3.GET('/v1/config'), 'p3') })
+export const useLimits = () => useQuery({ queryKey: ['limits'], refetchInterval: 20_000, retry: false, queryFn: () => unwrap<T.Limits>(p3.GET('/v1/limits'), 'p3') })
 export const useServices = () => useQuery({ queryKey: ['services'], refetchInterval: 20_000, queryFn: () => unwrap<T.Services>(p3.GET('/v1/services'), 'p3') })
 export const useLabScenarios = () => useQuery({ queryKey: ['lab-scenarios'], staleTime: STALE, queryFn: () => unwrap<{ scenarios: T.LabScenario[]; note: string }>(p3.GET('/v1/lab/scenarios'), 'p3') })
 export const useApprovals = (status?: 'pending' | 'approved' | 'denied') => {

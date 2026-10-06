@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useSearch } from '@tanstack/react-router'
 import { useInvestigate, useInvestigations } from '../api/hooks'
 import { Async, Badge, Button, Callout, Card, ErrorState, Grid, PageHeader } from '../components/ui'
-import { AskPanel, ClaimList, EvidenceDrawer, GatewayChip } from '../components/domain'
+import { AskPanel, ClaimList, EvidenceDrawer, GatewayChip, LimitsCallout } from '../components/domain'
 import { getToken, P3_BASE } from '../api/client'
 import { useSession } from '../state/session'
 import type { Investigation } from '../api/types'
@@ -37,6 +37,7 @@ function Workspace({ inv }: { inv: Investigation }) {
   return (
     <div className="space-y-3" data-testid="investigation">
       <GatewayChip g={inv.gateway} />
+      <LimitsCallout limits={inv.limits} />
       {inv.blocked ? <Callout tone="bad" title="Stopped by the AI gateway">{inv.gateway?.reason}</Callout> : (
         <>
           <Card title="Summary" actions={<div className="flex gap-2"><Button onClick={() => download(inv.id, 'md').catch(() => undefined)}>Export Markdown</Button><Button onClick={() => download(inv.id, 'pdf').catch(() => undefined)}>Export PDF</Button></div>}>

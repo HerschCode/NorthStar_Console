@@ -98,21 +98,31 @@ export interface Lineage { graph: { nodes: { id: string; label: string; layer: n
 export interface Briefing { as_of: string; facts: { id: string; fact: string; metric: string }[] }
 
 // P2 via P3
+export interface LimitModel { provider: string; model: string; scope: string; retry_after_s: number | null; message: string; local_cap?: boolean }
+export interface LimitsInfo { exhausted: boolean; retry_after_s: number | null; models: LimitModel[]; other: string[] }
+export interface ModelStatus { provider: string; model: string; state: 'ok' | 'cooling' | 'no_key' | 'unavailable'; cooldown_scope?: string | null; retry_after_s?: number | null; used_minute?: number; used_day?: number; tokens_minute?: number; caps?: { rpm: number | null; rpd: number | null; tpm: number | null }; note?: string }
+export interface Limits {
+  gateway: { per_user_daily: number; global_daily: number; used_by_you: number | null; used_overall: number; resets_in_s: number }
+  assistant: { mode: string; summary: string; next_available_s: number | null; models: ModelStatus[]; notes: string[] }
+}
 export interface GatewayVerdict { gateway_latency_ms?: number; decision: 'allow' | 'block'; reason?: string | null; phase?: string | null; layers: Record<string, { decision: string; latency_ms: number }>; pii_found?: unknown; latency_ms: number; trace_id: string; note?: string }
 export interface Claim { text: string; supported: boolean; evidence_ids: string[]; reason: string }
 export interface EvidenceItem { id: string; type: 'p1_metric' | 'policy'; endpoint?: string; label?: string; value?: number | string; unit?: string; provenance?: string; retrieved_at?: string; doc_id?: string; title?: string; section?: string | null; version?: string | null; citation?: string; excerpt?: string }
 export interface AskResponse {
   supported_claims?: number; total_claims?: number
   blocked: boolean; gateway: GatewayVerdict; answer: string | null; abstained?: boolean; abstain_reason?: string; claims?: Claim[]; evidence?: EvidenceItem[]
+  limits?: LimitsInfo | null
   actions_suggested?: { tool: string; case_id: string; intervention_type: string; rationale: string }[]; trace_id?: string; cost_usd?: number; latency_ms?: number; model?: string; notes?: string[]
 }
 export interface Investigation {
   id: string; created: number; question: string; model: string; summary: string; root_causes: (Claim & { causal_language?: boolean })[]; recommendations: { text: string; evidence_ids: string[]; supported?: boolean; action: unknown }[]
-  limitations: string; evidence: { data: EvidenceItem[]; documents: EvidenceItem[] }; relevant_policy: string[]; warnings: string[]; trace_id: string; gateway?: GatewayVerdict; blocked?: boolean
+  limitations: string; limits?: LimitsInfo | null; evidence: { data: EvidenceItem[]; documents: EvidenceItem[] }; relevant_policy: string[]; warnings: string[]; trace_id: string; gateway?: GatewayVerdict; blocked?: boolean
 }
 export interface BriefItem { title: string; sentences: { text: string; fact_ids: string[] }[] }
-export interface BriefOut { as_of: string; items: BriefItem[]; source: string; model: string; label?: string; facts: { id: string; fact: string }[]; gateway?: GatewayVerdict }
-export interface NLFilterOut { rejected: boolean; reason?: string; target?: 'queue' | 'suppliers'; endpoint?: string; filter?: Record<string, unknown>; restatement?: string; source?: string; gateway?: GatewayVerdict; blocked?: boolean }
+export interface BriefOut {
+  limits?: LimitsInfo | null; as_of: string; items: BriefItem[]; source: string; model: string; label?: string; facts: { id: string; fact: string }[]; gateway?: GatewayVerdict }
+export interface NLFilterOut {
+  limits?: LimitsInfo | null; rejected: boolean; reason?: string; target?: 'queue' | 'suppliers'; endpoint?: string; filter?: Record<string, unknown>; restatement?: string; source?: string; gateway?: GatewayVerdict; blocked?: boolean }
 export interface InterventionRow {
   id: number; case_id: string; intervention_type: string; rationale: string; risk: number; proposer: string; proposer_role: string; status: string; approval_id: string | null
   gateway_decision: { effect?: string; stage?: string; reasons?: string[]; risk?: string }; p1_intervention_id: number | null; assignment: string | null; outcome: string | null; created: number; updated: number

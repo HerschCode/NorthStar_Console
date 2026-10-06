@@ -55,6 +55,10 @@ export async function installMocks(page: Page): Promise<MockState> {
     const path = u.pathname.replace(/^\/p3/, '')
     const method = req.method()
     const me = who(route)
+    if (path === '/v1/limits') return json(route, { gateway: { per_user_daily: 40, global_daily: 400, used_by_you: st.asks, used_overall: st.asks, resets_in_s: 7200 }, assistant: { mode: 'free-chain', summary: 'some free models are cooling down or have no key', next_available_s: 41, notes: ['Gemini quotas are per project and per model; daily quotas reset at midnight Pacific time.'], models: [
+      { provider: 'gemini', model: 'gemini-2.5-flash', state: 'cooling', cooldown_scope: 'minute', retry_after_s: 41, used_minute: 8, used_day: 120, caps: { rpm: null, rpd: null, tpm: null } },
+      { provider: 'groq', model: 'openai/gpt-oss-120b', state: 'ok', used_minute: 1, used_day: 14, caps: { rpm: 30, rpd: null, tpm: null } },
+      { provider: 'groq', model: 'openai/gpt-oss-20b', state: 'no_key', note: 'set GROQ_API_KEY to enable' }] } })
     if (path === '/v1/services') return json(route, { gateway: { status: 'ok', demo_mode: true }, assistant: { configured: true, reachable: true, detail: 'HTTP 200' } })
     if (path === '/v1/me') return json(route, me ? { authenticated: true, user_id: me.user, role: me.role, source: 'demo', label: 'demo identity' } : { authenticated: false, demo_mode: true, roles: [] })
     if (path === '/v1/demo/login') {

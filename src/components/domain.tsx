@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
-import type { AskResponse, Claim, EvidenceItem, GatewayVerdict, Metric, TimelineEvent } from '../api/types'
+import type { AskResponse, Claim, EvidenceItem, GatewayVerdict, LimitsInfo, Metric, TimelineEvent } from '../api/types'
 import { Badge, Button, Callout, Card, cx, ErrorState } from './ui'
 import { MetricValue, ProvBadge } from './Prov'
 import { eur, fmt, hours, withUnit } from '../lib/format'
@@ -203,7 +203,7 @@ export function AskPanel({ context, suggestions, initial, autoRun }: { context: 
         {suggestions.map((s) => <button key={s} type="button" className="rounded-full border border-line px-2.5 py-0.5 text-xs hover:border-accent" onClick={() => { setQ(s); run(s) }}>{s}</button>)}
       </div>
       {ask.isPending && <p role="status" className="text-sm text-muted">Checking the question, retrieving evidence and verifying the answer…</p>}
-      {ask.isError && (err?.status === 429 ? <Callout tone="warn" title="Model spend limit reached">{err.message}. Answers fall back to templates only after the cap resets.</Callout> : <ErrorState error={ask.error} />)}
+      {ask.isError && (err?.status === 429 ? <Callout tone="warn" title="AI allowance reached"><span data-testid="allowance-callout">{err.message}</span></Callout> : <ErrorState error={ask.error} />)}
       {d && (
         <div className="space-y-2" data-testid="ask-result">
           <GatewayChip g={d.gateway} />
@@ -222,7 +222,8 @@ export function AskPanel({ context, suggestions, initial, autoRun }: { context: 
                 {d.evidence && <button type="button" className="underline" onClick={() => setEvidence([])}>all evidence ({d.evidence.length})</button>}
                 {d.trace_id && <Link to="/observability" search={{ trace: d.trace_id }} className="underline">trace {d.trace_id.slice(0, 8)}</Link>}
               </div>
-              {d.notes?.filter(Boolean).length ? <p className="text-xs text-muted">{d.notes.join(' · ')}</p> : null}
+              <LimitsCallout limits={d.limits} />
+              {d.notes?.filter(Boolean).length ? <p className="text-xs text-muted" data-testid="ask-notes">{d.notes.join(' · ')}</p> : null}
               {d.actions_suggested?.map((a, i) => (
                 <div key={i} className="flex flex-wrap items-center gap-2 rounded-md border border-line p-2 text-sm">
                   <Badge tone="info">suggested action</Badge><span>{TYPE_LABEL[a.intervention_type] ?? a.intervention_type} on case {a.case_id}</span>
@@ -236,6 +237,18 @@ export function AskPanel({ context, suggestions, initial, autoRun }: { context: 
       {evidence && d && <EvidenceDrawer items={d.evidence ?? []} highlight={evidence} onClose={() => setEvidence(null)} />}
       {propose && <ProposeDialog caseId={propose.case_id} risk={0.5} rationale={propose.rationale} type={propose.intervention_type} onClose={() => setPropose(null)} />}
     </div>
+  )
+}
+
+/** Free-tier limits in plain words: which model hit which limit and when it clears. Shown wherever an AI answer fell back or could not be written. */
+export function LimitsCallout({ limits }: { limits: LimitsInfo | null | undefined }) {
+  if (!limits) return null
+  const wait = limits.retry_after_s == null ? null : limits.retry_after_s < 90 ? `${Math.round(limits.retry_after_s)} s` : limits.retry_after_s < 5400 ? `${Math.round(limits.retry_after_s / 60)} min` : `${(limits.retry_after_s / 3600).toFixed(1)} h`
+  return (
+    <Callout tone="warn" title={limits.exhausted ? 'Free AI models are at their limits' : 'AI model limit'}>
+      <p data-testid="limits-callout">{limits.exhausted ? 'Every free Gemini and Groq model is limited right now, so this is a labelled template answer built from the same evidence.' : 'A model hit its limit.'}{wait && <> The soonest model is back in <strong>{wait}</strong>.</>}</p>
+      <ul className="mt-1 list-disc pl-5 text-xs">{limits.models.map((m) => <li key={m.provider + m.model}>{m.message}</li>)}{limits.other.map((o, i) => <li key={i}>{o}</li>)}</ul>
+    </Callout>
   )
 }
 

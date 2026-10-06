@@ -1,13 +1,34 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { useDataQuality, useEvidence, useExperiments, useLineage, useModels, useServices, useTrace } from '../api/hooks'
+import { useDataQuality, useEvidence, useExperiments, useLimits, useLineage, useModels, useServices, useTrace } from '../api/hooks'
 import { Async, Badge, Bar, Button, Callout, Card, DataTable, Grid, PageHeader } from '../components/ui'
 import { StatusBadge } from '../components/domain'
 import { ProvBadge } from '../components/Prov'
 import { P1_BASE, recentCalls } from '../api/client'
 import { fmt } from '../lib/format'
 import { useAlerts } from '../components/Shell'
+
+function FreeTierLimits() {
+  const q = useLimits()
+  const state = (s: string) => ({ ok: ['good', 'available'], cooling: ['warn', 'cooling down'], no_key: ['neutral', 'no key'], unavailable: ['bad', 'not available to this key'] } as Record<string, [any, string]>)[s] ?? ['neutral', s]
+  return (
+    <Card className="mt-3" title="Free-tier AI models (Gemini + Groq)" subtitle="Two keys only. Provider 429s set the cooldowns; the caps are the ones configured in config/free_models.yaml." actions={q.data && <Badge tone={q.data.assistant.summary.startsWith('all') ? 'good' : q.data.assistant.summary.startsWith('no free') ? 'bad' : 'warn'}>{q.data.assistant.summary}</Badge>}>
+      <Async q={q} rows={3}>{(l) => (
+        <div className="space-y-3" data-testid="limits-card">
+          <DataTable caption="Free-tier models" rows={l.assistant.models} rowKey={(m) => m.provider + m.model} columns={[
+            { key: 'p', header: 'Provider', render: (m) => m.provider }, { key: 'm', header: 'Model', render: (m) => <span className="font-mono text-xs">{m.model}</span> },
+            { key: 's', header: 'State', render: (m) => { const [t, label] = state(m.state); return <Badge tone={t}>{label}{m.state === 'cooling' && m.cooldown_scope ? ` · ${m.cooldown_scope}` : ''}</Badge> } },
+            { key: 'r', header: 'Back in', align: 'right', render: (m) => m.retry_after_s != null ? (m.retry_after_s < 90 ? `${Math.round(m.retry_after_s)} s` : m.retry_after_s < 5400 ? `${Math.round(m.retry_after_s / 60)} min` : `${(m.retry_after_s / 3600).toFixed(1)} h`) : '—' },
+            { key: 'u', header: 'Used min / today', align: 'right', render: (m) => m.used_day == null ? '—' : `${m.used_minute} / ${m.used_day}` },
+            { key: 'c', header: 'Your caps (rpm / rpd / tpm)', render: (m) => m.caps ? [m.caps.rpm, m.caps.rpd, m.caps.tpm].map((x) => x ?? '—').join(' / ') : '—' },
+          ]} />
+          <p className="text-sm">Gateway allowance: <strong>{l.gateway.used_by_you ?? '—'}</strong> of {l.gateway.per_user_daily} questions used by you today; {l.gateway.used_overall} of {l.gateway.global_daily} overall; resets in {Math.round(l.gateway.resets_in_s / 3600)} h (00:00 UTC).</p>
+          <ul className="list-disc pl-5 text-xs text-muted">{l.assistant.notes.map((n) => <li key={n}>{n}</li>)}</ul>
+        </div>)}</Async>
+    </Card>
+  )
+}
 
 export function Observability() {
   const search = (useSearch({ strict: false }) as { trace?: string })
@@ -28,6 +49,7 @@ export function Observability() {
         <Card title="Gateway (P3)">{services.isError ? <Badge tone="bad">unreachable</Badge> : services.data ? <Badge tone="good">{services.data.gateway.status}</Badge> : <Badge>checking…</Badge>}</Card>
         <Card title="Assistant (P2) via gateway">{services.data ? (services.data.assistant.reachable ? <Badge tone="good">reachable</Badge> : <Badge tone="warn">{services.data.assistant.configured ? 'unreachable' : 'not configured'}</Badge>) : <Badge>checking…</Badge>}<p className="mt-1 text-xs text-muted">{services.data?.assistant.detail}</p></Card>
       </Grid>
+      <FreeTierLimits />
       <Card className="mt-3" title="Trace">
         <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); nav({ to: '/observability', search: { trace: id.trim() || undefined } }) }}>
           <input value={id} onChange={(e) => setId(e.target.value)} aria-label="Trace id" placeholder="32-character trace id" className="min-w-0 flex-1 rounded-md border border-line bg-panel2 px-3 py-1.5 font-mono text-sm" data-testid="trace-input" />

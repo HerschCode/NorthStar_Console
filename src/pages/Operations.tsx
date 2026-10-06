@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from '@tanstack/react-router'
 import { useCase, useFlow, useNLFilter, useQueue, useRiskMap, useSupplier, useSuppliers, useVariants, type QueueFilters } from '../api/hooks'
 import { Async, Badge, Bar, Button, Callout, Card, DataTable, Grid, PageHeader, Tabs, Collapsible } from '../components/ui'
-import { AskPanel, GatewayChip, MiniStat, ProposeDialog, TierBadge, Timeline } from '../components/domain'
+import { AskPanel, GatewayChip, LimitsCallout, MiniStat, ProposeDialog, TierBadge, Timeline } from '../components/domain'
 import { MetricValue, ProvBadge } from '../components/Prov'
 import { FLOW_METRIC_LABEL, ProcessGraph, RiskValueScatter, SupplierQuadrant, type FlowMetric } from '../components/LazyCharts'
 import { dateLabel, eur, fmt, hours, pct } from '../lib/format'
@@ -47,6 +47,7 @@ export function ActionCenter() {
         {nl.data && (
           <div className="mt-2 space-y-1.5">
             <GatewayChip g={nl.data.gateway} />
+            <LimitsCallout limits={nl.data.limits} />
             {nl.data.blocked ? <Callout tone="warn" title="The gateway blocked this phrasing">Short telegraphic phrases are sometimes flagged by the injection classifier (a measured false-positive rate). Rephrase as a full sentence, e.g. “show orders above 50k in invoicing”.</Callout>
               : nl.data.rejected ? <Callout tone="warn" title="Not a supported filter">{nl.data.reason}</Callout>
               : <p className="text-sm" data-testid="nl-restatement">{nl.data.restatement} <Badge>{nl.data.source}</Badge></p>}

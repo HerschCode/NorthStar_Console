@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { NAV, ALL_NAV } from '../nav'
 import { ROLES, useSession, type Role } from '../state/session'
 import { useDataStatus } from '../state/status'
-import { useApprovals, useFinanceControls, useLogin, useOverview, useSearch, useServices } from '../api/hooks'
+import { useApprovals, useFinanceControls, useLimits, useLogin, useOverview, useSearch, useServices } from '../api/hooks'
 import { Badge, Button, cx } from './ui'
 import { dateLabel } from '../lib/format'
 
@@ -16,11 +16,17 @@ export function useAlerts(): Alert[] {
   const services = useServices()
   const controls = useFinanceControls()
   const approvals = useApprovals('pending')
+  const limits = useLimits()
   const out: Alert[] = []
   if (!status.live) out.push({ sev: 'warning', text: `Showing a saved snapshot${status.reason ? ` (${status.reason.slice(0, 80)})` : ''}. Numbers are real but not current.`, to: '/data-quality' })
   if (services.data && !services.data.assistant.reachable) out.push({ sev: 'warning', text: `The assistant (P2) is not reachable through the gateway: ${services.data.assistant.detail}. Ask Northstar will fail until it is.`, to: '/observability' })
   if (services.isError) out.push({ sev: 'critical', text: 'The gateway (P3) is unreachable: AI answers, approvals and governance data are unavailable.', to: '/observability' })
   controls.data?.controls.filter((c) => c.status === 'not_valid').forEach((c) => out.push({ sev: 'warning', text: `${c.id.replace(/_/g, ' ')} is not operationally valid (it flags ordinary data).`, to: '/finance/controls' }))
+  const a = limits.data?.assistant
+  if (a?.summary.startsWith('no free model')) out.push({ sev: 'warning', text: `Every free Gemini/Groq model is at its limit${a.next_available_s != null ? ` — the soonest is back in ${a.next_available_s < 90 ? Math.round(a.next_available_s) + ' s' : Math.round(a.next_available_s / 60) + ' min'}` : ''}. AI answers are labelled templates until then.`, to: '/observability' })
+  else if (a?.summary.startsWith('no free-tier key')) out.push({ sev: 'info', text: 'No Gemini or Groq key is configured on the assistant: AI answers are labelled templates (set GEMINI_API_KEY and/or GROQ_API_KEY).', to: '/observability' })
+  const g = limits.data?.gateway
+  if (g && g.used_by_you != null && g.per_user_daily > 0 && g.used_by_you >= 0.8 * g.per_user_daily) out.push({ sev: 'warning', text: `You have used ${g.used_by_you} of your ${g.per_user_daily} daily AI questions (resets 00:00 UTC).`, to: '/observability' })
   const pending = approvals.data?.approvals.length ?? 0
   if (pending) out.push({ sev: 'warning', text: `${pending} approval${pending === 1 ? '' : 's'} waiting for a human decision.`, to: '/approvals' })
   out.push({ sev: 'info', text: 'No real intervention outcomes are recorded; ROI figures are simulated.', to: '/roi' })

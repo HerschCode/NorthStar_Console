@@ -63,7 +63,7 @@ export function ErrorState({ error, retry }: { error: unknown; retry?: () => voi
   const unreachable = e?.status === 0
   return (
     <div role="alert" className="rounded-md border border-bad/40 bg-bad-soft p-3 text-sm text-ink">
-      <p className="font-semibold text-bad">{unreachable ? 'Service unreachable' : e?.status === 401 ? 'Sign in to see this' : 'Something went wrong'}</p>
+      <p className="font-semibold text-bad">{unreachable ? 'Service unreachable' : e?.status === 401 ? 'Sign in to see this' : e?.status === 429 ? 'Limit reached' : 'Something went wrong'}</p>
       <p className="mt-1 text-muted">{e?.message ?? String(error)}</p>
       {e?.traceId && <p className="mt-1 font-mono text-xs text-muted">trace {e.traceId}</p>}
       {retry && <Button className="mt-2" onClick={retry}>Retry</Button>}

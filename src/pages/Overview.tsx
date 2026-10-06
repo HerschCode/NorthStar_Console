@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useBrief, useBriefingFacts, useDataQuality, useFinanceControls, useFlow, useInterventions, useModels, useOverview, useQueue, useRiskMap } from '../api/hooks'
 import { Async, Badge, Button, Callout, Card, DataTable, Grid, PageHeader, Bar, ErrorState } from '../components/ui'
-import { Kpi, TierBadge, EvidenceDrawer } from '../components/domain'
+import { Kpi, TierBadge, EvidenceDrawer, LimitsCallout } from '../components/domain'
 import { MetricValue, ProvBadge } from '../components/Prov'
 import { RiskValueScatter, TrendChart } from '../components/LazyCharts'
 import { dateLabel, eur, fmt } from '../lib/format'
@@ -31,6 +31,7 @@ function Brief() {
             </div>
           ))}
           {brief.isError && <ErrorState error={brief.error} />}
+          <LimitsCallout limits={brief.data?.limits} />
           {brief.data?.label && <p className="text-xs text-muted">{brief.data.label}</p>}
         </div>
       )}</Async>

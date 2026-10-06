@@ -176,6 +176,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * V1 Limits
+         * @description Where the free-tier models stand right now: per model, key present or not, used this minute / today, any cooldown with its scope
+         *     and when it clears. Provider quotas are authoritative (their 429s set the cooldowns); the caps shown are the ones you configured.
+         */
+        get: operations["v1_limits_v1_limits_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/nl-filter": {
         parameters: {
             query?: never;
@@ -981,6 +1002,37 @@ export interface operations {
             path: {
                 inv_id: string;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    v1_limits_v1_limits_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-api-key"?: string;
+            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;

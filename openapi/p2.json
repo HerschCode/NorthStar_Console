@@ -1831,6 +1831,47 @@
     ]
    }
   },
+  "/v1/limits": {
+   "get": {
+    "description": "Where the free-tier models stand right now: per model, key present or not, used this minute / today, any cooldown with its scope\nand when it clears. Provider quotas are authoritative (their 429s set the cooldowns); the caps shown are the ones you configured.",
+    "operationId": "v1_limits_v1_limits_get",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-api-key",
+      "required": false,
+      "schema": {
+       "title": "X-Api-Key",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "V1 Limits",
+    "tags": [
+     "v1"
+    ]
+   }
+  },
   "/v1/nl-filter": {
    "post": {
     "operationId": "v1_nl_filter_v1_nl_filter_post",

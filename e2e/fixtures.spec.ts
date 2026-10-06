@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { installMocks } from './mock'
-import { runDemoStory } from './story'
+import { runDemoStory, signInAs } from './story'
 
 test.describe('fixtures (no services)', () => {
   test.beforeEach(async ({ page }) => { await installMocks(page) })
@@ -51,6 +51,34 @@ test.describe('fixtures (no services)', () => {
     await page.route('**/p1/v1/queue**', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ as_of: 'x', total_matching: 0, limit: 100, ranking: { value: null, unit: '', provenance: 'simulated', source: 's', note: '' }, driver_note: '', rows: [] }) }))
     await page.goto('/queue')
     await expect(page.getByText('No open cases match at this clock.')).toBeVisible()
+  })
+
+  test('free-tier limits: exhausted models, gateway allowance and the limits card are explained in words', async ({ page }) => {
+    await page.route('**/p3/v1/ask', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      blocked: false, answer: '(Template answer: no language model is configured.) 544 cases: already late.', abstained: false, claims: [], evidence: [], model: 'template-fallback', trace_id: 'a'.repeat(32), cost_usd: 0, latency_ms: 5,
+      gateway: { decision: 'allow', layers: {}, latency_ms: 1, trace_id: 'a'.repeat(32) }, notes: ['All free models are at their limits right now'],
+      limits: { exhausted: true, retry_after_s: 9, other: [], models: [
+        { provider: 'gemini', model: 'gemini-2.5-flash', scope: 'day', retry_after_s: 41520, message: 'Gemini (Google AI Studio free tier) · gemini-2.5-flash: per-day request limit reached — try again in 11.5 h' },
+        { provider: 'groq', model: 'openai/gpt-oss-120b', scope: 'tokens', retry_after_s: 9, message: 'Groq (free plan) · openai/gpt-oss-120b: per-minute token limit reached — try again in 9 s' }] } }) }))
+    await page.goto('/ask')
+    await signInAs(page, 'analyst')
+    await page.getByTestId('ask-input').fill('How many open cases are already late?')
+    await page.getByTestId('ask-submit').click()
+    const callout = page.getByTestId('limits-callout')
+    await expect(callout).toContainText('Every free Gemini and Groq model is limited right now')
+    await expect(callout).toContainText('9 s')
+    await expect(page.getByText('per-day request limit reached')).toBeVisible()
+    await expect(page.getByText('per-minute token limit reached')).toBeVisible()
+    // the gateway's own allowance is explained in its own words
+    await page.route('**/p3/v1/ask', (route) => route.fulfill({ status: 429, contentType: 'application/json', headers: { 'Retry-After': '7200' }, body: JSON.stringify({ detail: 'Daily AI question allowance for this demo identity is used (40). It protects the shared Gemini/Groq free-tier quota and resets at 00:00 UTC (in 2.0 h).' }) }))
+    await page.getByTestId('ask-submit').click()
+    await expect(page.getByTestId('allowance-callout')).toContainText('protects the shared Gemini/Groq free-tier quota')
+    await page.goto('/observability')
+    const card = page.getByTestId('limits-card')
+    await expect(card).toContainText('gemini-2.5-flash')
+    await expect(card).toContainText('cooling down · minute')
+    await expect(card).toContainText('no key')
+    await expect(card).toContainText('of 40 questions used by you today')
   })
 
   test('command palette opens with Ctrl+K and navigates', async ({ page }) => {
