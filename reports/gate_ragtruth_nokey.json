@@ -1,0 +1,785 @@
+{
+ "source": {
+  "dataset": "RAGTruth test split",
+  "repo": "ParticleMedia/RAGTruth",
+  "commit": "c103204b9ce28d6bbad859304bf30de72b8ed8fe",
+  "licence": "MIT",
+  "files": {
+   "dataset/response.jsonl": {
+    "bytes": 21458735,
+    "sha256": "e4c2e4ac24fff676d8984cc61c35d791612fadc58015335d97dd632375e18073"
+   },
+   "dataset/source_info.jsonl": {
+    "bytes": 15117971,
+    "sha256": "0dffc26ea9f3c1c3d7c7e8336b56ef1646e3cec876edffcca3c9c624d12d578b"
+   }
+  }
+ },
+ "label": "no model was called to produce these numbers; human span labels collapsed to a response-level hallucinated / supported label",
+ "n": 2700,
+ "hallucinated_share": 0.349,
+ "overall": {
+  "flag everything (baseline)": {
+   "n": 2700,
+   "hallucinated": 943,
+   "recall": {
+    "k": 943,
+    "n": 943,
+    "rate": 1.0,
+    "ci95": [
+     0.996,
+     1.0
+    ]
+   },
+   "false_positive_rate": {
+    "k": 1757,
+    "n": 1757,
+    "rate": 1.0,
+    "ci95": [
+     0.998,
+     1.0
+    ]
+   },
+   "precision": 0.349,
+   "balanced_accuracy": 0.5
+  },
+  "lexical claim-support gate (r=0.65, deployed)": {
+   "n": 2700,
+   "hallucinated": 943,
+   "recall": {
+    "k": 923,
+    "n": 943,
+    "rate": 0.979,
+    "ci95": [
+     0.967,
+     0.986
+    ]
+   },
+   "false_positive_rate": {
+    "k": 1390,
+    "n": 1757,
+    "rate": 0.791,
+    "ci95": [
+     0.771,
+     0.809
+    ]
+   },
+   "precision": 0.399,
+   "balanced_accuracy": 0.594,
+   "roc_auc": 0.765
+  },
+  "NLI baseline (nli-deberta-v3-small, entailment >= 0.5)": {
+   "n": 2700,
+   "hallucinated": 943,
+   "recall": {
+    "k": 940,
+    "n": 943,
+    "rate": 0.997,
+    "ci95": [
+     0.991,
+     0.999
+    ]
+   },
+   "false_positive_rate": {
+    "k": 1699,
+    "n": 1757,
+    "rate": 0.967,
+    "ci95": [
+     0.958,
+     0.974
+    ]
+   },
+   "precision": 0.356,
+   "balanced_accuracy": 0.515,
+   "roc_auc": 0.623
+  }
+ },
+ "by_task": {
+  "Data2txt": {
+   "flag everything (baseline)": {
+    "n": 900,
+    "hallucinated": 579,
+    "recall": {
+     "k": 579,
+     "n": 579,
+     "rate": 1.0,
+     "ci95": [
+      0.993,
+      1.0
+     ]
+    },
+    "false_positive_rate": {
+     "k": 321,
+     "n": 321,
+     "rate": 1.0,
+     "ci95": [
+      0.988,
+      1.0
+     ]
+    },
+    "precision": 0.643,
+    "balanced_accuracy": 0.5
+   },
+   "lexical claim-support gate (r=0.65, deployed)": {
+    "n": 900,
+    "hallucinated": 579,
+    "recall": {
+     "k": 579,
+     "n": 579,
+     "rate": 1.0,
+     "ci95": [
+      0.993,
+      1.0
+     ]
+    },
+    "false_positive_rate": {
+     "k": 321,
+     "n": 321,
+     "rate": 1.0,
+     "ci95": [
+      0.988,
+      1.0
+     ]
+    },
+    "precision": 0.643,
+    "balanced_accuracy": 0.5,
+    "roc_auc": 0.475
+   },
+   "NLI baseline (nli-deberta-v3-small, entailment >= 0.5)": {
+    "n": 900,
+    "hallucinated": 579,
+    "recall": {
+     "k": 579,
+     "n": 579,
+     "rate": 1.0,
+     "ci95": [
+      0.993,
+      1.0
+     ]
+    },
+    "false_positive_rate": {
+     "k": 321,
+     "n": 321,
+     "rate": 1.0,
+     "ci95": [
+      0.988,
+      1.0
+     ]
+    },
+    "precision": 0.643,
+    "balanced_accuracy": 0.5,
+    "roc_auc": 0.509
+   }
+  },
+  "QA": {
+   "flag everything (baseline)": {
+    "n": 900,
+    "hallucinated": 160,
+    "recall": {
+     "k": 160,
+     "n": 160,
+     "rate": 1.0,
+     "ci95": [
+      0.977,
+      1.0
+     ]
+    },
+    "false_positive_rate": {
+     "k": 740,
+     "n": 740,
+     "rate": 1.0,
+     "ci95": [
+      0.995,
+      1.0
+     ]
+    },
+    "precision": 0.178,
+    "balanced_accuracy": 0.5
+   },
+   "lexical claim-support gate (r=0.65, deployed)": {
+    "n": 900,
+    "hallucinated": 160,
+    "recall": {
+     "k": 157,
+     "n": 160,
+     "rate": 0.981,
+     "ci95": [
+      0.946,
+      0.994
+     ]
+    },
+    "false_positive_rate": {
+     "k": 534,
+     "n": 740,
+     "rate": 0.722,
+     "ci95": [
+      0.688,
+      0.753
+     ]
+    },
+    "precision": 0.227,
+    "balanced_accuracy": 0.63,
+    "roc_auc": 0.761
+   },
+   "NLI baseline (nli-deberta-v3-small, entailment >= 0.5)": {
+    "n": 900,
+    "hallucinated": 160,
+    "recall": {
+     "k": 157,
+     "n": 160,
+     "rate": 0.981,
+     "ci95": [
+      0.946,
+      0.994
+     ]
+    },
+    "false_positive_rate": {
+     "k": 693,
+     "n": 740,
+     "rate": 0.936,
+     "ci95": [
+      0.917,
+      0.952
+     ]
+    },
+    "precision": 0.185,
+    "balanced_accuracy": 0.522,
+    "roc_auc": 0.653
+   }
+  },
+  "Summary": {
+   "flag everything (baseline)": {
+    "n": 900,
+    "hallucinated": 204,
+    "recall": {
+     "k": 204,
+     "n": 204,
+     "rate": 1.0,
+     "ci95": [
+      0.982,
+      1.0
+     ]
+    },
+    "false_positive_rate": {
+     "k": 696,
+     "n": 696,
+     "rate": 1.0,
+     "ci95": [
+      0.995,
+      1.0
+     ]
+    },
+    "precision": 0.227,
+    "balanced_accuracy": 0.5
+   },
+   "lexical claim-support gate (r=0.65, deployed)": {
+    "n": 900,
+    "hallucinated": 204,
+    "recall": {
+     "k": 187,
+     "n": 204,
+     "rate": 0.917,
+     "ci95": [
+      0.871,
+      0.947
+     ]
+    },
+    "false_positive_rate": {
+     "k": 535,
+     "n": 696,
+     "rate": 0.769,
+     "ci95": [
+      0.736,
+      0.798
+     ]
+    },
+    "precision": 0.259,
+    "balanced_accuracy": 0.574,
+    "roc_auc": 0.673
+   },
+   "NLI baseline (nli-deberta-v3-small, entailment >= 0.5)": {
+    "n": 900,
+    "hallucinated": 204,
+    "recall": {
+     "k": 204,
+     "n": 204,
+     "rate": 1.0,
+     "ci95": [
+      0.982,
+      1.0
+     ]
+    },
+    "false_positive_rate": {
+     "k": 685,
+     "n": 696,
+     "rate": 0.984,
+     "ci95": [
+      0.972,
+      0.991
+     ]
+    },
+    "precision": 0.229,
+    "balanced_accuracy": 0.508,
+    "roc_auc": 0.562
+   }
+  }
+ },
+ "by_model": {
+  "gpt-3.5-turbo-0613": {
+   "flag everything (baseline)": {
+    "n": 450,
+    "hallucinated": 46,
+    "recall": {
+     "k": 46,
+     "n": 46,
+     "rate": 1.0,
+     "ci95": [
+      0.923,
+      1.0
+     ]
+    },
+    "false_positive_rate": {
+     "k": 404,
+     "n": 404,
+     "rate": 1.0,
+     "ci95": [
+      0.991,
+      1.0
+     ]
+    },
+    "precision": 0.102,
+    "balanced_accuracy": 0.5
+   },
+   "lexical claim-support gate (r=0.65, deployed)": {
+    "n": 450,
+    "hallucinated": 46,
+    "recall": {
+     "k": 45,
+     "n": 46,
+     "rate": 0.978,
+     "ci95": [
+      0.887,
+      0.996
+     ]
+    },
+    "false_positive_rate": {
+     "k": 290,
+     "n": 404,
+     "rate": 0.718,
+     "ci95": [
+      0.672,
+      0.759
+     ]
+    },
+    "precision": 0.134,
+    "balanced_accuracy": 0.63,
+    "roc_auc": 0.774
+   },
+   "NLI baseline (nli-deberta-v3-small, entailment >= 0.5)": {
+    "n": 450,
+    "hallucinated": 46,
+    "recall": {
+     "k": 46,
+     "n": 46,
+     "rate": 1.0,
+     "ci95": [
+      0.923,
+      1.0
+     ]
+    },
+    "false_positive_rate": {
+     "k": 383,
+     "n": 404,
+     "rate": 0.948,
+     "ci95": [
+      0.922,
+      0.966
+     ]
+    },
+    "precision": 0.107,
+    "balanced_accuracy": 0.526,
+    "roc_auc": 0.672
+   }
+  },
+  "gpt-4-0613": {
+   "flag everything (baseline)": {
+    "n": 450,
+    "hallucinated": 42,
+    "recall": {
+     "k": 42,
+     "n": 42,
+     "rate": 1.0,
+     "ci95": [
+      0.916,
+      1.0
+     ]
+    },
+    "false_positive_rate": {
+     "k": 408,
+     "n": 408,
+     "rate": 1.0,
+     "ci95": [
+      0.991,
+      1.0
+     ]
+    },
+    "precision": 0.093,
+    "balanced_accuracy": 0.5
+   },
+   "lexical claim-support gate (r=0.65, deployed)": {
+    "n": 450,
+    "hallucinated": 42,
+    "recall": {
+     "k": 41,
+     "n": 42,
+     "rate": 0.976,
+     "ci95": [
+      0.877,
+      0.996
+     ]
+    },
+    "false_positive_rate": {
+     "k": 273,
+     "n": 408,
+     "rate": 0.669,
+     "ci95": [
+      0.622,
+      0.713
+     ]
+    },
+    "precision": 0.131,
+    "balanced_accuracy": 0.654,
+    "roc_auc": 0.796
+   },
+   "NLI baseline (nli-deberta-v3-small, entailment >= 0.5)": {
+    "n": 450,
+    "hallucinated": 42,
+    "recall": {
+     "k": 42,
+     "n": 42,
+     "rate": 1.0,
+     "ci95": [
+      0.916,
+      1.0
+     ]
+    },
+    "false_positive_rate": {
+     "k": 394,
+     "n": 408,
+     "rate": 0.966,
+     "ci95": [
+      0.943,
+      0.979
+     ]
+    },
+    "precision": 0.096,
+    "balanced_accuracy": 0.517,
+    "roc_auc": 0.655
+   }
+  },
+  "llama-2-13b-chat": {
+   "flag everything (baseline)": {
+    "n": 450,
+    "hallucinated": 207,
+    "recall": {
+     "k": 207,
+     "n": 207,
+     "rate": 1.0,
+     "ci95": [
+      0.982,
+      1.0
+     ]
+    },
+    "false_positive_rate": {
+     "k": 243,
+     "n": 243,
+     "rate": 1.0,
+     "ci95": [
+      0.984,
+      1.0
+     ]
+    },
+    "precision": 0.46,
+    "balanced_accuracy": 0.5
+   },
+   "lexical claim-support gate (r=0.65, deployed)": {
+    "n": 450,
+    "hallucinated": 207,
+    "recall": {
+     "k": 206,
+     "n": 207,
+     "rate": 0.995,
+     "ci95": [
+      0.973,
+      0.999
+     ]
+    },
+    "false_positive_rate": {
+     "k": 227,
+     "n": 243,
+     "rate": 0.934,
+     "ci95": [
+      0.896,
+      0.959
+     ]
+    },
+    "precision": 0.476,
+    "balanced_accuracy": 0.531,
+    "roc_auc": 0.81
+   },
+   "NLI baseline (nli-deberta-v3-small, entailment >= 0.5)": {
+    "n": 450,
+    "hallucinated": 207,
+    "recall": {
+     "k": 207,
+     "n": 207,
+     "rate": 1.0,
+     "ci95": [
+      0.982,
+      1.0
+     ]
+    },
+    "false_positive_rate": {
+     "k": 236,
+     "n": 243,
+     "rate": 0.971,
+     "ci95": [
+      0.942,
+      0.986
+     ]
+    },
+    "precision": 0.467,
+    "balanced_accuracy": 0.514,
+    "roc_auc": 0.572
+   }
+  },
+  "llama-2-70b-chat": {
+   "flag everything (baseline)": {
+    "n": 450,
+    "hallucinated": 171,
+    "recall": {
+     "k": 171,
+     "n": 171,
+     "rate": 1.0,
+     "ci95": [
+      0.978,
+      1.0
+     ]
+    },
+    "false_positive_rate": {
+     "k": 279,
+     "n": 279,
+     "rate": 1.0,
+     "ci95": [
+      0.986,
+      1.0
+     ]
+    },
+    "precision": 0.38,
+    "balanced_accuracy": 0.5
+   },
+   "lexical claim-support gate (r=0.65, deployed)": {
+    "n": 450,
+    "hallucinated": 171,
+    "recall": {
+     "k": 166,
+     "n": 171,
+     "rate": 0.971,
+     "ci95": [
+      0.933,
+      0.987
+     ]
+    },
+    "false_positive_rate": {
+     "k": 238,
+     "n": 279,
+     "rate": 0.853,
+     "ci95": [
+      0.807,
+      0.89
+     ]
+    },
+    "precision": 0.411,
+    "balanced_accuracy": 0.559,
+    "roc_auc": 0.787
+   },
+   "NLI baseline (nli-deberta-v3-small, entailment >= 0.5)": {
+    "n": 450,
+    "hallucinated": 171,
+    "recall": {
+     "k": 169,
+     "n": 171,
+     "rate": 0.988,
+     "ci95": [
+      0.958,
+      0.997
+     ]
+    },
+    "false_positive_rate": {
+     "k": 273,
+     "n": 279,
+     "rate": 0.978,
+     "ci95": [
+      0.954,
+      0.99
+     ]
+    },
+    "precision": 0.382,
+    "balanced_accuracy": 0.505,
+    "roc_auc": 0.62
+   }
+  },
+  "llama-2-7b-chat": {
+   "flag everything (baseline)": {
+    "n": 450,
+    "hallucinated": 226,
+    "recall": {
+     "k": 226,
+     "n": 226,
+     "rate": 1.0,
+     "ci95": [
+      0.983,
+      1.0
+     ]
+    },
+    "false_positive_rate": {
+     "k": 224,
+     "n": 224,
+     "rate": 1.0,
+     "ci95": [
+      0.983,
+      1.0
+     ]
+    },
+    "precision": 0.502,
+    "balanced_accuracy": 0.5
+   },
+   "lexical claim-support gate (r=0.65, deployed)": {
+    "n": 450,
+    "hallucinated": 226,
+    "recall": {
+     "k": 223,
+     "n": 226,
+     "rate": 0.987,
+     "ci95": [
+      0.962,
+      0.995
+     ]
+    },
+    "false_positive_rate": {
+     "k": 205,
+     "n": 224,
+     "rate": 0.915,
+     "ci95": [
+      0.871,
+      0.945
+     ]
+    },
+    "precision": 0.521,
+    "balanced_accuracy": 0.536,
+    "roc_auc": 0.746
+   },
+   "NLI baseline (nli-deberta-v3-small, entailment >= 0.5)": {
+    "n": 450,
+    "hallucinated": 226,
+    "recall": {
+     "k": 225,
+     "n": 226,
+     "rate": 0.996,
+     "ci95": [
+      0.975,
+      0.999
+     ]
+    },
+    "false_positive_rate": {
+     "k": 224,
+     "n": 224,
+     "rate": 1.0,
+     "ci95": [
+      0.983,
+      1.0
+     ]
+    },
+    "precision": 0.501,
+    "balanced_accuracy": 0.498,
+    "roc_auc": 0.574
+   }
+  },
+  "mistral-7B-instruct": {
+   "flag everything (baseline)": {
+    "n": 450,
+    "hallucinated": 251,
+    "recall": {
+     "k": 251,
+     "n": 251,
+     "rate": 1.0,
+     "ci95": [
+      0.985,
+      1.0
+     ]
+    },
+    "false_positive_rate": {
+     "k": 199,
+     "n": 199,
+     "rate": 1.0,
+     "ci95": [
+      0.981,
+      1.0
+     ]
+    },
+    "precision": 0.558,
+    "balanced_accuracy": 0.5
+   },
+   "lexical claim-support gate (r=0.65, deployed)": {
+    "n": 450,
+    "hallucinated": 251,
+    "recall": {
+     "k": 242,
+     "n": 251,
+     "rate": 0.964,
+     "ci95": [
+      0.933,
+      0.981
+     ]
+    },
+    "false_positive_rate": {
+     "k": 157,
+     "n": 199,
+     "rate": 0.789,
+     "ci95": [
+      0.727,
+      0.84
+     ]
+    },
+    "precision": 0.607,
+    "balanced_accuracy": 0.588,
+    "roc_auc": 0.806
+   },
+   "NLI baseline (nli-deberta-v3-small, entailment >= 0.5)": {
+    "n": 450,
+    "hallucinated": 251,
+    "recall": {
+     "k": 251,
+     "n": 251,
+     "rate": 1.0,
+     "ci95": [
+      0.985,
+      1.0
+     ]
+    },
+    "false_positive_rate": {
+     "k": 189,
+     "n": 199,
+     "rate": 0.95,
+     "ci95": [
+      0.91,
+      0.972
+     ]
+    },
+    "precision": 0.57,
+    "balanced_accuracy": 0.525,
+    "roc_auc": 0.681
+   }
+  }
+ }
+}

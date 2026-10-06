@@ -18,7 +18,7 @@ over 10 policy/SOP documents plus live P1 metrics — grounded, cited, and willi
 |---|---|---|
 | Hybrid retrieval Hit@1 | **70.8%** | 130 in-scope questions over a 12-document corpus, section-level match, deployed config |
 | Hybrid retrieval MRR | **0.780** | same eval set; with optional cross-encoder reranker: Hit@1 77.7%, MRR 0.832 |
-| Answer gate — correct answers passed (held-out) | **68.8%** | 32 hand-checked correct answers, claim-support gate r=0.65; old NLI gate was 18.8% (same rate as wrong answers — no discrimination); [`docs/gate-calibration.md`](docs/gate-calibration.md) |
+| Answer gate — correct answers passed (held-out) | **68.8%** | 32 hand-checked correct answers, claim-support gate r=0.65; the old NLI gate's 18.8% was measured with premise and hypothesis swapped and is retracted (evidence-first it passes 81.2% of correct answers but also 43.8% of wrong-fact ones); [`docs/gate-calibration.md`](docs/gate-calibration.md) |
 | Answer gate — wrong-fact pass rate | **18.8–21.9%** | same 32 questions with one fact mutated; all failures are polarity flips (Yes↔No) the lexical check cannot catch |
 | Answer gate — off-context pass rate | **3.1–6.2%** | same 32 correct answers scored against chunks from a different question |
 | Agent tool-selection smoke test | **25/25 (100%)** — but these questions were written by the same person who tuned the prompt, so this is a regression guard, not a generalization estimate; see v2 eval for a larger independent set | [`docs/agent-eval.md`](docs/agent-eval.md) |
@@ -184,16 +184,18 @@ Threshold parameter tuned on odd question IDs; held-out results on even IDs:
 
 | Gate | Correct passed | Wrong-fact passed | Off-context passed |
 |---|---|---|---|
-| NLI, t=0.05 | 18.8% | 18.8% | 18.8% — **no discrimination** |
-| NLI, t=0.5 | 18.8% | 18.8% | 18.8% |
+| NLI, t=0.05 (swapped pairs, **retracted**) | 18.8% | 18.8% | 18.8% |
+| NLI, t=0.5 (swapped pairs, **retracted**) | 18.8% | 18.8% | 18.8% |
+| NLI, t=0.5, evidence first (corrected 2026-10-06) | 81.2% | 43.8% | 0.0% |
+| NLI, t=1.0, evidence first (every sentence entailed) | 62.5% | 12.5% | 0.0% |
 | **Claim-support, r=0.65** | **68.8%** | **18.8%** | **6.2%** |
 | No gate | 100% | 100% | 100% |
 
-The NLI gate was replaced because it blocked correct and wrong answers at the same rate on
-this labeled set — the gate had no discriminating power on procurement text. The
-`cross-encoder/nli-deberta-v3-small` model (trained on MNLI/SNLI) assigns contradiction
-probabilities near 1 to correct procurement sentences, because domain-specific numerical
-claims look like contradictions to a general-purpose NLI model.
+**Correction (2026-10-06).** The NLI rows marked "retracted" were produced by passing the cross-encoder `(answer sentence, source chunk)`, which asks whether the sentence entails the chunk; an
+NLI model reads `(premise, hypothesis)`, evidence first. That also undermines the explanation given here before (that the model scores correct procurement claims as contradictions because of domain mismatch).
+Re-run in the right order the NLI gate does discriminate: it blocks off-context answers as well as claim support does and passes more correct answers, but it lets through about twice as many
+wrong-fact answers at t=0.5 (43.8% vs 18.8%, held-out; 50.0% vs 21.9% on all 32), and at t=1.0 it only matches claim support on wrong facts by passing fewer correct answers. Claim support stays the default, because
+it is the better trade-off for catching a changed number or term, not because NLI could not tell right from wrong. Details, and what has not been re-run: [`docs/gate-calibration.md`](docs/gate-calibration.md).
 
 **What the claim-support gate still gets wrong:** all 7 wrong-fact answers that pass are
 polarity flips (Yes↔No, included↔excluded) — a lexical check cannot see sign changes.
@@ -232,6 +234,13 @@ demonstrated the intended behaviour — catching polarity flips that lexical sco
 sound; production use would require a paid tier or a self-hosted model.
 
 Full analysis: [`docs/llm-gate-eval.md`](docs/llm-gate-eval.md)
+
+### Public human-labelled data and local-model evaluations (no key needed)
+
+[`docs/public-evals-no-key.md`](docs/public-evals-no-key.md): the gates scored on RAGTruth's 2,700 human-labelled responses (the deployed lexical gate flags 79% of supported responses at r = 0.65 but ranks with AUC 0.77;
+the NLI baseline, once its pair order was fixed, 0.62), P2's retrievers on FinanceBench evidence pages (dense Hit@5 73%, hybrid 61%, BM25 29%: a closed-set proxy), and a local 7B model through the whole pipeline
+(66.7% of answers grounded after two bugs the evaluation found were fixed; NL filter 52.5%; briefing 81%). Local-model results are pipeline proofs, not headline numbers. LLM-AggreFact is gated (needs the owner's Hugging Face
+login) and the LLM-judge columns are pending (key).
 
 ---
 
