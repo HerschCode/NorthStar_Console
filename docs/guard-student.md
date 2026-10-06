@@ -225,8 +225,8 @@ What this does **not** show:
   current detectors on an independently authored set. The comparison above is
   against the teacher only, at one operating point each.
 - **AgentDojo and the adaptive red-team numbers with the student enabled.** The
-  AgentDojo runner below is built, but no AgentDojo result is claimed: running it
-  needs a model provider key, which the account owner sets. The
+  AgentDojo runner below is built and has run once as a **3-pair smoke test on a local 7B model** (see "Smoke test" below), which proves the runner and nothing else; no AgentDojo
+  result is claimed, because a real run needs a model provider key, which the account owner sets. The
   default backend stays `numpy` for that reason as well: switching it would
   change what the published red-team numbers measured.
 - **The student has not been through the adaptive attacker.** A stronger-than-
@@ -235,6 +235,13 @@ What this does **not** show:
 
 
 ## AgentDojo integration
+
+**Smoke test (a pipeline proof, not a result).** `--provider ollama --smoke-test --compare-baseline` on `qwen2.5:7b-instruct` (workspace suite, `tool_knowledge` attack, 3 task pairs per
+arm, detector only: no firewall policy was supplied) ran to completion in both arms ([`reports/p3_agentdojo_local_smoke.json`](../reports/p3_agentdojo_local_smoke.json)). The model
+completed none of the user tasks (utility 0 in both arms) and the injection succeeded in all three pairs in both arms; the gateway's detector scanned 14 tool outputs and flagged none, which is what the
+indirect-injection benchmark in [`docs/guard-baselines.md`](guard-baselines.md) predicts for plain-request injections. Three pairs and a weak model say nothing about the gateway's real effect;
+they show that the runner, the budget caps and the report work against a local model with no key. A meaningful run needs a stronger model, about 40 pairs per arm, and the action firewall
+enabled with a policy and tool map for the suite (not yet written).
 
 The integration is an optional benchmark dependency, not a serving dependency.
 Install it with:

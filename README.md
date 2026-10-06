@@ -94,7 +94,7 @@ student peaks at about 160 MB resident and ran under a 144 MB commit cap
 (Windows job-object substitute; a real `docker run -m 512m` has not been done).
 See [`docs/guard-student.md`](docs/guard-student.md) for the method, the order
 in which the evidence was seen, limits, reproduction, and the sampled/capped
-AgentDojo runner (built, not yet run).
+AgentDojo runner (smoke-tested on a local 7B model, 3 pairs: a pipeline proof, no result claimed).
 
 ## Quickstart
 

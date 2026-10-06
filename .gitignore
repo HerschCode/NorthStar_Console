@@ -57,3 +57,6 @@ redteam/runs/
 
 # any throwaway virtual environment (.venv-ci312, .venv-fuzz, .venv-agentdojo, ...)
 .venv-*/
+
+# AgentDojo / garak run logs (the summary reports under reports/ are what is committed)
+runs/
