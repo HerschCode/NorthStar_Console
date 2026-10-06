@@ -35,6 +35,49 @@ test.describe('fixtures (no services)', () => {
     await expect(page.getByText(/saved snapshot/i)).toBeVisible()
   })
 
+  test('model health shows registered champion, challenger, integrity status and registry events', async ({ page }) => {
+    await page.route('**/p1/v1/mlops/registry', (route) => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        available: true,
+        name: 'sla_risk',
+        champion: {
+          version: 'champion-v3',
+          registered_at: '2026-10-06T12:00:00Z',
+          sha256: 'a'.repeat(64),
+          data_fingerprint: 'train-window-v8',
+          metrics: { roc_auc: 0.84, brier: 0.17, ece: 0.03, n_test: 580 },
+          notes: 'approved temporal holdout',
+        },
+        challenger: {
+          version: 'candidate-v4',
+          registered_at: '2026-10-06T13:00:00Z',
+          sha256: 'b'.repeat(64),
+          data_fingerprint: 'train-window-v9',
+          metrics: { roc_auc: 0.86, brier: 0.16, ece: 0.02, n_test: 610 },
+          notes: 'awaiting review',
+        },
+        versions: ['champion-v3', 'candidate-v4'],
+        champion_hash_verified: false,
+        events: [{
+          at: '2026-10-06T13:05:00Z',
+          event: 'promotion_held',
+          detail: { summary: 'awaiting independent approval' },
+        }],
+        note: '',
+      }),
+    }))
+
+    await page.goto('/models')
+    const registry = page.getByRole('region', { name: /model registry/i })
+    await expect(registry).toContainText('champion-v3')
+    await expect(registry).toContainText('candidate-v4')
+    await expect(registry).toContainText('hash mismatch')
+    await expect(registry).toContainText('promotion_held')
+    await expect(registry).toContainText('awaiting independent approval')
+    await expect(registry.getByRole('table', { name: 'Registry events' })).toBeVisible()
+  })
+
   test('replay clock re-queries with as_of', async ({ page }) => {
     const seen: string[] = []
     page.on('request', (r) => { const u = new URL(r.url()); if (u.pathname.endsWith('/v1/overview')) seen.push(u.searchParams.get('as_of') ?? '') })
