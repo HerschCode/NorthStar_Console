@@ -1,0 +1,445 @@
+"""
+Core middleware orchestrator. Implements the request lifecycle from the build
+doc:
+
+  Pre-flight: PII redaction -> injection detection (ensemble of all 3 layers,
+              since this is the *protecting* path, not the *comparing* path --
+              scripts/evaluate.py is where each layer is measured individually)
+              -> rate limit -> session anomaly check
+  -> forward to backend adapter (if pre-flight clean)
+  Post-flight: role-based exposure check -> jailbreak-compliance check ->
+               system-prompt leak check
+  -> log everything, return decision + response
+
+"Ensemble" here means block if ANY layer blocks -- defense in depth, matching
+the doc's request-lifecycle diagram which doesn't ask for a single-layer
+production mode. Which layer actually fired is preserved in the log
+(matched_pattern_id + detection_layer_used), so a block is always attributable
+to a specific layer even in ensemble mode.
+"""
+import os
+import time
+from dataclasses import dataclass, field
+
+from gateway.adapters.base import BackendAdapter
+from gateway.adaptive_threshold import AdaptiveThresholdTracker
+from gateway.detectors import rule_based
+from gateway.logging_schema import GatewayLogger, LogRecord
+from gateway.text_normalizer import decoding_candidates, find_hidden_tag_text
+from gateway.text_normalizer import normalize as _normalize_text
+from gateway.text_normalizer import sanitize as _sanitize_text
+
+# CLASSIFIER_THRESHOLD is re-declared here (rather than imported from a
+# detector module) to keep this file import-cheap. Keep in sync with
+# gateway/detectors/classifier_numpy.py.
+#
+# History: GATEWAY_LITE=1 originally existed to skip the classifier because it
+# was torch-backed and torch didn't fit Render's 512MB free tier (see
+# docs/decisions.md). It no longer needs to exist for that reason -- the
+# serving path now uses gateway/detectors/classifier_numpy.py, a torch-free
+# re-implementation of the same trained model's forward pass (verified
+# bit-parity in tests/test_classifier_numpy_parity.py), so the full default
+# ensemble (rules + classifier) fits the free tier too. GATEWAY_LITE is kept as an opt-in "run an
+# even smaller ensemble" toggle (marginally lower latency, one fewer moving
+# part for a quick smoke test), not because anything requires it anymore.
+CLASSIFIER_THRESHOLD = 0.5
+LITE_MODE = os.environ.get("GATEWAY_LITE", "").lower() in ("1", "true", "yes")
+
+# Layer 2 backend: "none" (default: layer disabled), "tfidf" (torch-free, opt-in ablation) or
+# "sentence_transformer" (opt-in: real semantic embeddings, needs `pip install
+# sentence-transformers`, which pulls in torch; not in requirements.txt).
+#
+# Default changed from "tfidf" to "none" on 2026-09-25 after an ablation
+# (docs/ensemble-ablation.md): the TF-IDF layer scores 0% on this project's own attack corpus, and on
+# deepset it added 14 points of detection at the cost of 14 points of false positives (about a
+# coin flip). Removing it leaves own-corpus results unchanged, halves deepset false positives, and
+# cuts ~4 ms from a ~4 ms ensemble. See also gateway/detectors/embedding_similarity_st.py and
+# docs/sentence_transformer_similarity_result.md.
+EMBEDDING_BACKEND = os.environ.get("EMBEDDING_BACKEND", "none").lower()
+
+# Classifier layer: "numpy" (default: the 2 MB mean-pooled MLP), "student" (the distilled MiniLM served as ONNX int8,
+# gateway/detectors/student_onnx.py; needs onnxruntime and tokenizers) or "both" (block if either fires). Opt-in: which is better,
+# and at what memory, is measured in docs/guard-student.md.
+CLASSIFIER_BACKEND = os.environ.get("CLASSIFIER_BACKEND", "numpy").lower()
+from gateway import pseudonymize
+from gateway.pii import PIIResult, scan_and_redact
+from gateway.response_checks import check_jailbreak_compliance, check_system_prompt_leak
+from gateway.role_exposure import check as check_role_exposure
+from gateway.session_checks import SessionContentTracker, SessionTracker
+
+
+@dataclass
+class GatewayResponse:
+    allowed: bool
+    response_text: str | None
+    block_reason: str | None
+    trace: dict = field(default_factory=dict)
+
+
+class GatewayMiddleware:
+    def __init__(self):
+        self.embedding_backend = EMBEDDING_BACKEND
+        self.embedding_detector = None
+        self.similarity_threshold = None
+        if self.embedding_backend == "none":
+            pass
+        elif self.embedding_backend == "sentence_transformer":
+            from gateway.detectors.embedding_similarity_st import (
+                SIMILARITY_THRESHOLD as EMB_THRESHOLD,
+            )
+            from gateway.detectors.embedding_similarity_st import (
+                SentenceTransformerSimilarityDetector,
+            )
+            self.embedding_detector = SentenceTransformerSimilarityDetector()
+        elif self.embedding_backend == "tfidf":
+            from gateway.detectors.embedding_similarity import (
+                SIMILARITY_THRESHOLD as EMB_THRESHOLD,
+            )
+            from gateway.detectors.embedding_similarity import (
+                EmbeddingSimilarityDetector,
+            )
+            self.embedding_detector = EmbeddingSimilarityDetector()
+        else:
+            raise ValueError(f"EMBEDDING_BACKEND must be none, tfidf or sentence_transformer, got {self.embedding_backend!r}")
+        if self.embedding_detector is not None:
+            self.embedding_detector.load()
+            self.similarity_threshold = EMB_THRESHOLD
+
+        # GATEWAY_LITE=1: deliberately run a smaller ensemble (see the module
+        # docstring above for why this is no longer a torch/RAM necessity).
+        self.lite_mode = LITE_MODE
+        self.classifier_backend = CLASSIFIER_BACKEND
+        if self.classifier_backend not in ("numpy", "student", "both"):
+            raise ValueError(f"CLASSIFIER_BACKEND must be numpy, student or both, got {self.classifier_backend!r}")
+        self.classifier_detector = None
+        self.student_detector = None
+        if not self.lite_mode:
+            if self.classifier_backend in ("numpy", "both"):
+                from gateway.detectors.classifier_numpy import (
+                    ScratchClassifierDetectorNumpy,
+                )
+                self.classifier_detector = ScratchClassifierDetectorNumpy()
+                self.classifier_detector.load()
+            if self.classifier_backend in ("student", "both"):
+                from gateway.detectors.student_onnx import StudentOnnxDetector
+                self.student_detector = StudentOnnxDetector()
+                self.student_detector.load()
+
+        self.session_tracker = SessionTracker()
+        self.session_content_tracker = SessionContentTracker()
+        self.adaptive_tracker = AdaptiveThresholdTracker()
+        self.logger = GatewayLogger()
+        self.pseudonyms = pseudonymize.PseudonymVault()
+
+    def _scan_pii(self, prompt: str, session_id: str, user_id: str) -> PIIResult:
+        """PII out of the prompt, before anything else sees it: redacted (default) or, with PII_MODE=pseudonymize, replaced by session
+        tokens the model can refer to and an authorized reader gets restored (gateway/pseudonymize.py). The originals never leave the vault."""
+        result = scan_and_redact(prompt)
+        if result.spans and pseudonymize.mode() == "pseudonymize":
+            result = PIIResult(redacted_text=self.pseudonyms.tokenize(session_id, user_id, prompt, result.spans), found=result.found, spans=result.spans)
+        return result
+
+    def _reveal(self, response_text: str, session_id: str, user_id: str, role: str) -> str:
+        """Restore pseudonym tokens in an ALLOWED response for roles in PII_DETOKENIZE_ROLES; everyone else keeps the tokens."""
+        if pseudonymize.mode() == "pseudonymize" and role in pseudonymize.detokenize_roles():
+            return self.pseudonyms.detokenize(session_id, user_id, response_text)
+        return response_text
+
+    def _run_injection_ensemble(self, text: str, session_id: str) -> tuple[bool, str | None, str | None, dict]:
+        """Runs the detection layers (rules, then the classifier; the similarity layer only when enabled), blocks if any fires. Returns
+        (blocked, detection_layer_used, matched_pattern_id, per_layer_trace).
+
+        Tier 3 adaptive thresholding: layers 2 and 3's thresholds are scaled
+        down for sessions with an elevated risk score (prior blocks in this
+        session), making them easier to trip for a session that's already
+        looked suspicious -- rather than treating every request as
+        independent of what this session did a moment ago."""
+        per_layer = {}
+        multiplier = self.adaptive_tracker.get_threshold_multiplier(session_id)
+
+        rb_result = rule_based.detect(text)
+        per_layer["rule_based"] = {"blocked": rb_result.blocked, "latency_ms": rb_result.latency_ms}
+        if rb_result.blocked:
+            self.adaptive_tracker.record_block(session_id)
+            return True, "rule_based", rb_result.matched_pattern_id, per_layer
+
+        # RT-06: the rules also read the text as an attacker who applied a trivial cipher would have written it
+        for label, reading in decoding_candidates(text):
+            cand = rule_based.detect(reading)
+            if cand.blocked:
+                per_layer["rule_based"]["blocked"] = True
+                per_layer["rule_based"]["decoded_via"] = label
+                self.adaptive_tracker.record_block(session_id)
+                return True, "rule_based", cand.matched_pattern_id, per_layer
+
+        if self.embedding_detector is None:  # layer 2 disabled (default)
+            per_layer["embedding_similarity"] = {"blocked": False, "skipped": "disabled"}
+        else:
+            emb_threshold = self.similarity_threshold * multiplier
+            emb_result = self.embedding_detector.detect(text, threshold=emb_threshold)
+            per_layer["embedding_similarity"] = {
+                "blocked": emb_result.blocked, "latency_ms": emb_result.latency_ms,
+                "effective_threshold": emb_threshold, "risk_multiplier": multiplier,
+            }
+            if emb_result.blocked:
+                self.adaptive_tracker.record_block(session_id)
+                return True, "embedding_similarity", emb_result.matched_pattern_id, per_layer
+
+        if self.classifier_detector is None and self.student_detector is None:  # lite mode -- layer 3 disabled
+            per_layer["scratch_classifier"] = {"blocked": False, "skipped": "lite_mode"}
+            return False, None, None, per_layer
+
+        if self.classifier_detector is not None:
+            clf_threshold = CLASSIFIER_THRESHOLD * multiplier
+            clf_result = self.classifier_detector.detect(text, threshold=clf_threshold)
+            per_layer["scratch_classifier"] = {
+                "blocked": clf_result.blocked, "latency_ms": clf_result.latency_ms,
+                "effective_threshold": clf_threshold, "risk_multiplier": multiplier,
+            }
+            if clf_result.blocked:
+                self.adaptive_tracker.record_block(session_id)
+                return True, "scratch_classifier", clf_result.matched_pattern_id, per_layer
+
+        if self.student_detector is not None:
+            stu_threshold = self.student_detector.threshold * multiplier
+            stu_result = self.student_detector.detect(text, threshold=stu_threshold)
+            per_layer["student_guard"] = {
+                "blocked": stu_result.blocked, "latency_ms": stu_result.latency_ms,
+                "effective_threshold": round(stu_threshold, 4), "risk_multiplier": multiplier,
+            }
+            if stu_result.blocked:
+                self.adaptive_tracker.record_block(session_id)
+                return True, "student_guard", stu_result.matched_pattern_id, per_layer
+
+        return False, None, None, per_layer
+
+    def process(
+        self,
+        prompt: str,
+        session_id: str,
+        backend: BackendAdapter,
+        role: str = "employee",
+        system_prompt: str = "",
+        user_id: str = "unknown",
+        trace_id: str | None = None,
+        route: str | None = None,
+    ) -> GatewayResponse:
+        request_id = self.logger.new_request_id()
+        overall_start = time.perf_counter()
+        ctx_extra = {k: v for k, v in (("trace_id", trace_id), ("route", route)) if v}      # correlation fields on every record
+
+        # ---------- PRE-FLIGHT ----------
+        pre_start = time.perf_counter()
+
+        pii_result = self._scan_pii(prompt, session_id, user_id)
+        working_text = _normalize_text(pii_result.redacted_text)      # DETECTION only (leet/homoglyph/decoding rewrite text)
+        forward_text = _sanitize_text(pii_result.redacted_text)       # what the backend receives: removal-only cleanup
+
+        session_check = self.session_tracker.record_and_check(session_id)
+        if not session_check.allowed:
+            self.logger.log(LogRecord(
+                timestamp=self.logger.now(), session_id=session_id, request_id=request_id, user_id=user_id,
+                phase="pre_flight", decision="block", detection_layer_used="session_check",
+                latency_ms=(time.perf_counter() - pre_start) * 1000,
+                matched_pattern_id=session_check.reason,
+                extra={"pii_found": pii_result.found, "session_details": session_check.details, **ctx_extra},
+            ))
+            return GatewayResponse(
+                allowed=False, response_text=None, block_reason=session_check.reason,
+                trace={"phase": "pre_flight", "session_check": session_check.details},
+            )
+
+        # Reconstructed session context (this session's own prior turns + the
+        # current message), not just the current message in isolation -- this is
+        # what makes a GW-009-style split-payload attack detectable for real: no
+        # single turn contains the full malicious instruction, but the
+        # reconstructed context does. The backend still only ever receives
+        # working_text (the real current message) below, never this
+        # detection-only reconstruction.
+        context_text = self.session_content_tracker.get_context_text(session_id, working_text)
+        blocked, layer_used, pattern_id, per_layer_trace = self._run_injection_ensemble(context_text, session_id)
+        if not blocked and find_hidden_tag_text(pii_result.redacted_text):     # invisible Unicode Tag payload: RT-03
+            blocked, layer_used, pattern_id = True, "input_hygiene", "IH-TAG-CHARS"
+            per_layer_trace["input_hygiene"] = {"blocked": True, "latency_ms": 0.0}
+        pre_latency_ms = (time.perf_counter() - pre_start) * 1000
+
+        self.logger.log(LogRecord(
+            timestamp=self.logger.now(), session_id=session_id, request_id=request_id, user_id=user_id,
+            phase="pre_flight", decision="block" if blocked else "allow",
+            detection_layer_used=layer_used, latency_ms=pre_latency_ms,
+            matched_pattern_id=pattern_id,
+            extra={"pii_found": pii_result.found, "per_layer": per_layer_trace, **ctx_extra},
+        ))
+
+        # A blocked message doesn't get added to this session's context -- an
+        # attacker's rejected turn shouldn't still count toward future context
+        # reconstruction, and a legitimate turn only becomes part of context once
+        # it's known to be clean.
+        if not blocked:
+            self.session_content_tracker.record_turn(session_id, working_text)
+
+        if blocked:
+            return GatewayResponse(
+                allowed=False, response_text=None,
+                block_reason=f"injection_detected:{layer_used}:{pattern_id}",
+                trace={"phase": "pre_flight", "per_layer": per_layer_trace, "pii_found": pii_result.found},
+            )
+
+        # ---------- FORWARD TO BACKEND ----------
+        backend_response = backend.send(forward_text, session_id=session_id, role=role, user_id=user_id)
+
+        # ---------- POST-FLIGHT ----------
+        post_start = time.perf_counter()
+
+        role_result = check_role_exposure(backend_response, role)
+        compliance_result = check_jailbreak_compliance(backend_response)
+        leak_result = check_system_prompt_leak(backend_response, system_prompt)
+
+        post_blocked = role_result.exposed or compliance_result.flagged or leak_result.leaked
+        post_latency_ms = (time.perf_counter() - post_start) * 1000
+
+        post_reason = None
+        if role_result.exposed:
+            post_reason = f"role_exposure:{','.join(role_result.matched_tags)}"
+        elif compliance_result.flagged:
+            post_reason = "jailbreak_compliance"
+        elif leak_result.leaked:
+            post_reason = "system_prompt_leak"
+
+        self.logger.log(LogRecord(
+            timestamp=self.logger.now(), session_id=session_id, request_id=request_id, user_id=user_id,
+            phase="post_flight", decision="block" if post_blocked else "allow",
+            detection_layer_used="post_flight_checks", latency_ms=post_latency_ms,
+            matched_pattern_id=post_reason,
+            extra={
+                "role_exposure_tags": role_result.matched_tags,
+                "compliance_markers": compliance_result.matched_markers,
+                "system_leak": leak_result.leaked,
+                **ctx_extra,
+            },
+        ))
+
+        if post_blocked:
+            # A post-flight catch is a real signal too -- feeds the same
+            # adaptive-risk mechanism as pre-flight blocks.
+            self.adaptive_tracker.record_block(session_id)
+            final_text = role_result.redacted_text if role_result.exposed else (
+                "[RESPONSE BLOCKED: gateway post-flight check flagged this response -- "
+                f"reason: {post_reason}]"
+            )
+            return GatewayResponse(
+                allowed=False, response_text=final_text, block_reason=post_reason,
+                trace={
+                    "phase": "post_flight",
+                    "role_exposure": role_result.matched_tags,
+                    "compliance_markers": compliance_result.matched_markers,
+                    "system_leak": leak_result.leaked,
+                    "total_latency_ms": (time.perf_counter() - overall_start) * 1000,
+                },
+            )
+
+        return GatewayResponse(
+            allowed=True, response_text=self._reveal(backend_response, session_id, user_id, role), block_reason=None,
+            trace={
+                "per_layer": per_layer_trace,
+                "total_latency_ms": (time.perf_counter() - overall_start) * 1000,
+            },
+        )
+
+    def process_streaming(
+        self,
+        prompt: str,
+        session_id: str,
+        backend: BackendAdapter,
+        role: str = "employee",
+        system_prompt: str = "",
+        user_id: str = "unknown",
+    ):
+        """
+        Tier 3: streaming support. Pre-flight runs exactly as in process() --
+        there's nothing to stream on the way in. The difference is on the way
+        out: instead of waiting for the full response before running
+        post-flight checks, this re-runs the post-flight checks against the
+        GROWING buffer after every chunk, so a leak gets caught and the
+        stream gets cut off as soon as enough of it has arrived to detect the
+        violation -- not after the backend has already finished generating
+        (and the caller has already seen) the entire leaked response.
+
+        Yields dicts: {"chunk": str, "cut_off": bool}. If cut_off=True, no
+        further chunks are sent and the caller should treat the response as
+        blocked (same semantics as GatewayResponse.allowed=False).
+        """
+        request_id = self.logger.new_request_id()
+
+        # ---------- PRE-FLIGHT (identical to process()) ----------
+        pii_result = self._scan_pii(prompt, session_id, user_id)
+        working_text = _normalize_text(pii_result.redacted_text)      # DETECTION only (leet/homoglyph/decoding rewrite text)
+        forward_text = _sanitize_text(pii_result.redacted_text)       # what the backend receives: removal-only cleanup
+
+        session_check = self.session_tracker.record_and_check(session_id)
+        if not session_check.allowed:
+            self.logger.log(LogRecord(
+                timestamp=self.logger.now(), session_id=session_id, request_id=request_id, user_id=user_id,
+                phase="pre_flight", decision="block", detection_layer_used="session_check",
+                latency_ms=0.0, matched_pattern_id=session_check.reason, extra={},
+            ))
+            yield {"chunk": f"[BLOCKED pre-flight: {session_check.reason}]", "cut_off": True}
+            return
+
+        # Same session-context reconstruction as process() -- see that method's
+        # comment for why. The backend still only ever receives working_text.
+        context_text = self.session_content_tracker.get_context_text(session_id, working_text)
+        blocked, layer_used, pattern_id, _ = self._run_injection_ensemble(context_text, session_id)
+        if not blocked and find_hidden_tag_text(pii_result.redacted_text):     # invisible Unicode Tag payload: RT-03
+            blocked, layer_used, pattern_id = True, "input_hygiene", "IH-TAG-CHARS"
+        if blocked:
+            self.logger.log(LogRecord(
+                timestamp=self.logger.now(), session_id=session_id, request_id=request_id, user_id=user_id,
+                phase="pre_flight", decision="block", detection_layer_used=layer_used,
+                latency_ms=0.0, matched_pattern_id=pattern_id, extra={},
+            ))
+            yield {"chunk": f"[BLOCKED pre-flight: injection_detected:{layer_used}:{pattern_id}]", "cut_off": True}
+            return
+
+        self.session_content_tracker.record_turn(session_id, working_text)
+
+        # ---------- STREAM FROM BACKEND, CHECKING INCREMENTALLY ----------
+        buffer = ""
+        detok = self.pseudonyms.stream_detokenizer(
+            session_id, user_id, enabled=pseudonymize.mode() == "pseudonymize" and role in pseudonymize.detokenize_roles())
+        for chunk in backend.stream(forward_text, session_id=session_id, role=role, user_id=user_id):
+            buffer += chunk
+
+            role_result = check_role_exposure(buffer, role)
+            compliance_result = check_jailbreak_compliance(buffer)
+            leak_result = check_system_prompt_leak(buffer, system_prompt)
+
+            if role_result.exposed or compliance_result.flagged or leak_result.leaked:
+                reason = (
+                    f"role_exposure:{','.join(role_result.matched_tags)}" if role_result.exposed
+                    else "jailbreak_compliance" if compliance_result.flagged
+                    else "system_prompt_leak"
+                )
+                self.adaptive_tracker.record_block(session_id)
+                self.logger.log(LogRecord(
+                    timestamp=self.logger.now(), session_id=session_id, request_id=request_id, user_id=user_id,
+                    phase="post_flight", decision="block", detection_layer_used="streaming_post_flight",
+                    latency_ms=0.0, matched_pattern_id=reason,
+                    extra={"chars_generated_before_cutoff": len(buffer)},   # not the text: what was cut off is by definition data that must not be kept
+                ))
+                yield {"chunk": f"\n[STREAM CUT OFF -- post-flight check flagged: {reason}]", "cut_off": True}
+                return
+
+            out = detok.feed(chunk)                # the checks above ran on the tokenized buffer; only the emitted text is restored
+            if out:
+                yield {"chunk": out, "cut_off": False}
+
+        tail = detok.flush()
+        if tail:
+            yield {"chunk": tail, "cut_off": False}
+
+        self.logger.log(LogRecord(
+            timestamp=self.logger.now(), session_id=session_id, request_id=request_id, user_id=user_id,
+            phase="post_flight", decision="allow", detection_layer_used="streaming_post_flight",
+            latency_ms=0.0, matched_pattern_id=None, extra={"total_chars": len(buffer)},
+        ))

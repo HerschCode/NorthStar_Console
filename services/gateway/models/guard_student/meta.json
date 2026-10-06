@@ -1,0 +1,27 @@
+{
+  "run": "hardkd_tkd-seed2",
+  "variant": "int8-matmul-gather-perchannel",
+  "max_length": 256,
+  "threshold_margin": 0.0,
+  "threshold_selection": "probability 0.5, the convention of every detector layer here. Chosen over the stricter threshold below on the leave-one-source-out folds (development data): for the teacher-distilled variants 0.5 already gives about 1% false positives on a source never seen in training, and the stricter threshold only costs ~9 points of detection",
+  "conservative_threshold_margin": 7.058,
+  "conservative_threshold_selection": "smallest margin with <= 1% false positives on the in-distribution validation rows",
+  "base_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "teacher": "protectai/deberta-v3-base-prompt-injection-v2",
+  "train": {
+    "cmd": "train",
+    "variant": "hardkd_tkd",
+    "seed": 2,
+    "epochs": 4,
+    "batch": 32,
+    "lr": 5e-05,
+    "temperature": 2.0,
+    "alpha": 0.3,
+    "beta": 1.0
+  },
+  "n_labelled": 8178,
+  "n_transfer": 3467,
+  "fp32_val_auc": 0.9865,
+  "int8_val_auc": 0.9863,
+  "tokenizer": "BERT WordPiece, uncased, pure Python (gateway/detectors/wordpiece.py); identical ids to the Hugging Face tokenizer on every project text that contains no special-token literal"
+}

@@ -1,0 +1,262 @@
+{
+  "D": {
+    "n_train": 8939,
+    "n_attack": 3015,
+    "dropped_overlap": 560,
+    "seeds": 3,
+    "heldout": {
+      "deepset_test": {
+        "detection": {
+          "mean": 0.45,
+          "min": 0.267,
+          "max": 0.55
+        },
+        "fpr": {
+          "mean": 0.083,
+          "min": 0.054,
+          "max": 0.125
+        },
+        "auc": {
+          "mean": 0.821,
+          "min": 0.793,
+          "max": 0.84
+        }
+      },
+      "jbb_benign": {
+        "fpr": {
+          "mean": 0.067,
+          "min": 0.05,
+          "max": 0.08
+        }
+      },
+      "jbllms_clean": {
+        "detection": {
+          "mean": 0.858,
+          "min": 0.836,
+          "max": 0.889
+        }
+      },
+      "safeguard_test": {
+        "detection": {
+          "mean": 0.951,
+          "min": 0.932,
+          "max": 0.968
+        },
+        "fpr": {
+          "mean": 0.014,
+          "min": 0.01,
+          "max": 0.016
+        },
+        "auc": {
+          "mean": 0.994,
+          "min": 0.993,
+          "max": 0.994
+        }
+      },
+      "jackhhao_test": {
+        "detection": {
+          "mean": 0.832,
+          "min": 0.82,
+          "max": 0.849
+        },
+        "fpr": {
+          "mean": 0.019,
+          "min": 0.016,
+          "max": 0.024
+        },
+        "auc": {
+          "mean": 0.976,
+          "min": 0.975,
+          "max": 0.977
+        }
+      },
+      "gandalf_test": {
+        "detection": {
+          "mean": 0.961,
+          "min": 0.955,
+          "max": 0.964
+        }
+      },
+      "short_benign_heldout": {
+        "fpr": {
+          "mean": 0.225,
+          "min": 0.175,
+          "max": 0.275
+        }
+      },
+      "in_domain_heldout": {
+        "fpr": {
+          "mean": 0.156,
+          "min": 0.133,
+          "max": 0.2
+        }
+      },
+      "own_corpus": {
+        "detection": {
+          "mean": 0.483,
+          "min": 0.385,
+          "max": 0.564
+        },
+        "fpr": {
+          "mean": 0.196,
+          "min": 0.176,
+          "max": 0.235
+        },
+        "auc": {
+          "mean": 0.786,
+          "min": 0.771,
+          "max": 0.796
+        }
+      }
+    }
+  },
+  "E": {
+    "n_train": 9109,
+    "n_attack": 3015,
+    "dropped_overlap": 560,
+    "seeds": 3,
+    "heldout": {
+      "deepset_test": {
+        "detection": {
+          "mean": 0.506,
+          "min": 0.483,
+          "max": 0.517
+        },
+        "fpr": {
+          "mean": 0.071,
+          "min": 0.036,
+          "max": 0.107
+        },
+        "auc": {
+          "mean": 0.835,
+          "min": 0.813,
+          "max": 0.873
+        }
+      },
+      "jbb_benign": {
+        "fpr": {
+          "mean": 0.097,
+          "min": 0.09,
+          "max": 0.11
+        }
+      },
+      "jbllms_clean": {
+        "detection": {
+          "mean": 0.862,
+          "min": 0.84,
+          "max": 0.873
+        }
+      },
+      "safeguard_test": {
+        "detection": {
+          "mean": 0.954,
+          "min": 0.952,
+          "max": 0.955
+        },
+        "fpr": {
+          "mean": 0.011,
+          "min": 0.011,
+          "max": 0.011
+        },
+        "auc": {
+          "mean": 0.995,
+          "min": 0.994,
+          "max": 0.995
+        }
+      },
+      "jackhhao_test": {
+        "detection": {
+          "mean": 0.835,
+          "min": 0.82,
+          "max": 0.856
+        },
+        "fpr": {
+          "mean": 0.022,
+          "min": 0.016,
+          "max": 0.033
+        },
+        "auc": {
+          "mean": 0.976,
+          "min": 0.972,
+          "max": 0.983
+        }
+      },
+      "gandalf_test": {
+        "detection": {
+          "mean": 0.964,
+          "min": 0.955,
+          "max": 0.973
+        }
+      },
+      "short_benign_heldout": {
+        "fpr": {
+          "mean": 0.133,
+          "min": 0.05,
+          "max": 0.225
+        }
+      },
+      "in_domain_heldout": {
+        "fpr": {
+          "mean": 0.078,
+          "min": 0.033,
+          "max": 0.1
+        }
+      },
+      "own_corpus": {
+        "detection": {
+          "mean": 0.423,
+          "min": 0.385,
+          "max": 0.449
+        },
+        "fpr": {
+          "mean": 0.137,
+          "min": 0.118,
+          "max": 0.176
+        },
+        "auc": {
+          "mean": 0.821,
+          "min": 0.801,
+          "max": 0.852
+        }
+      }
+    }
+  },
+  "heldout_sizes": {
+    "deepset_test": {
+      "n": 116,
+      "attacks": 60
+    },
+    "jbb_benign": {
+      "n": 100,
+      "attacks": 0
+    },
+    "jbllms_clean": {
+      "n": 244,
+      "attacks": 244
+    },
+    "safeguard_test": {
+      "n": 2060,
+      "attacks": 650
+    },
+    "jackhhao_test": {
+      "n": 262,
+      "attacks": 139
+    },
+    "gandalf_test": {
+      "n": 112,
+      "attacks": 112
+    },
+    "short_benign_heldout": {
+      "n": 40,
+      "attacks": 0
+    },
+    "in_domain_heldout": {
+      "n": 30,
+      "attacks": 0
+    },
+    "own_corpus": {
+      "n": 95,
+      "attacks": 78
+    }
+  }
+}

@@ -1,0 +1,681 @@
+{
+  "method": "Does the gateway, with the student layer on, run inside 512 MB? Measured by running the real app (uvicorn gateway.app:app) under a Windows job-object commit limit.",
+  "n_requests": 400,
+  "clients": 8,
+  "server_python": "D:/0_Project3/llm-security-gateway/.venv-ci312/Scripts/python.exe",
+  "runs": [
+    {
+      "backend": "numpy",
+      "cap_mb": 512,
+      "started": true,
+      "survived": true,
+      "startup_s": 3.9,
+      "idle": {
+        "working_set_mb": 65.2,
+        "commit_mb": 52.2
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 144,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 6.2,
+        "req_per_s": 64.6
+      },
+      "peak": {
+        "working_set_mb": 76.6,
+        "commit_mb": 63.4
+      },
+      "after": {
+        "working_set_mb": 75.0,
+        "commit_mb": 62.3
+      }
+    },
+    {
+      "backend": "numpy",
+      "cap_mb": 384,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.0,
+      "idle": {
+        "working_set_mb": 65.2,
+        "commit_mb": 52.4
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 144,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.4,
+        "req_per_s": 284.1
+      },
+      "peak": {
+        "working_set_mb": 76.0,
+        "commit_mb": 62.9
+      },
+      "after": {
+        "working_set_mb": 72.8,
+        "commit_mb": 60.5
+      }
+    },
+    {
+      "backend": "numpy",
+      "cap_mb": 256,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 65.3,
+        "commit_mb": 52.4
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 144,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.4,
+        "req_per_s": 286.0
+      },
+      "peak": {
+        "working_set_mb": 75.5,
+        "commit_mb": 62.6
+      },
+      "after": {
+        "working_set_mb": 74.6,
+        "commit_mb": 61.2
+      }
+    },
+    {
+      "backend": "numpy",
+      "cap_mb": 192,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 65.1,
+        "commit_mb": 52.3
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 144,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.4,
+        "req_per_s": 290.8
+      },
+      "peak": {
+        "working_set_mb": 75.9,
+        "commit_mb": 62.7
+      },
+      "after": {
+        "working_set_mb": 75.9,
+        "commit_mb": 62.7
+      }
+    },
+    {
+      "backend": "numpy",
+      "cap_mb": 160,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 65.2,
+        "commit_mb": 52.2
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 144,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.4,
+        "req_per_s": 286.7
+      },
+      "peak": {
+        "working_set_mb": 76.4,
+        "commit_mb": 63.2
+      },
+      "after": {
+        "working_set_mb": 75.1,
+        "commit_mb": 63.2
+      }
+    },
+    {
+      "backend": "numpy",
+      "cap_mb": 144,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 65.3,
+        "commit_mb": 52.3
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 144,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.5,
+        "req_per_s": 271.1
+      },
+      "peak": {
+        "working_set_mb": 76.2,
+        "commit_mb": 62.8
+      },
+      "after": {
+        "working_set_mb": 76.2,
+        "commit_mb": 62.8
+      }
+    },
+    {
+      "backend": "numpy",
+      "cap_mb": 128,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 65.0,
+        "commit_mb": 51.9
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 144,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.4,
+        "req_per_s": 286.0
+      },
+      "peak": {
+        "working_set_mb": 75.0,
+        "commit_mb": 61.8
+      },
+      "after": {
+        "working_set_mb": 74.6,
+        "commit_mb": 61.6
+      }
+    },
+    {
+      "backend": "numpy",
+      "cap_mb": 112,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 65.4,
+        "commit_mb": 52.5
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 144,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.4,
+        "req_per_s": 294.6
+      },
+      "peak": {
+        "working_set_mb": 75.5,
+        "commit_mb": 62.5
+      },
+      "after": {
+        "working_set_mb": 75.2,
+        "commit_mb": 62.5
+      }
+    },
+    {
+      "backend": "numpy",
+      "cap_mb": 96,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.0,
+      "idle": {
+        "working_set_mb": 65.4,
+        "commit_mb": 52.3
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 144,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.4,
+        "req_per_s": 282.6
+      },
+      "peak": {
+        "working_set_mb": 75.4,
+        "commit_mb": 62.1
+      },
+      "after": {
+        "working_set_mb": 74.3,
+        "commit_mb": 61.2
+      }
+    },
+    {
+      "backend": "numpy",
+      "cap_mb": 64,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 65.0,
+        "commit_mb": 52.1
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 144,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.4,
+        "req_per_s": 283.7
+      },
+      "peak": {
+        "working_set_mb": 75.6,
+        "commit_mb": 62.5
+      },
+      "after": {
+        "working_set_mb": 74.6,
+        "commit_mb": 61.4
+      }
+    },
+    {
+      "backend": "student",
+      "cap_mb": 512,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.6,
+      "idle": {
+        "working_set_mb": 121.8,
+        "commit_mb": 96.9
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 130,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 3.1,
+        "req_per_s": 130.2
+      },
+      "peak": {
+        "working_set_mb": 162.6,
+        "commit_mb": 138.3
+      },
+      "after": {
+        "working_set_mb": 162.6,
+        "commit_mb": 138.3
+      }
+    },
+    {
+      "backend": "student",
+      "cap_mb": 384,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 122.6,
+        "commit_mb": 97.7
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 130,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.8,
+        "req_per_s": 219.9
+      },
+      "peak": {
+        "working_set_mb": 162.1,
+        "commit_mb": 138.1
+      },
+      "after": {
+        "working_set_mb": 162.1,
+        "commit_mb": 138.1
+      }
+    },
+    {
+      "backend": "student",
+      "cap_mb": 256,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 122.1,
+        "commit_mb": 97.3
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 130,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.8,
+        "req_per_s": 219.3
+      },
+      "peak": {
+        "working_set_mb": 162.3,
+        "commit_mb": 138.4
+      },
+      "after": {
+        "working_set_mb": 162.3,
+        "commit_mb": 138.4
+      }
+    },
+    {
+      "backend": "student",
+      "cap_mb": 192,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 123.0,
+        "commit_mb": 98.2
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 130,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.8,
+        "req_per_s": 223.3
+      },
+      "peak": {
+        "working_set_mb": 161.7,
+        "commit_mb": 136.9
+      },
+      "after": {
+        "working_set_mb": 159.5,
+        "commit_mb": 135.1
+      }
+    },
+    {
+      "backend": "student",
+      "cap_mb": 160,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 121.0,
+        "commit_mb": 96.1
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 130,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.8,
+        "req_per_s": 224.1
+      },
+      "peak": {
+        "working_set_mb": 162.3,
+        "commit_mb": 138.3
+      },
+      "after": {
+        "working_set_mb": 162.3,
+        "commit_mb": 138.3
+      }
+    },
+    {
+      "backend": "student",
+      "cap_mb": 144,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 122.4,
+        "commit_mb": 97.6
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 130,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.8,
+        "req_per_s": 224.0
+      },
+      "peak": {
+        "working_set_mb": 156.4,
+        "commit_mb": 138.1
+      },
+      "after": {
+        "working_set_mb": 156.4,
+        "commit_mb": 138.1
+      }
+    },
+    {
+      "backend": "student",
+      "cap_mb": 128,
+      "started": true,
+      "survived": false,
+      "startup_s": 1.0,
+      "idle": {
+        "working_set_mb": 122.1,
+        "commit_mb": 97.1
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 30,
+        "blocked": 11,
+        "errors": [
+          "TimeoutError",
+          "skipped"
+        ],
+        "aborted_early": true,
+        "seconds": 40.2,
+        "req_per_s": 10.0
+      },
+      "peak": {
+        "working_set_mb": 145.6,
+        "commit_mb": 127.6
+      },
+      "after": {
+        "working_set_mb": 145.6,
+        "commit_mb": 127.1
+      }
+    },
+    {
+      "backend": "both",
+      "cap_mb": 512,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 125.2,
+        "commit_mb": 100.5
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 149,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.7,
+        "req_per_s": 236.8
+      },
+      "peak": {
+        "working_set_mb": 156.2,
+        "commit_mb": 140.0
+      },
+      "after": {
+        "working_set_mb": 156.2,
+        "commit_mb": 139.4
+      }
+    },
+    {
+      "backend": "both",
+      "cap_mb": 384,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.0,
+      "idle": {
+        "working_set_mb": 125.0,
+        "commit_mb": 100.4
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 149,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.7,
+        "req_per_s": 234.0
+      },
+      "peak": {
+        "working_set_mb": 155.6,
+        "commit_mb": 139.8
+      },
+      "after": {
+        "working_set_mb": 153.7,
+        "commit_mb": 139.8
+      }
+    },
+    {
+      "backend": "both",
+      "cap_mb": 256,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 124.2,
+        "commit_mb": 100.0
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 149,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.7,
+        "req_per_s": 234.5
+      },
+      "peak": {
+        "working_set_mb": 155.1,
+        "commit_mb": 140.1
+      },
+      "after": {
+        "working_set_mb": 155.1,
+        "commit_mb": 139.3
+      }
+    },
+    {
+      "backend": "both",
+      "cap_mb": 192,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.0,
+      "idle": {
+        "working_set_mb": 125.9,
+        "commit_mb": 101.2
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 149,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.7,
+        "req_per_s": 235.8
+      },
+      "peak": {
+        "working_set_mb": 155.8,
+        "commit_mb": 140.2
+      },
+      "after": {
+        "working_set_mb": 155.6,
+        "commit_mb": 140.2
+      }
+    },
+    {
+      "backend": "both",
+      "cap_mb": 160,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 125.9,
+        "commit_mb": 101.3
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 149,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.7,
+        "req_per_s": 231.4
+      },
+      "peak": {
+        "working_set_mb": 153.3,
+        "commit_mb": 140.3
+      },
+      "after": {
+        "working_set_mb": 153.3,
+        "commit_mb": 140.3
+      }
+    },
+    {
+      "backend": "both",
+      "cap_mb": 144,
+      "started": true,
+      "survived": true,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 125.0,
+        "commit_mb": 100.2
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 400,
+        "blocked": 149,
+        "errors": [],
+        "aborted_early": false,
+        "seconds": 1.7,
+        "req_per_s": 232.7
+      },
+      "peak": {
+        "working_set_mb": 155.2,
+        "commit_mb": 139.9
+      },
+      "after": {
+        "working_set_mb": 153.6,
+        "commit_mb": 139.3
+      }
+    },
+    {
+      "backend": "both",
+      "cap_mb": 128,
+      "started": true,
+      "survived": false,
+      "startup_s": 1.1,
+      "idle": {
+        "working_set_mb": 127.1,
+        "commit_mb": 102.5
+      },
+      "requests": {
+        "n": 400,
+        "ok_200": 55,
+        "blocked": 24,
+        "errors": [
+          "ConnectionResetError",
+          "URLError",
+          "skipped"
+        ],
+        "aborted_early": true,
+        "seconds": 2.3,
+        "req_per_s": 174.5
+      },
+      "exit": "server process died during the traffic run (exit code 3221225477)",
+      "stderr_tail": "\u001b[32mINFO\u001b[0m:     Started server process [\u001b[36m24468\u001b[0m]\r\n\u001b[32mINFO\u001b[0m:     Waiting for application startup.\r\n\u001b[32mINFO\u001b[0m:     Application startup complete.\r\n\u001b[32mINFO\u001b[0m:     Uvicorn running on \u001b[1mhttp://127.0.0.1:8141\u001b[0m (Press CTRL+C to quit)\r\n"
+    }
+  ]
+}

@@ -1,0 +1,209 @@
+{
+  "detectors": [
+    "rule_based",
+    "embedding_similarity",
+    "scratch_classifier"
+  ],
+  "overlap_method": "exact match after lowercase + whitespace normalisation (near-duplicates not detected)",
+  "A_contamination": {
+    "jailbreak_llms_prompts": 666,
+    "exact_in_train_positives": 422,
+    "not_found_in_train": 244
+  },
+  "A_contaminated_scores": {
+    "rule_based": {
+      "blocked": 70,
+      "n": 422,
+      "rate": 0.166,
+      "ci95": [
+        0.133,
+        0.204
+      ]
+    },
+    "embedding_similarity": {
+      "blocked": 422,
+      "n": 422,
+      "rate": 1.0,
+      "ci95": [
+        0.991,
+        1.0
+      ]
+    },
+    "scratch_classifier": {
+      "blocked": 349,
+      "n": 422,
+      "rate": 0.827,
+      "ci95": [
+        0.788,
+        0.86
+      ]
+    },
+    "ensemble_any": {
+      "blocked": 422,
+      "n": 422,
+      "rate": 1.0,
+      "ci95": [
+        0.991,
+        1.0
+      ]
+    }
+  },
+  "B_jailbreak_llms_clean": {
+    "rule_based": {
+      "blocked": 38,
+      "n": 244,
+      "rate": 0.156,
+      "ci95": [
+        0.116,
+        0.207
+      ]
+    },
+    "embedding_similarity": {
+      "blocked": 159,
+      "n": 244,
+      "rate": 0.652,
+      "ci95": [
+        0.59,
+        0.709
+      ]
+    },
+    "scratch_classifier": {
+      "blocked": 209,
+      "n": 244,
+      "rate": 0.857,
+      "ci95": [
+        0.807,
+        0.895
+      ]
+    },
+    "ensemble_any": {
+      "blocked": 221,
+      "n": 244,
+      "rate": 0.906,
+      "ci95": [
+        0.863,
+        0.936
+      ]
+    }
+  },
+  "C_deepset": {
+    "rows": 116,
+    "removed_in_train": 0,
+    "removed_in_corpus": 0,
+    "scored": 116,
+    "injection_detection": {
+      "rule_based": {
+        "blocked": 0,
+        "n": 60,
+        "rate": 0.0,
+        "ci95": [
+          -0.0,
+          0.06
+        ]
+      },
+      "embedding_similarity": {
+        "blocked": 15,
+        "n": 60,
+        "rate": 0.25,
+        "ci95": [
+          0.158,
+          0.372
+        ]
+      },
+      "scratch_classifier": {
+        "blocked": 31,
+        "n": 60,
+        "rate": 0.517,
+        "ci95": [
+          0.393,
+          0.638
+        ]
+      },
+      "ensemble_any": {
+        "blocked": 36,
+        "n": 60,
+        "rate": 0.6,
+        "ci95": [
+          0.474,
+          0.714
+        ]
+      }
+    },
+    "benign_false_positive": {
+      "rule_based": {
+        "blocked": 0,
+        "n": 56,
+        "rate": 0.0,
+        "ci95": [
+          0.0,
+          0.064
+        ]
+      },
+      "embedding_similarity": {
+        "blocked": 9,
+        "n": 56,
+        "rate": 0.161,
+        "ci95": [
+          0.087,
+          0.278
+        ]
+      },
+      "scratch_classifier": {
+        "blocked": 6,
+        "n": 56,
+        "rate": 0.107,
+        "ci95": [
+          0.05,
+          0.215
+        ]
+      },
+      "ensemble_any": {
+        "blocked": 13,
+        "n": 56,
+        "rate": 0.232,
+        "ci95": [
+          0.141,
+          0.358
+        ]
+      }
+    }
+  },
+  "D_jbb_benign_false_positive": {
+    "rule_based": {
+      "blocked": 0,
+      "n": 100,
+      "rate": 0.0,
+      "ci95": [
+        0.0,
+        0.037
+      ]
+    },
+    "embedding_similarity": {
+      "blocked": 1,
+      "n": 100,
+      "rate": 0.01,
+      "ci95": [
+        0.002,
+        0.054
+      ]
+    },
+    "scratch_classifier": {
+      "blocked": 6,
+      "n": 100,
+      "rate": 0.06,
+      "ci95": [
+        0.028,
+        0.125
+      ]
+    },
+    "ensemble_any": {
+      "blocked": 7,
+      "n": 100,
+      "rate": 0.07,
+      "ci95": [
+        0.034,
+        0.137
+      ]
+    }
+  }
+}

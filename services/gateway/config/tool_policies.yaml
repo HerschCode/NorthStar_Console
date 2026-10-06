@@ -1,0 +1,171 @@
+# Tool-level capability policy for the action firewall (gateway/actions/).
+#
+# Semantics (see docs/action-firewall.md):
+#   * default-deny: a tool that is not listed here cannot be called by anyone.
+#   * a call is allowed only if some rule of that tool matches the caller's role AND every
+#     argument satisfies its constraints; rules are evaluated in order, first match wins.
+#   * strict_args: an argument that is not declared in the matching rule is rejected
+#     (blocks smuggled parameters such as `skip_approval=true`).
+#   * approval: required  -> the call is queued for human approval instead of running.
+#   * require_role_separation: true (a rule with approval: required) -> the approver's role, not just their
+#     identity, must differ from the requester's (auditor-grade segregation of duties); see docs/decisions.md.
+#     Per-rule, not per-tool: a tool whose rules cover several actions (like propose_intervention) can
+#     require it for one action's rule (e.g. release_payment) without requiring it for the others.
+#   * output_trust: untrusted -> this tool's results are free text that may carry injected
+#     instructions; they are registered as untrusted spans for taint tracking.
+#   * taint: per-argument reaction when the value was copied from an untrusted span without
+#     corroboration from a trusted source: deny | flag (flag = raise risk, still needs approval).
+#   * `$principal.user_id` / `$principal.role` in `equals` bind an argument to the caller.
+#
+# Roles mirror gateway/role_exposure.py: employee < manager < admin, listed explicitly per rule.
+version: 1
+default_effect: deny
+strict_args: true
+
+tools:
+  # ---- read tools: the 9 tools exposed by operations-assistant's MCP server ----
+  get_cycle_time:
+    kind: read
+    output_trust: trusted
+    rules:
+      - roles: [employee, manager, admin]
+        args: {segment: {in: [category, supplier]}}
+  get_bottlenecks:
+    kind: read
+    output_trust: trusted
+    rules:
+      - roles: [employee, manager, admin]
+        args: {top_n: {type: integer, min: 1, max: 50}}
+  get_sla_metrics:
+    kind: read
+    output_trust: trusted
+    rules:
+      - roles: [employee, manager, admin]
+        args: {segment: {in: [category, supplier]}}
+  get_supplier_performance:
+    kind: read
+    output_trust: trusted
+    rules:
+      - roles: [manager, admin]
+        args:
+          min_volume: {type: integer, min: 1, max: 1000}
+          top_n: {type: integer, min: 1, max: 50}
+  get_management_report:
+    kind: read
+    output_trust: trusted
+    rules:
+      - roles: [manager, admin]
+        args: {}
+  predict_sla_risk:
+    kind: read
+    output_trust: trusted
+    rules:
+      - roles: [employee, manager, admin]
+        args:
+          case_id: {required: true, type: string, pattern: '[A-Za-z0-9_-]{1,40}'}
+  get_pipeline_status:
+    kind: read
+    output_trust: trusted
+    rules:
+      - roles: [employee, manager, admin]
+        args: {limit: {type: integer, min: 1, max: 20}}
+  search_policy_documents:
+    kind: read
+    output_trust: untrusted        # retrieved document text: the classic indirect-injection carrier
+    rules:
+      - roles: [employee, manager, admin]
+        args: {query: {required: true, type: string, max_length: 300}}
+  get_conformance:
+    kind: read
+    output_trust: trusted
+    rules:
+      - roles: [employee, manager, admin]
+        args: {}
+
+  # ---- accounts-payable reads (operations-assistant Phase F2; wrappers over operations-performance's /controls and
+  # /working-capital endpoints). Manager/admin only: they expose vendor-level exception and cash-timing data. Trusted
+  # output, like the other operations-performance analytics: a case id the agent reads here and then holds is corroborated,
+  # not tainted (tests/test_action_firewall.py pins that). tests/test_policy_covers_ops_assistant_tools.py keeps these
+  # entries in step with operations-assistant's real tool list.
+  get_control_exceptions:
+    kind: read
+    output_trust: trusted
+    rules:
+      - roles: [manager, admin]
+        args:
+          control: {in: [C1, C2, C3, C4, C5, C6]}
+          vendor: {type: string, max_length: 80, pattern: "[A-Za-z0-9 &_.,'-]{1,80}"}
+          min_exposure: {type: number, min: 0, max: 1000000000}
+          top_n: {type: integer, min: 1, max: 100}
+  get_control_summary:
+    kind: read
+    output_trust: trusted
+    rules:
+      - roles: [manager, admin]
+        args: {}
+  get_working_capital_summary:
+    kind: read
+    output_trust: trusted
+    rules:
+      - roles: [manager, admin]
+        args: {}
+
+  # ---- illustrative user-scoped read (own records only) ----
+  get_my_cases:
+    kind: read
+    output_trust: trusted
+    rules:
+      - roles: [employee]
+        args:
+          user_id: {required: true, equals: '$principal.user_id'}   # employees see only their own
+      - roles: [manager, admin]
+        args:
+          user_id: {required: true, type: string, pattern: '[A-Za-z0-9_.-]{1,40}'}
+
+  # ---- the write tool (operations-assistant's propose_intervention) ----
+  propose_intervention:
+    kind: write
+    output_trust: trusted
+    max_per_session: 5
+    taint:
+      target: deny       # an attacker-chosen entity is the core of a confused-deputy attack
+      reason: flag       # agents legitimately summarise documents into reasons: raise risk, keep approval
+    rules:
+      # Accounts-payable actions (operations-assistant's propose_payment_hold/propose_payment_release,
+      # both thin wrappers around this same tool -- see docs/decisions.md). release_payment requires
+      # require_role_separation: an approver with a different ROLE from the requester, not just a
+      # different person, per the auditor definition of segregation of duties; hold_payment does not,
+      # since placing a hold is the conservative direction (see docs/finance-controls-mapping.md).
+      - name: finance-hold
+        roles: [finance, manager, admin]
+        approval: required
+        args:
+          action: {required: true, in: [hold_payment]}
+          target: {required: true, type: string, pattern: '[A-Za-z0-9 _.-]{1,60}'}
+          reason: {required: true, type: string, max_length: 500, not_pattern: '(?i)(https?://|www\.|@[a-z0-9-]+\.|password|api[_ -]?key|secret|\bssn\b|salary|\b[a-z]{2}\d{2}(?=(?: ?[a-z]{0,4} ?\d){8})(?: ?[a-z0-9]{4}){2,7}(?: ?[a-z0-9]{1,3})?\b)'}
+          priority: {in: [high]}
+      - name: finance-release
+        roles: [finance, manager, admin]
+        approval: required
+        require_role_separation: true
+        args:
+          action: {required: true, in: [release_payment]}
+          target: {required: true, type: string, pattern: '[A-Za-z0-9 _.-]{1,60}'}
+          reason: {required: true, type: string, max_length: 500, not_pattern: '(?i)(https?://|www\.|@[a-z0-9-]+\.|password|api[_ -]?key|secret|\bssn\b|salary|\b[a-z]{2}\d{2}(?=(?: ?[a-z]{0,4} ?\d){8})(?: ?[a-z0-9]{4}){2,7}(?: ?[a-z0-9]{1,3})?\b)'}
+          priority: {in: [normal]}
+      - name: manager-standard
+        roles: [analyst, manager, admin]
+        approval: required
+        args:
+          action: {required: true, in: [escalate_case, flag_supplier, notify_manager, request_approval, mark_exception]}
+          target: {required: true, type: string, pattern: '[A-Za-z0-9 _.-]{1,60}'}
+          reason: {required: true, type: string, max_length: 500, not_pattern: '(?i)(https?://|www\.|@[a-z0-9-]+\.|password|api[_ -]?key|secret|\bssn\b|salary)'}
+          priority: {in: [low, normal, high]}
+      - name: admin-urgent
+        roles: [admin]
+        approval: required
+        args:
+          action: {required: true, in: [escalate_case, flag_supplier, notify_manager, request_approval, mark_exception]}
+          target: {required: true, type: string, pattern: '[A-Za-z0-9 _.-]{1,60}'}
+          reason: {required: true, type: string, max_length: 500, not_pattern: '(?i)(https?://|www\.|@[a-z0-9-]+\.|password|api[_ -]?key|secret|\bssn\b|salary)'}
+          priority: {in: [urgent]}

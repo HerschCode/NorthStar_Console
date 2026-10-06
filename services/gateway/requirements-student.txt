@@ -1,0 +1,6 @@
+# Runtime for the opt-in distilled guard (gateway/detectors/student_onnx.py, CLASSIFIER_BACKEND=student|both): ONNX Runtime and nothing else.
+# The tokenizer is pure Python (gateway/detectors/wordpiece.py), so there is no `tokenizers` / huggingface-hub / transformers / torch here.
+# Compiled to requirements-student.lock with hashes by scripts/update_locks.sh, CONSTRAINED to requirements-render.lock: every package both contain (numpy) keeps the render lock's version,
+# so installing the two together can never move the numpy the rest of the suite is tested against.
+# CI installs it to exercise the student's tests; the deployed Render image does not (see docs/guard-student.md for enabling it).
+onnxruntime>=1.18,<2

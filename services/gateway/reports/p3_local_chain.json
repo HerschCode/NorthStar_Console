@@ -1,0 +1,84 @@
+{
+  "when": "2026-10-05 21:45:31",
+  "llm": "local ollama",
+  "results": [
+    {
+      "step": "1 services are up and P3 reaches P2",
+      "status": "PASS",
+      "detail": "assistant reachable; p1/p2/p3 started on ports 63646/63647/63648",
+      "seconds": 2.5
+    },
+    {
+      "step": "2 demo identities",
+      "status": "PASS",
+      "detail": "five logins; every identity is labelled demo; two manager logins are two people",
+      "seconds": 0.05
+    },
+    {
+      "step": "3 a real open case from P1's queue",
+      "status": "PASS",
+      "detail": "case 2000000100_00001 p(breach) 1.0 (snapshot: P1 has no database here)",
+      "seconds": 2.13
+    },
+    {
+      "step": "4 ask through P3 -> P2 -> P1 evidence -> model, claims verified",
+      "status": "PASS",
+      "detail": "ollama:qwen2.5:7b-instruct: 2/2 claims supported, 43 evidence items, 9.6s; answer: 'There are 544 cases that are already late and 1088 cases that are at risk of breaching.'",
+      "seconds": 9.58
+    },
+    {
+      "step": "5 an injection is stopped at the gateway before P2",
+      "status": "PASS",
+      "detail": "blocked in pre_flight: injection_detected:rule_based:RB-001",
+      "seconds": 0.04
+    },
+    {
+      "step": "6 the trace joins the gateway and the assistant",
+      "status": "PASS",
+      "detail": "gateway phases ['post_flight', 'pre_flight']; assistant spans ['gate', 'llm', 'p1', 'retrieval']",
+      "seconds": 0.13
+    },
+    {
+      "step": "7 the analyst proposes an escalation: P2 -> the firewall -> held",
+      "status": "PASS",
+      "detail": "intervention 1 held; approval apr_83dc",
+      "seconds": 0.24
+    },
+    {
+      "step": "8 the people rules: no self-approval, a viewer cannot propose",
+      "status": "PASS",
+      "detail": "analyst approving own proposal: 403; viewer proposing: 403",
+      "seconds": 0.11
+    },
+    {
+      "step": "9 a manager sees the approval and approves; a second approval is refused",
+      "status": "PASS",
+      "detail": "approved by a manager (a different person and role); ledger history ['proposed', 'gateway_held', 'approved', 'execution_failed']; a second approval: 409",
+      "seconds": 2.39
+    },
+    {
+      "step": "9b the approved intervention is written to P1's ledger",
+      "status": "SKIP",
+      "detail": "NOT PROVEN here: P1 has no database (ledger status 'execution_failed': {\"error\": \"operations-performance returned 500 for POST /interventions: \"}); the failure is recorded, not hidden"
+    },
+    {
+      "step": "10 audit: one trace id spans decisions, the held action and the spans; no prompt text is stored",
+      "status": "PASS",
+      "detail": "2 gateway decisions, actions [('propose_intervention', 'require_approval'), ('propose_intervention', 'approval_granted')], the manager's approval, assistant spans; prompts absent from the audit",
+      "seconds": 0.14
+    }
+  ],
+  "ask": {
+    "answer": "There are 544 cases that are already late and 1088 cases that are at risk of breaching.",
+    "model": "ollama:qwen2.5:7b-instruct",
+    "claims": 2,
+    "supported": 2,
+    "wall_s": 9.6
+  },
+  "span_kinds": [
+    "gate",
+    "llm",
+    "p1",
+    "retrieval"
+  ]
+}

@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-security-gateway"
+version = "0.1.0"
+description = "A standalone security gateway/middleware for LLM applications: prompt-injection detection, PII redaction, role-based response filtering, and jailbreak-compliance checks, sitting in front of any pluggable backend."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "pydantic>=2.0",
+    "httpx>=0.27",
+    "scikit-learn>=1.7,<1.9",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Only needed to TRAIN layer 3 (scripts/train_scratch_classifier.py). Serving
+# it (gateway/detectors/classifier_numpy.py) needs no torch at all -- see
+# docs/decisions.md, 2026-09-11.
+classifier = ["torch>=2.0"]
+dev = ["pytest>=8.0", "torch>=2.0"]
+student = ["onnxruntime>=1.18,<2"]
+# Keep the moving AgentDojo benchmark API isolated from the serving install.
+agentdojo = ["agentdojo==0.1.35"]
+# Only needed to run the (now-run-for-real, see docs/distilbert_finetune_result.md)
+# DistilBERT fine-tune comparison script.
+finetune = ["transformers>=4.40", "datasets>=2.19", "accelerate>=1.1.0"]
+# Opt-in layer 2 backend: real sentence-transformer embeddings instead of the
+# default TF-IDF. Pulls in torch -- not used by the free-tier deploy. See
+# gateway/detectors/embedding_similarity_st.py and
+# docs/sentence_transformer_similarity_result.md.
+semantic = ["sentence-transformers>=3.0"]
+# scripts/baselines/: guard-model comparison (protectai deberta, Meta Prompt Guard 2 /
+# Llama Guard if you have HF access to those gated repos). Not used by gateway/ or CI.
+baselines = ["transformers>=4.40", "huggingface_hub>=0.24", "psutil>=5.9", "onnx>=1.16", "onnxruntime>=1.18", "tokenizers>=0.19"]
+# PII_BACKEND=presidio / presidio_ner (gateway/pii_presidio.py, scripts/evaluate_pii.py). spaCy adds a large dependency tree and the NER mode needs
+# `python -m spacy download en_core_web_sm`; neither is used by the free-tier deploy, whose default PII path (regex + Indian identifiers) has no dependencies.
+pii = ["presidio-analyzer>=2.2.350", "presidio-anonymizer>=2.2.350", "spacy>=3.7", "phonenumbers>=8.13", "pandas>=2.0", "pyarrow>=15"]
+
+[tool.setuptools.packages.find]
+include = ["gateway*"]
