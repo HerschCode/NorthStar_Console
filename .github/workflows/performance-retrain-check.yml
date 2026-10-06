@@ -1,4 +1,4 @@
-name: Retrain check
+name: Performance / Retrain check
 
 # Wires src/ml/retrain_trigger.py's decision logic to an actual scheduler --
 # the piece its own docstring named as missing ("No scheduler is actually wired
@@ -11,6 +11,10 @@ on:
     - cron: "0 6 * * *"  # 06:00 UTC daily
   workflow_dispatch: {}  # manual trigger from the Actions tab, for testing without waiting a day
 
+defaults:
+  run:
+    working-directory: services/performance
+
 jobs:
   check-and-retrain:
     runs-on: ubuntu-latest
@@ -22,6 +26,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: "pip"
+          cache-dependency-path: "services/performance/requirements*.txt"
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -41,5 +46,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sla-risk-model
-          path: models/sla_risk_model.*
+          path: services/performance/models/sla_risk_model.*
           if-no-files-found: ignore

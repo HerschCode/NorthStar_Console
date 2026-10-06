@@ -1,9 +1,13 @@
-name: Deploy (manual)
+name: Console / Deploy (manual)
 # Builds the image, pushes it to Artifact Registry and deploys it to Cloud Run through workload identity federation (no keys).
 # It does nothing until the repository variables below exist; nothing in this repo calls GCP before then.
 on:
   workflow_dispatch: {}
 permissions: { contents: read, id-token: write }
+defaults:
+  run:
+    working-directory: apps/console
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

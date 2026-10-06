@@ -1,4 +1,4 @@
-name: ci
+name: Infra / ci
 
 # Everything here runs with NO cloud credentials: the plan is computed offline against an empty
 # state (scripts/offline-plan.sh), so a pull request from anyone, including a fork, can be checked
@@ -7,8 +7,13 @@ name: ci
 
 on:
   pull_request:
+    paths: ['infra/**', '.github/workflows/infra-ci.yml']
   push:
     branches: [main]
+    paths: ['infra/**', '.github/workflows/infra-ci.yml']
+    paths:
+      - infra/**
+      - .github/workflows/infra-ci.yml
   workflow_dispatch:
 
 permissions:
@@ -24,6 +29,10 @@ env:
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
   # tflint downloads its ruleset from GitHub releases; an authenticated call avoids rate limits.
   GITHUB_TOKEN: ${{ github.token }}
+
+defaults:
+  run:
+    working-directory: infra
 
 jobs:
   terraform:

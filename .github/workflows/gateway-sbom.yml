@@ -1,4 +1,4 @@
-name: SBOM
+name: Gateway / SBOM
 
 # A CycloneDX software bill of materials per release: the Python dependencies exactly as locked (with hashes), and the container image
 # as built. Also runnable by hand (workflow_dispatch) to inspect the current state.
@@ -9,6 +9,10 @@ on:
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    working-directory: services/gateway
 
 jobs:
   sbom:
@@ -41,15 +45,15 @@ jobs:
         with:
           name: sbom
           path: |
-            sbom-python-render.cdx.json
-            sbom-python-full.cdx.json
-            sbom-image.cdx.json
+            services/gateway/sbom-python-render.cdx.json
+            services/gateway/sbom-python-full.cdx.json
+            services/gateway/sbom-image.cdx.json
 
       - name: Attach to the release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2.6.2
         with:
           files: |
-            sbom-python-render.cdx.json
-            sbom-python-full.cdx.json
-            sbom-image.cdx.json
+            services/gateway/sbom-python-render.cdx.json
+            services/gateway/sbom-python-full.cdx.json
+            services/gateway/sbom-image.cdx.json

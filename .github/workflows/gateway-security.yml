@@ -1,17 +1,27 @@
-name: Security
+name: Gateway / Security
 
 # Static analysis, secret scanning and container scanning (Phase 6; what each tool found, and what was fixed, is in docs/security-scans.md).
 on:
   push:
     branches: [main]
+    paths:
+      - services/gateway/**
+      - .github/workflows/gateway-security.yml
   pull_request:
     branches: [main]
+    paths:
+      - services/gateway/**
+      - .github/workflows/gateway-security.yml
   schedule:
     - cron: "23 4 * * 1"          # weekly: new advisories appear without any change to this repository
   workflow_dispatch:
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    working-directory: services/gateway
 
 jobs:
   bandit:
@@ -58,7 +68,7 @@ jobs:
         if: always()
         with:
           name: semgrep-report
-          path: semgrep.sarif
+          path: services/gateway/semgrep.sarif
 
   gitleaks:
     runs-on: ubuntu-24.04
@@ -113,4 +123,4 @@ jobs:
         if: always()
         with:
           name: trivy-image-report
-          path: trivy-image.sarif
+          path: services/gateway/trivy-image.sarif

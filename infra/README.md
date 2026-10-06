@@ -68,17 +68,17 @@ fails if a link stops pointing at a real job or a counted number stops matching 
 
 | What | Result | Proven by (CI job) |
 |---|---|---|
-| `terraform fmt` / `validate` | 10 modules and 2 roots clean | [`ci` › `terraform`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L29) |
-| Module unit tests (mocked provider) | 95 passing | [`ci` › `terraform`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L29) |
-| Credential-free plans | `envs/bootstrap` 51 resources, `envs/dev` 55, every IAM attribute known at plan time | [`ci` › `policy`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L96) |
-| tflint (with the Google ruleset) | 0 issues | [`ci` › `tflint`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L62) |
-| checkov | 108 passed, 0 failed; every suppression is justified in place | [`ci` › `security`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L77) |
-| Trivy (IaC and secrets) | 0 findings; suppressions justified in place | [`ci` › `security`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L77) |
-| Policy unit tests | 104 passing | [`ci` › `policy`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L96) |
-| Policy mutation tests (real plans) | baseline passes; 20 of 20 bad changes blocked by the named rule | [`ci` › `policy`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L96) |
-| Generated docs | module READMEs and the identity map match the code, every rule is documented, and this table's links and counts are true | [`ci` › `docs`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L143) and [`ci` › `policy`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L96) |
-| Workflow syntax | actionlint, with shellcheck on every `run:` block | [`ci` › `workflows`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/ci.yml#L128) |
-| Credential-gated workflows skip cleanly | With no cloud credentials configured, `plan` (on [a pull request](https://github.com/HerschCode/northstar-infra/actions/runs/36164780881)) and `apply` (by [manual dispatch on main](https://github.com/HerschCode/northstar-infra/actions/runs/36164780238)) pass their `preflight` job green with a notice naming the missing variables, and skip the credentialed job. Nothing goes red | [`plan` › `preflight`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/plan.yml#L46) and [`apply` › `preflight`](https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/apply.yml#L43) |
+| `terraform fmt` / `validate` | 10 modules and 2 roots clean | [`ci` › `terraform`](https://github.com/HerschCode/NorthStar_Console/blob/main/.github/workflows/infra-ci.yml#L38) |
+| Module unit tests (mocked provider) | 95 passing | [`ci` › `terraform`](https://github.com/HerschCode/NorthStar_Console/blob/main/.github/workflows/infra-ci.yml#L38) |
+| Credential-free plans | `envs/bootstrap` 51 resources, `envs/dev` 55, every IAM attribute known at plan time | [`ci` › `policy`](https://github.com/HerschCode/NorthStar_Console/blob/main/.github/workflows/infra-ci.yml#L105) |
+| tflint (with the Google ruleset) | 0 issues | [`ci` › `tflint`](https://github.com/HerschCode/NorthStar_Console/blob/main/.github/workflows/infra-ci.yml#L71) |
+| checkov | 108 passed, 0 failed; every suppression is justified in place | [`ci` › `security`](https://github.com/HerschCode/NorthStar_Console/blob/main/.github/workflows/infra-ci.yml#L86) |
+| Trivy (IaC and secrets) | 0 findings; suppressions justified in place | [`ci` › `security`](https://github.com/HerschCode/NorthStar_Console/blob/main/.github/workflows/infra-ci.yml#L86) |
+| Policy unit tests | 104 passing | [`ci` › `policy`](https://github.com/HerschCode/NorthStar_Console/blob/main/.github/workflows/infra-ci.yml#L105) |
+| Policy mutation tests (real plans) | baseline passes; 20 of 20 bad changes blocked by the named rule | [`ci` › `policy`](https://github.com/HerschCode/NorthStar_Console/blob/main/.github/workflows/infra-ci.yml#L105) |
+| Generated docs | module READMEs and the identity map match the code, every rule is documented, and this table's links and counts are true | [`ci` › `docs`](https://github.com/HerschCode/NorthStar_Console/blob/main/.github/workflows/infra-ci.yml#L152) and [`ci` › `policy`](https://github.com/HerschCode/NorthStar_Console/blob/main/.github/workflows/infra-ci.yml#L105) |
+| Workflow syntax | actionlint, with shellcheck on every `run:` block | [`ci` › `workflows`](https://github.com/HerschCode/NorthStar_Console/blob/main/.github/workflows/infra-ci.yml#L137) |
+| Credential-gated workflows skip cleanly | With no cloud credentials configured, `plan` (on [a pull request](https://github.com/HerschCode/northstar-infra/actions/runs/36164780881)) and `apply` (by [manual dispatch on main](https://github.com/HerschCode/northstar-infra/actions/runs/36164780238)) pass their `preflight` job green with a notice naming the missing variables, and skip the credentialed job. Nothing goes red | [`plan` › `preflight`](https://github.com/HerschCode/NorthStar_Console/blob/main/.github/workflows/infra-plan.yml#L50) and [`apply` › `preflight`](https://github.com/HerschCode/NorthStar_Console/blob/main/.github/workflows/infra-apply.yml#L47) |
 
 The counts of tests, mutations and rules are checked against the repository; the other totals
 (resources per plan, checkov's pass count) are from the run before the first push, and CI enforces "no

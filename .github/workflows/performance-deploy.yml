@@ -1,6 +1,6 @@
-name: deploy
+name: Performance / deploy
 
-# Deploys operations-assistant to Cloud Run: build the image, scan it, push it to Artifact Registry, roll the
+# Deploys operations-performance to Cloud Run: build the image, scan it, push it to Artifact Registry, roll the
 # service over to it. MANUAL ONLY (Actions > deploy > Run workflow), and only from main.
 #
 # It changes the IMAGE and nothing else. Environment variables, secrets, scaling and IAM belong to
@@ -28,8 +28,12 @@ concurrency:
   cancel-in-progress: false # never interrupt a rollout half-way
 
 env:
-  SERVICE: operations-assistant # the Cloud Run service (and the image name) in northstar-infra
+  SERVICE: operations-performance # the Cloud Run service (and the image name) in northstar-infra
   REGISTRY_REPOSITORY: northstar # the Artifact Registry repository in northstar-infra
+
+defaults:
+  run:
+    working-directory: services/performance
 
 jobs:
   preflight:
@@ -68,7 +72,7 @@ jobs:
     needs: preflight
     if: ${{ needs.preflight.outputs.configured == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 45
     permissions:
       contents: read
       id-token: write # mint the OIDC token for workload identity federation
@@ -121,6 +125,11 @@ jobs:
           # No --allow-unauthenticated / --no-allow-unauthenticated: who may call the service is
           # decided in northstar-infra, never here.
           gcloud run deploy "$SERVICE" --image "$IMAGE_REF" --region "$REGION" --project "$PROJECT_ID" --quiet
+
+      - name: Roll the pipeline job over to the same image
+        env:
+          IMAGE_REF: ${{ steps.push.outputs.ref }}
+        run: gcloud run jobs update operations-pipeline --image "$IMAGE_REF" --region "$REGION" --project "$PROJECT_ID" --quiet
 
       - name: Summary
         env:

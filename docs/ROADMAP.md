@@ -4,19 +4,23 @@
 Models: Gemini via Google AI Studio free key, Groq free key, and local open models (Ollama, ONNX). Data: Neon free tier.
 Cloud: Cloud Run scale-to-zero inside the free quota, with the budget guard in `infra`.
 
-Done: monorepo import with history; console paths repointed (`sync-specs --check --local` passes); pushed to
-`claude/intelligent-meitner-s1o6j6`.
+Done (Phase 1, mostly): monorepo import with history; ID-token auth and manual-deploy branches merged; 15 workflows hoisted to the root;
+root `docker-compose.yml` and `Makefile`; tests re-pointed (gateway 1049 pass, console 26 pass). Left in Phase 1: run the workflows on GitHub, run the
+performance/assistant suites, archive the old repos.
+
+**Pace:** the core that matters for applications is Phases 1-4 and takes about 8-10 weeks of focused work (to mid-December), not June.
+Phases 5-7 are depth that can be added while you apply; Phase 8 (packaging) should start as soon as Phase 3 is live.
 
 | Phase | When | Goal | Role signal |
 |---|---|---|---|
 | 1 Consolidate | Oct 2026 | One repo that builds, tests and runs with one command | MLOps, platform |
 | 2 Live data + free models | Oct–Nov | Real Neon DB, keys, whole stack running locally | Data eng, DS |
 | 3 Deploy on free tier | Nov–Dec | Public URL, applied Terraform, no paid services | MLOps, cloud |
-| 4 MLOps loop | Dec–Feb | Registry, drift → retrain → gated promote, all automated | MLOps (top differentiator) |
-| 5 Data engineering depth | Feb–Mar | Contracts, incremental loads, one streaming path, lakehouse files | Data eng |
-| 6 Evaluation rigor | Mar–Apr | Fix weak numbers honestly, independent labels, causal/uplift on real-ish data | Data science |
-| 7 Security depth | Apr–May | ML supply chain, OWASP/ATLAS mapping in CI, independent test | Cybersec for AI |
-| 8 Packaging | May–Jun (before applications) | Demo, video, write-ups, resume bullets | All |
+| 4 MLOps loop | Dec | Registry, drift → retrain → gated promote, all automated | MLOps (top differentiator) |
+| 5 Data engineering depth | Jan–Feb | Contracts, incremental loads, one streaming path, lakehouse files | Data eng |
+| 6 Evaluation rigor | Feb–Mar | Fix weak numbers honestly, independent labels, causal/uplift on real-ish data | Data science |
+| 7 Security depth | Mar–Apr | ML supply chain, OWASP/ATLAS mapping in CI, independent test | Cybersec for AI |
+| 8 Packaging | from Dec, ongoing | Demo, video, write-ups, resume bullets | All |
 
 ## Phase 1: Consolidate
 1. Merge `feat/google-id-token-auth` (gateway, assistant): service-to-service identity needed for private Cloud Run. Also `ci/manual-deploy-workflow`.

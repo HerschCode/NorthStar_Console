@@ -1,4 +1,4 @@
-name: apply
+name: Infra / apply
 
 # Manual only. Applies envs/dev as the Terraform apply identity, which is the most powerful
 # identity in the stack, so this job is deliberately hard to reach:
@@ -38,6 +38,10 @@ env:
   TF_VAR_alert_emails: ${{ vars.ALERT_EMAILS || '[]' }}
   TF_VAR_use_http_startup_probes: ${{ vars.USE_HTTP_STARTUP_PROBES || 'false' }}
   TF_VAR_pipeline_schedule_paused: ${{ vars.PIPELINE_SCHEDULE_PAUSED || 'true' }}
+
+defaults:
+  run:
+    working-directory: infra
 
 jobs:
   preflight:
@@ -95,23 +99,23 @@ jobs:
           service_account: ${{ vars.GCP_TF_APPLY_SA }}
 
       - name: terraform init
-        working-directory: envs/dev
+        working-directory: infra/envs/dev
         run: |
           terraform init -input=false -no-color \
             -backend-config="bucket=${{ vars.GCP_TF_STATE_BUCKET }}" \
             -backend-config="prefix=northstar/dev"
 
       - name: terraform plan
-        working-directory: envs/dev
+        working-directory: infra/envs/dev
         run: |
           terraform plan -input=false -no-color -out=tfplan.bin
           terraform show -no-color tfplan.bin
           terraform show -json tfplan.bin > plan.json
 
       - name: Policy gate (a violation stops the apply)
-        working-directory: envs/dev
+        working-directory: infra/envs/dev
         run: conftest test plan.json -p ../../policies --no-color
 
       - name: terraform apply (exactly the plan that passed the gate)
-        working-directory: envs/dev
+        working-directory: infra/envs/dev
         run: terraform apply -input=false -no-color tfplan.bin

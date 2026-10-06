@@ -23,8 +23,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
-WORKFLOWS = ROOT / ".github" / "workflows"
-BLOB = "https://github.com/HerschCode/northstar-infra/blob/main/.github/workflows/"
+WORKFLOWS = ROOT.parent / ".github" / "workflows"  # monorepo root; this root's files are infra-*.yml
+BLOB = "https://github.com/HerschCode/NorthStar_Console/blob/main/.github/workflows/"
 
 # [`ci` › `terraform`](https://github.com/.../ci.yml#L29)
 LINK = re.compile(r"\[`(?P<workflow>[\w-]+)` › `(?P<job>[\w-]+)`\]\((?P<url>[^)\s]+)\)")
@@ -116,7 +116,7 @@ def main() -> int:
             if not url:
                 problems.append(f"README.md:{i + 1}: link is not {BLOB}<file>.yml#L<n>: {link['url']}")
                 continue
-            if url["file"] != link["workflow"] + ".yml":
+            if url["file"] != "infra-" + link["workflow"] + ".yml":
                 problems.append(f"README.md:{i + 1}: link text says `{link['workflow']}` but the URL is {url['file']}")
                 continue
             workflow = WORKFLOWS / url["file"]

@@ -1,4 +1,4 @@
-name: plan
+name: Infra / plan
 
 # The credentialed plan: what would this pull request change in the real project? Runs as the
 # read-only plan identity via workload identity federation (no keys).
@@ -17,10 +17,10 @@ name: plan
 on:
   pull_request:
     paths:
-      - "envs/dev/**"
-      - "modules/**"
-      - "policies/**"
-      - ".github/workflows/plan.yml"
+      - "infra/envs/dev/**"
+      - "infra/modules/**"
+      - "infra/policies/**"
+      - ".github/workflows/infra-plan.yml"
 
 permissions:
   contents: read
@@ -41,6 +41,10 @@ env:
   TF_VAR_alert_emails: ${{ vars.ALERT_EMAILS || '[]' }}
   TF_VAR_use_http_startup_probes: ${{ vars.USE_HTTP_STARTUP_PROBES || 'false' }}
   TF_VAR_pipeline_schedule_paused: ${{ vars.PIPELINE_SCHEDULE_PAUSED || 'true' }}
+
+defaults:
+  run:
+    working-directory: infra
 
 jobs:
   preflight:
@@ -98,7 +102,7 @@ jobs:
           service_account: ${{ vars.GCP_TF_PLAN_SA }}
 
       - name: terraform init
-        working-directory: envs/dev
+        working-directory: infra/envs/dev
         run: |
           terraform init -input=false -no-color \
             -backend-config="bucket=${{ vars.GCP_TF_STATE_BUCKET }}" \
@@ -108,14 +112,14 @@ jobs:
       # read access to the state bucket, so it could not create the lock object anyway.
       - name: terraform plan
         id: plan
-        working-directory: envs/dev
+        working-directory: infra/envs/dev
         run: |
           terraform plan -input=false -no-color -lock=false -out=tfplan.bin
           terraform show -no-color tfplan.bin > plan.txt
           terraform show -json tfplan.bin > plan.json
 
       - name: Policy gate on the real plan
-        working-directory: envs/dev
+        working-directory: infra/envs/dev
         run: conftest test plan.json -p ../../policies --no-color
 
       - name: Comment the plan on the pull request

@@ -16,7 +16,17 @@ repositories is preserved (`git log --follow` works across the move).
 * **Status and next steps:** [docs/ROADMAP.md](docs/ROADMAP.md)
 * Each directory keeps its own README, tests and lockfiles; the services remain separate deployables on purpose.
 
+## Run it
+```bash
+cp .env.example .env        # DB_* for your Neon project, GEMINI_API_KEY / GROQ_API_KEY (free tiers), never committed
+docker compose up --build   # console :5173, gateway :8002; P1/P2 stay private inside the network
+make test                   # console unit tests + gateway suite
+```
+
 ## Migration status
-Imported with `git merge -s ours` + `read-tree --prefix` (history kept). **GitHub Actions workflows still sit in their old nested
-`.github/` folders and do not run from there** until hoisted to the repository root: see the roadmap, step 1. Remote spec checks in
-`apps/console` still read the old repositories' `main` until those are archived.
+History of all five repositories is imported (`git log` shows every original commit). The Google ID-token auth branches
+(gateway, assistant) and the manual-deploy workflow (performance) are merged. All 15 GitHub Actions workflows now live in the root
+`.github/workflows/` as `<service>-<name>.yml`, with `paths:` filters and `working-directory` set per service.
+Gateway suite: 1049 passed. Console: type-check clean, 26 unit tests pass. Not yet run here: the other services' suites, Playwright, `docker compose up`
+(no Docker engine in the build environment), and the workflows on GitHub (they run once this branch is on `main` or a PR is open).
+`apps/console` remote spec checks still read the old repositories' `main` until those are archived.

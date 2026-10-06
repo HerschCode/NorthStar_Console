@@ -1,0 +1,79 @@
+# The whole Northstar stack on one machine, any OS:  cp .env.example .env  &&  docker compose up --build
+#   console  http://localhost:5173        gateway (the only API the console calls)  http://localhost:8002
+# P1 and P2 are not published: they are reachable only from inside this network, as in the cloud design.
+# Database: set DB_* in .env to your Neon project (DB_SSLMODE=require), or run the bundled Postgres:
+#   docker compose --profile local-db up --build     (with DB_HOST=postgres DB_SSLMODE=disable in .env)
+# Models: free only. GEMINI_API_KEY / GROQ_API_KEY in .env; with neither, P2 answers with labelled template text.
+
+x-db: &db
+  DB_HOST: ${DB_HOST:-postgres}
+  DB_PORT: ${DB_PORT:-5432}
+  DB_NAME: ${DB_NAME:-operations_performance}
+  DB_USER: ${DB_USER:-operations_admin}
+  DB_PASSWORD: ${DB_PASSWORD:-local-dev-only}   # pragma: allowlist secret (throwaway default for the bundled Postgres)
+  DB_SSLMODE: ${DB_SSLMODE:-disable}
+
+services:
+  postgres:
+    profiles: ["local-db"]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-operations_performance}
+      POSTGRES_USER: ${DB_USER:-operations_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-local-dev-only}   # pragma: allowlist secret
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-operations_admin} -d ${DB_NAME:-operations_performance}"]
+      interval: 5s
+      retries: 10
+
+  performance:
+    build: ./services/performance
+    expose: ["8000"]
+    environment:
+      <<: *db
+      API_KEY: ${P1_API_KEY:-local-dev-p1-key}   # pragma: allowlist secret
+      API_ALLOWED_ORIGINS: "*"
+
+  assistant:
+    build: ./services/assistant
+    expose: ["8001"]
+    environment:
+      OPS_PERFORMANCE_API_URL: http://performance:8000
+      OPS_PERFORMANCE_API_KEY: ${P1_API_KEY:-local-dev-p1-key}   # pragma: allowlist secret
+      API_KEY: ${P2_API_KEY:-local-dev-p2-key}   # pragma: allowlist secret
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      P2_LLM_PROVIDER: free
+      CHROMA_PERSIST_DIR: /app/data/chroma
+    volumes: [chroma:/app/data/chroma]
+    depends_on: [performance]
+
+  gateway:
+    build:
+      context: ./services/gateway
+      dockerfile: Dockerfile
+    ports: ["8002:8000"]
+    environment:
+      P1_URL: http://performance:8000
+      P1_API_KEY: ${P1_API_KEY:-local-dev-p1-key}   # pragma: allowlist secret
+      P2_URL: http://assistant:8001
+      P2_API_KEY: ${P2_API_KEY:-local-dev-p2-key}   # pragma: allowlist secret
+      OPS_ASSISTANT_URL: http://assistant:8001
+      OPS_ASSISTANT_API_KEY: ${P2_API_KEY:-local-dev-p2-key}   # pragma: allowlist secret
+      GATEWAY_DEMO_MODE: "1"
+      GATEWAY_CORS_ORIGINS: http://localhost:5173
+    depends_on: [assistant]
+
+  console:
+    build:
+      context: ./apps/console
+      args:
+        VITE_P3_URL: http://localhost:8002
+        VITE_P1_URL: http://localhost:8002/v1/data
+    ports: ["5173:8080"]
+    depends_on: [gateway]
+
+volumes:
+  pgdata:
+  chroma:

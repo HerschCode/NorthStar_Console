@@ -12,7 +12,8 @@ import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[1]
-WORKFLOWS = sorted((REPO / ".github" / "workflows").glob("*.yml"))
+WF_DIR = Path(__file__).resolve().parents[3] / ".github" / "workflows"  # monorepo root; this service's files are gateway-*.yml
+WORKFLOWS = sorted(WF_DIR.glob("gateway-*.yml"))
 
 # Jobs allowed to continue-on-error, each for a stated reason in its workflow file. Semgrep and the image scan were soft until their first findings were
 # triaged (2026-09-26); only the style linter still is.
@@ -31,7 +32,7 @@ def all_uses(wf):
 
 
 def test_there_are_workflows():
-    assert {p.name for p in WORKFLOWS} >= {"ci.yml", "security.yml", "sbom.yml"}
+    assert {p.name for p in WORKFLOWS} >= {"gateway-ci.yml", "gateway-security.yml", "gateway-sbom.yml"}
 
 
 @pytest.mark.parametrize("path", WORKFLOWS, ids=lambda p: p.name)
@@ -73,13 +74,13 @@ def test_only_the_documented_jobs_are_allowed_to_fail_without_failing_the_build(
 
 
 def test_the_security_workflow_runs_the_scanners_it_claims_to():
-    text = (REPO / ".github" / "workflows" / "security.yml").read_text(encoding="utf-8")
+    text = (WF_DIR / "gateway-security.yml").read_text(encoding="utf-8")
     for needle in ("bandit -r gateway", "semgrep scan", "gitleaks/gitleaks-action", "aquasecurity/trivy-action", "cron:"):
         assert needle in text, needle
 
 
 def test_ci_installs_from_hash_locked_files_and_enforces_model_integrity():
-    text = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    text = (WF_DIR / "gateway-ci.yml").read_text(encoding="utf-8")
     assert "--require-hashes" in text and "requirements-render.lock" in text and "MODEL_INTEGRITY: enforce" in text
     assert "pip install -r" not in text
 
@@ -187,6 +188,6 @@ def test_the_student_lock_never_moves_a_package_it_shares_with_the_render_lock()
 
 
 def test_ci_installs_and_audits_the_student_lock():
-    text = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    text = (WF_DIR / "gateway-ci.yml").read_text(encoding="utf-8")
     assert "pip install --require-hashes --no-deps -r requirements-student.lock" in text
     assert "pip-audit -r requirements-student.lock --require-hashes --strict" in text
