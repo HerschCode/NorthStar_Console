@@ -109,7 +109,7 @@ def test_missing_token_counts_fall_back_to_an_estimate(tmp_path):
 
 # ── provider selection ──
 def clean_env(monkeypatch, tmp_path):
-    for name in ("P2_LLM_PROVIDER", "ANTHROPIC_API_KEY"):
+    for name in ("P2_LLM_PROVIDER", "ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "GROQ_API_KEY"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("P2_SPEND_DB", str(tmp_path / "spend.db"))
 

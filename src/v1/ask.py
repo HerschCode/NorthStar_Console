@@ -125,11 +125,13 @@ def ask(req: dict, *, llm: LLM, p1: P1, retriever: Callable, trace: Trace) -> di
     actions = suggest_actions(ctx, objs)
     user = f"QUESTION: {question}\nPAGE CONTEXT: {json.dumps({k: v for k, v in ctx.items() if v})}\n\nEVIDENCE:\n{book.prompt_block()}"
     model_name, cost = "template-fallback", 0.0
+    limits_info = None
     try:
         with trace.span("llm", "llm") as a:
             res = llm.complete(SYSTEM, user, max_tokens=900, label="ask")
             a.update(model=res.model, input_tokens=res.input_tokens, output_tokens=res.output_tokens, cost_usd=res.cost_usd)
         model_name, cost = res.model, res.cost_usd
+        notes += list(getattr(res, "notes", []))      # free-chain: which models were skipped for a limit, and why
         parsed = _parse_json(res.text)
         if parsed is None or "answer" not in parsed:
             answer, raw_claims, notes_ = res.text.strip(), [], "model output was not valid JSON; no claims could be verified"
@@ -139,6 +141,7 @@ def ask(req: dict, *, llm: LLM, p1: P1, retriever: Callable, trace: Trace) -> di
     except SpendExhausted:
         raise
     except LLMUnavailable as exc:
+        limits_info = exc.to_dict() if hasattr(exc, "to_dict") else None      # structured free-tier limit info for the UI
         notes.append(f"{exc}; returning a template answer")
         answer, raw_claims = template_answer(question, book)
     with trace.span("claim_gate", "gate") as a:
@@ -148,5 +151,5 @@ def ask(req: dict, *, llm: LLM, p1: P1, retriever: Callable, trace: Trace) -> di
             v = verify_claim(str(c["text"]), ids, book)
             claims.append({"text": c["text"], "supported": v["supported"], "evidence_ids": ids, "reason": v["reason"]})
         a.update(claims=len(claims), supported=sum(c["supported"] for c in claims))
-    return done({"answer": answer, "abstained": False, "claims": claims, "actions_suggested": actions, "model": model_name, "cost_usd": cost,
+    return done({"answer": answer, "abstained": False, "limits": limits_info, "claims": claims, "actions_suggested": actions, "model": model_name, "cost_usd": cost,
                  "supported_claims": sum(c["supported"] for c in claims), "total_claims": len(claims)})

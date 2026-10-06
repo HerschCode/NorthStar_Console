@@ -5,7 +5,8 @@
 - NoLLM: no model configured -> LLMUnavailable; callers fall back to a deterministic, clearly labelled template.
 - FakeLLM: scripted responses for tests (never used in production wiring).
 
-Provider is chosen by P2_LLM_PROVIDER (anthropic | ollama | none; default anthropic when ANTHROPIC_API_KEY is set, else none; ollama only when asked for). The API key is
+Provider is chosen by P2_LLM_PROVIDER (free | gemini | groq | anthropic | ollama | none). Default: `free` (the Gemini + Groq free-tier chain, config/free_models.yaml)
+when GEMINI_API_KEY or GROQ_API_KEY is set, else anthropic when ANTHROPIC_API_KEY is set, else none; ollama only when asked for. The API key is
 read from the environment by the SDK and is never logged or returned.
 """
 from __future__ import annotations
@@ -13,7 +14,7 @@ from __future__ import annotations
 import logging
 import os
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Protocol
 
 from src.evaluation.cost_estimator import calculate_cost, estimate_tokens
@@ -22,8 +23,7 @@ from src.v1.spend import SpendGuard
 log = logging.getLogger(__name__)
 
 
-class LLMUnavailable(RuntimeError):
-    pass
+from src.v1.limits import LLMUnavailable  # noqa: E402  (defined with the limit errors so the two modules do not import each other)
 
 
 @dataclass
@@ -34,6 +34,7 @@ class LLMResult:
     output_tokens: int
     cost_usd: float
     latency_ms: float
+    notes: list = field(default_factory=list)   # what the free chain skipped on the way (limits), shown to the user
 
 
 class LLM(Protocol):
@@ -157,7 +158,15 @@ class FakeLLM:
 
 
 def get_llm() -> LLM:
-    provider = os.environ.get("P2_LLM_PROVIDER", "anthropic" if os.environ.get("ANTHROPIC_API_KEY") else "none").lower()
+    from src.v1.free_llm import ChainLLM, GeminiLLM, GroqLLM, build_free_chain
+
+    free_keys = GeminiLLM.key_present() or GroqLLM.key_present()
+    provider = os.environ.get("P2_LLM_PROVIDER", "free" if free_keys else "anthropic" if os.environ.get("ANTHROPIC_API_KEY") else "none").lower()
+    if provider in ("free", "gemini", "groq"):             # the two-key free-tier chain (models and order in config/free_models.yaml)
+        chain: ChainLLM = build_free_chain()
+        if provider in ("gemini", "groq"):
+            chain.members = [m for m in chain.members if m.provider == provider]
+        return chain
     if provider == "anthropic" and os.environ.get("ANTHROPIC_API_KEY"):
         return AnthropicLLM()
     if provider == "ollama":                               # only on request: never auto-detected, so a deployed instance does not probe localhost

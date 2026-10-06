@@ -76,6 +76,7 @@ def run_investigation(req: dict, *, llm: LLM, p1: P1, retriever: Callable, trace
         book.add_policy(h)
 
     model, cost = "template-fallback", 0.0
+    limits_info = None
     causal_warning = False
     summary, causes, recs, limits = "", [], [], ""
     if not book.items:
@@ -88,12 +89,14 @@ def run_investigation(req: dict, *, llm: LLM, p1: P1, retriever: Callable, trace
                 res = llm.complete(SYSTEM, user, max_tokens=1200, label="investigation")
                 a.update(model=res.model, input_tokens=res.input_tokens, output_tokens=res.output_tokens, cost_usd=res.cost_usd)
             model, cost = res.model, res.cost_usd
+            notes += list(getattr(res, "notes", []))
             parsed = _parse_json(res.text) or {}
             summary = str(parsed.get("summary", "")) or res.text.strip()[:400]
             causes = [c for c in parsed.get("root_causes", []) if isinstance(c, dict) and c.get("text")]
             recs = [c for c in parsed.get("recommendations", []) if isinstance(c, dict) and c.get("text")]
             limits = str(parsed.get("limitations", ""))
         except LLMUnavailable as exc:
+            limits_info = exc.to_dict() if hasattr(exc, "to_dict") else None
             notes.append(f"{exc}; deterministic summary only")
             facts = [e for e in book.items.values() if e.type == "p1_metric"][:5]
             summary = "(No language model configured.) Live data points: " + "; ".join(f"{e.meta['label']} = {e.meta['value']} {e.meta['unit']}".strip() for e in facts)
@@ -118,7 +121,7 @@ def run_investigation(req: dict, *, llm: LLM, p1: P1, retriever: Callable, trace
         "evidence": {"data": [e.public() for e in book.items.values() if e.type == "p1_metric"],
                      "documents": [e.public() for e in book.items.values() if e.type == "policy"]},
         "relevant_policy": [e.meta["citation"] for e in book.items.values() if e.type == "policy"],
-        "actions_suggested": actions, "notes": notes, "trace_id": trace.trace_id,
+        "actions_suggested": actions, "notes": notes, "limits": limits_info, "trace_id": trace.trace_id,
         "warnings": (["Causal wording found in a root cause; treat as association."] if causal_warning else []),
     }
     return inv

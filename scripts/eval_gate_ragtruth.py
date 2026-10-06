@@ -150,19 +150,34 @@ def lexical_scores(rows: list[dict]) -> tuple[np.ndarray, np.ndarray]:
     return np.array(flagged), np.array(score)
 
 
+NLI_CACHE = DATA / "nli_cache.json"
+
+
 def nli_scores(rows: list[dict]) -> tuple[np.ndarray, np.ndarray]:
+    """Resumable: each response's result is kept in data/external/ragtruth/nli_cache.json, so a crash (a CUDA 'unknown error' ended one 40-minute run at 900 of 2,700) is re-run, not lost.
+    The cache is keyed by response id, and is only valid for the model and thresholds named in its header."""
     from src.evaluation import faithfulness
-    flagged, score = [], []
+    header = {"model": faithfulness.NLI_MODEL, "entailment": faithfulness.ENTAILMENT_THRESHOLD, "chunk_words": CHUNK_WORDS, "chunk_overlap": CHUNK_OVERLAP}
+    cache = {}
+    if NLI_CACHE.exists():
+        stored = json.loads(NLI_CACHE.read_text(encoding="utf-8"))
+        if stored.get("header") == header:
+            cache = stored["rows"]
+    done = 0
     for i, r in enumerate(rows):
-        res = faithfulness.score_faithfulness(r["response"], chunk_text(r["source"]))
-        if res.backend_used.startswith("error"):
-            raise RuntimeError(res.backend_used)
-        flagged.append(res.n_sentences == 0 or res.n_grounded < res.n_sentences)
-        weakest = min((s.max_entailment for s in res.sentence_scores), default=0.0)
-        score.append(-weakest)
+        if r["id"] not in cache:
+            res = faithfulness.score_faithfulness(r["response"], chunk_text(r["source"]))
+            if res.backend_used.startswith("error"):
+                NLI_CACHE.write_text(json.dumps({"header": header, "rows": cache}), encoding="utf-8")
+                raise RuntimeError(res.backend_used)
+            cache[r["id"]] = [bool(res.n_sentences == 0 or res.n_grounded < res.n_sentences), -min((s.max_entailment for s in res.sentence_scores), default=0.0)]
+            done += 1
+            if done % 100 == 0:
+                NLI_CACHE.write_text(json.dumps({"header": header, "rows": cache}), encoding="utf-8")
         if (i + 1) % 300 == 0:
             print(f"  nli {i + 1}/{len(rows)}", flush=True)
-    return np.array(flagged), np.array(score)
+    NLI_CACHE.write_text(json.dumps({"header": header, "rows": cache}), encoding="utf-8")
+    return np.array([cache[r["id"]][0] for r in rows]), np.array([cache[r["id"]][1] for r in rows])
 
 
 def main():

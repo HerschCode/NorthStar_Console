@@ -60,3 +60,43 @@ def test_rows_join_responses_to_sources_and_label_any_span_as_hallucinated(tmp_p
     rows = eg.load_rows("test")
     assert [(r["id"], r["task"], r["hallucinated"], r["source"]) for r in rows] == [("1", "Summary", False, "an article"), ("2", "QA", True, "the passages")]
     assert len(eg.load_rows("test", limit=1)) == 1 and eg.load_rows("test", limit=1) == eg.load_rows("test", limit=1)      # the sample is seeded
+
+
+def _fake_result(sentences, grounded, entail):
+    from types import SimpleNamespace
+    return SimpleNamespace(backend_used="nli", n_sentences=sentences, n_grounded=grounded, sentence_scores=[SimpleNamespace(max_entailment=e) for e in entail])
+
+
+def test_nli_scoring_resumes_after_a_crash_and_does_not_rescore_finished_rows(tmp_path, monkeypatch):
+    from src.evaluation import faithfulness
+
+    monkeypatch.setattr(eg, "DATA", tmp_path)
+    monkeypatch.setattr(eg, "NLI_CACHE", tmp_path / "nli_cache.json")
+    rows = [{"id": str(i), "response": f"response {i}", "source": "source text"} for i in range(5)]
+    calls = []
+
+    def flaky(response, chunks):
+        calls.append(response)
+        if response == "response 2" and calls.count("response 2") == 1:
+            return type("R", (), {"backend_used": "error:CUDA error: unknown error"})()          # the crash that ended a long run
+        return _fake_result(2, 2 if response != "response 3" else 1, [0.9, 0.8] if response != "response 3" else [0.9, 0.1])
+
+    monkeypatch.setattr(faithfulness, "score_faithfulness", flaky)
+    with pytest.raises(RuntimeError, match="CUDA"):
+        eg.nli_scores(rows)
+    assert sorted(json.loads((tmp_path / "nli_cache.json").read_text(encoding="utf-8"))["rows"]) == ["0", "1"]       # the two finished rows survived the crash
+    flagged, score = eg.nli_scores(rows)
+    assert calls == ["response 0", "response 1", "response 2", "response 2", "response 3", "response 4"]              # 0 and 1 were not scored again
+    assert flagged.tolist() == [False, False, False, True, False]
+    assert score[3] == pytest.approx(-0.1) and score[0] == pytest.approx(-0.8)                                         # the weakest sentence's entailment, negated so higher = more suspect
+
+
+def test_a_cache_made_with_other_settings_is_not_reused(tmp_path, monkeypatch):
+    from src.evaluation import faithfulness
+
+    monkeypatch.setattr(eg, "DATA", tmp_path)
+    monkeypatch.setattr(eg, "NLI_CACHE", tmp_path / "nli_cache.json")
+    (tmp_path / "nli_cache.json").write_text(json.dumps({"header": {"model": "something else"}, "rows": {"0": [True, 9.0]}}), encoding="utf-8")
+    monkeypatch.setattr(faithfulness, "score_faithfulness", lambda r, c: _fake_result(1, 1, [0.99]))
+    flagged, score = eg.nli_scores([{"id": "0", "response": "r", "source": "s"}])
+    assert flagged.tolist() == [False] and score[0] == pytest.approx(-0.99)

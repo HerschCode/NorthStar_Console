@@ -1,0 +1,38 @@
+# Free-tier model chain for the /v1 surfaces (src/v1/llm.py ChainLLM). Only two keys are ever needed:
+#   GEMINI_API_KEY  (Google AI Studio; GOOGLE_API_KEY is accepted as an alias)
+#   GROQ_API_KEY    (Groq console)
+# A model whose provider key is absent is skipped and shown as "no key" on /v1/limits. Order = preference.
+#
+# LIMITS: neither provider publishes fixed free-tier numbers in its docs (Google: "view them in AI Studio"; Groq: "see the console
+# limits page"), they differ per model and change. So:
+#   * `rpm` / `rpd` / `tpm` below are YOUR numbers: copy them from your AI Studio rate-limit page and your Groq console limits page
+#     (null = unknown, enforce nothing locally);
+#   * `default_rpm` is a conservative SELF-THROTTLE for models with no rpm set, not a claim about the provider's limit;
+#   * the provider's own 429 is always authoritative: it is parsed (retry-after, retryDelay, per-minute vs per-day) and the model
+#     is put on cooldown until it can answer again, then the chain moves to the next model.
+# Gemini quotas are per PROJECT and per model, and daily quotas reset at midnight Pacific time. Groq reports remaining quota in
+# `x-ratelimit-*` headers (limit-requests = per day, limit-tokens = per minute).
+# Verify: python -m scripts.check_free_models   (lists what your two keys can actually call; --probe makes one tiny call per model)
+soft_cap_fraction: 0.85        # stop calling a model at 85% of a configured cap, so we stop before the provider has to say no
+default_rpm: 8
+
+chain:
+  - {provider: gemini, model: gemini-2.5-flash,      rpm: null, rpd: null, tpm: null}
+  - {provider: gemini, model: gemini-2.5-flash-lite, rpm: null, rpd: null, tpm: null}
+  - {provider: groq,   model: openai/gpt-oss-120b,     rpm: null, rpd: null, tpm: null}   # confirmed working on this project's Groq key earlier
+  - {provider: groq,   model: openai/gpt-oss-20b,      rpm: null, rpd: null, tpm: null}
+  # Groq retires models (llama-3.3-70b-versatile was one for this project): a name that is not available to your key is remembered for
+  # 6 hours and skipped, so a stale entry costs nothing. `python -m scripts.check_free_models` lists what your key can call today;
+  # add e.g. a llama model from that list here if you want another free pool.
+
+# Google Cloud (paid / credits) path, ready but off: set GEMINI_BACKEND=vertex, GOOGLE_CLOUD_PROJECT, GOOGLE_CLOUD_LOCATION and
+# application-default credentials (on Cloud Run: the service account). Vertex has no free tier: cost is counted by the SpendGuard
+# when the model has a price in config/pricing.yaml. Usage counters can live in Firestore (P2_USAGE_BACKEND=firestore) so they
+# survive Cloud Run's ephemeral disk.
+vertex:
+  model: gemini-2.5-flash
+  location: us-central1
+
+# Free-tier data note (verify against Google's and Groq's current terms before sending anything non-public): on Google's free tier prompts
+# may be used to improve their products. Everything this platform sends is the public BPI 2019 sample, synthetic policy text and the
+# user's own questions.

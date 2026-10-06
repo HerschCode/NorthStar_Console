@@ -54,18 +54,20 @@ def make_brief(p1_facts: dict, llm: LLM, use_cache: bool = True) -> dict:
     if use_cache and as_of in _CACHE:
         return {**_CACHE[as_of], "cached": True}
     items, source, cost, model = None, "template", 0.0, "template-fallback"
+    limits_info = None
     try:
         res = llm.complete(SYSTEM, "FACTS:\n" + "\n".join(f"[{f['id']}] {f['fact']}" for f in facts), max_tokens=700, label="briefing")
         parsed = _parse_json(res.text) or {}
         if _valid(parsed.get("items"), facts):
             items, source, cost, model = parsed["items"], "model", res.cost_usd, res.model
-    except LLMUnavailable:
-        pass
+    except LLMUnavailable as exc:
+        limits_info = exc.to_dict() if hasattr(exc, "to_dict") else None
     if items is None:
         items = template_brief(facts)
     out = {"as_of": as_of, "items": items, "source": source, "model": model, "cost_usd": cost, "fact_ids_used": sorted({i for it in items for s in it["sentences"] for i in s["fact_ids"]}),
-           "facts": facts, "cached": False}
+           "facts": facts, "cached": False, "limits": limits_info}
     if source == "template":
         out["label"] = "Deterministic template (no model, or the model output failed the fact-id check)."
-    _CACHE[as_of] = {k: v for k, v in out.items() if k != "cached"}
+    if limits_info is None:                              # a template produced only because a free-tier limit was hit is not worth caching
+        _CACHE[as_of] = {k: v for k, v in out.items() if k != "cached"}
     return out

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Free-model chain: Gemini (Google AI Studio) + Groq, two keys only** (`src/v1/free_llm.py`, `src/v1/limits.py`, `config/free_models.yaml`,
+  `docs/free-models.md`). Limits are parsed from each provider's 429 (scope: minute / day / tokens / request size, and when it clears),
+  persisted as cooldowns (SQLite, or Firestore with `P2_USAGE_BACKEND=firestore`), enforced as optional soft caps, and surfaced to the
+  user in plain words; a model the key cannot call is remembered and skipped. `GET /v1/limits`, `scripts/check_free_models.py`. Vertex AI
+  is wired but off. The rule parser answers NL filters first, so the model is asked only when the rules find nothing.
+
 - **Round 10: `/v1` copilot API** (`src/v1/`, `docs/v1-copilot-api.md`): context-aware `/v1/ask` with claim-level
   verification against numbered evidence, persisted investigations (Markdown/PDF export), executive briefing with fact-id
   checks, schema-validated natural-language filters, an intervention ledger routed through P3's action firewall with

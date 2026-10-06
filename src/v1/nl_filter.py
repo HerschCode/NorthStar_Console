@@ -133,21 +133,36 @@ def restate(target: str, flt: dict) -> str:
 
 
 def nl_filter(question: str, llm: LLM | None = None) -> dict:
-    source, out = "rules", None
+    """Rules first, model only when they find nothing. The free-tier quota is scarce and the deterministic parser handles the common
+    phrasings exactly, so a model call is spent only on a question the rules could not turn into any filter."""
+    out = _nl_filter(question, llm)
+    return out
+
+
+def _nl_filter(question: str, llm: LLM | None) -> dict:
+    source, out, limits_info = "rules", None, None
     if UNSUPPORTED.search(question):                      # dates, owners, regions: refused before any model sees them, so a model cannot turn "German" into a supplier name
         return {"rejected": True, "reason": "the request needs a filter the API does not support (dates, owners, regions)", "source": "rules"}
-    if llm is not None:
+    ruled = parse_rules(question)
+    if llm is not None and not ruled.get("rejected") and not ruled.get("filter"):
         try:
             res = llm.complete(SYSTEM, question, max_tokens=300, label="nl-filter")
             out, source = _parse_json(res.text), "model"
-        except LLMUnavailable:
+        except LLMUnavailable as exc:
             out = None
+            limits_info = exc.to_dict() if hasattr(exc, "to_dict") else None
     if out is None:
-        out, source = parse_rules(question), "rules"
+        out, source = ruled, "rules"
+
+    def finish(r: dict) -> dict:
+        if limits_info:
+            r["limits"] = limits_info
+        return r
+
     if out.get("rejected"):
-        return {"rejected": True, "reason": out.get("reason", "outside the filter schema"), "source": source}
+        return finish({"rejected": True, "reason": out.get("reason", "outside the filter schema"), "source": source})
     target, flt = out.get("target"), out.get("filter") or {}
     errors = validate(target, flt)
     if errors:
-        return {"rejected": True, "reason": "filter does not match the schema: " + "; ".join(errors[:3]), "source": source}
-    return {"rejected": False, "target": target, "endpoint": P1_ENDPOINT[target], "filter": flt, "restatement": restate(target, flt), "source": source}
+        return finish({"rejected": True, "reason": "filter does not match the schema: " + "; ".join(errors[:3]), "source": source})
+    return finish({"rejected": False, "target": target, "endpoint": P1_ENDPOINT[target], "filter": flt, "restatement": restate(target, flt), "source": source})

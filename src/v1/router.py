@@ -246,6 +246,24 @@ def v1_spend():
     return deps.store("spend", SpendGuard).status()
 
 
+@router.get("/limits")
+def v1_limits():
+    """Where the free-tier models stand right now: per model, key present or not, used this minute / today, any cooldown with its scope
+    and when it clears. Provider quotas are authoritative (their 429s set the cooldowns); the caps shown are the ones you configured."""
+    llm = deps.llm
+    rows = llm.status() if hasattr(llm, "status") else [{"provider": llm.name, "model": llm.name, "state": "ok" if llm.name != "none" else "no_key", "note": "this provider has no per-model free-tier tracking"}]
+    free = [r for r in rows if r.get("provider") in ("gemini", "groq")]
+    usable = [r for r in free if r.get("state") == "ok"]
+    return {"mode": "free-chain" if hasattr(llm, "status") else llm.name, "models": rows,
+            "summary": ("all configured free models are available" if usable and len(usable) == len(free) else
+                        "some free models are cooling down or have no key" if usable else
+                        "no free model can answer right now" if free else "no free-tier key is configured (set GEMINI_API_KEY and/or GROQ_API_KEY)"),
+            "next_available_s": min((r["retry_after_s"] for r in free if r.get("state") == "cooling" and r.get("retry_after_s") is not None), default=None),
+            "notes": ["Gemini quotas are per project and per model; daily quotas reset at midnight Pacific time.",
+                      "Groq reports remaining quota in x-ratelimit-* headers (limit-requests is per day, limit-tokens per minute).",
+                      "Neither provider publishes fixed free-tier numbers in its docs: copy yours from Google AI Studio and the Groq console into config/free_models.yaml."]}
+
+
 def install(app) -> None:
     """Register the 429 handler for exhausted spend caps and mount the router."""
     @app.exception_handler(SpendExhausted)
