@@ -11,9 +11,6 @@ on:
   push:
     branches: [main]
     paths: ['infra/**', '.github/workflows/infra-ci.yml']
-    paths:
-      - infra/**
-      - .github/workflows/infra-ci.yml
   workflow_dispatch:
 
 permissions:

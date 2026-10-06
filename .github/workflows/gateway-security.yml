@@ -79,7 +79,7 @@ jobs:
       - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7  # v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_CONFIG: .gitleaks.toml
+          GITLEAKS_CONFIG: services/gateway/.gitleaks.toml
 
   trivy-fs:
     runs-on: ubuntu-24.04
@@ -89,7 +89,7 @@ jobs:
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8  # v0.36.0
         with:
           scan-type: fs
-          scan-ref: .
+          scan-ref: services/gateway   # this workflow is the gateway's; other services' Dockerfiles are tracked separately
           scanners: vuln,secret,misconfig
           severity: HIGH,CRITICAL
           ignore-unfixed: true
