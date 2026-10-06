@@ -1,0 +1,9 @@
+# root: dev
+# expect: PUB-001
+# what: the analytics dataset is made readable by anyone, "so a dashboard can connect".
+resource "google_bigquery_dataset_iam_member" "mutation" {
+  project    = var.project_id
+  dataset_id = "operations_performance_analytics"
+  role       = "roles/bigquery.dataViewer"
+  member     = "allUsers"
+}

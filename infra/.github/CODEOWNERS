@@ -1,0 +1,16 @@
+# Code owners are asked to review every change to these paths. Turn on "Require review from Code
+# Owners" in branch protection so the list is enforced, not just advisory.
+
+# The guardrails themselves: weakening a policy, an allow-list or an exception must be a
+# deliberate, reviewed act, never a side effect of an unrelated change.
+/policies/                 @HerschCode
+/tools.env                 @HerschCode
+
+# The identity plane: who can authenticate, and what the pipeline may do.
+/envs/bootstrap/           @HerschCode
+/modules/wif_github/       @HerschCode
+/modules/service_account/  @HerschCode
+
+# The pipeline definitions: a change here changes what runs with cloud credentials.
+/.github/                  @HerschCode
+/scripts/                  @HerschCode

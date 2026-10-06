@@ -1,0 +1,9 @@
+# root: bootstrap
+# expect: IAM-006
+# what: the apply identity is given a role on the billing account "so CI can manage the budget",
+#       which would let a compromised pipeline silence the very alarm meant to catch it.
+resource "google_billing_account_iam_member" "mutation" {
+  billing_account_id = "000000-000000-000000"
+  role               = "roles/billing.costsManager"
+  member             = "serviceAccount:gh-tf-apply@${var.project_id}.iam.gserviceaccount.com"
+}

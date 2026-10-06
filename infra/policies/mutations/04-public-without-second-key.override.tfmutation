@@ -1,0 +1,7 @@
+# root: dev
+# expect: plan-fails
+# what: same mistake, but only one of the two keys is turned. The cloud_run_service module's own
+#       guard (a precondition) must refuse it before policy even runs: defence in depth.
+module "run_performance" {
+  invoker_members = ["allUsers"]
+}

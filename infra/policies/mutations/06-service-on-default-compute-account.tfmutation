@@ -1,0 +1,15 @@
+# root: dev
+# expect: RUN-003
+# what: a quick new service that forgets to set a service account, so it would run as the project's
+#       default compute service account (which is usually Editor).
+resource "google_cloud_run_v2_service" "mutation" {
+  name                = "forgot-the-service-account"
+  location            = var.region
+  deletion_protection = false
+
+  template {
+    containers {
+      image = "us-docker.pkg.dev/cloudrun/container/hello"
+    }
+  }
+}

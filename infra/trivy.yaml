@@ -1,0 +1,18 @@
+# Trivy configuration, picked up automatically from the repository root.
+#   trivy config .                       # IaC misconfiguration (Terraform)
+#   trivy fs --scanners secret .         # committed-secret scan
+# The check bundle is pinned by the Trivy version itself (--skip-check-update in CI), so a result
+# depends only on the pinned release and never on whatever checks were published this morning.
+
+format: table
+exit-code: 1
+ignorefile: .trivyignore.yaml
+
+severity:
+  - MEDIUM
+  - HIGH
+  - CRITICAL
+
+scan:
+  skip-dirs:
+    - "**/.terraform"

@@ -1,0 +1,10 @@
+# root: dev
+# expect: IAM-003
+# what: "allAuthenticatedUsers sounds safer than allUsers" (it is not: it is every Google account).
+resource "google_cloud_run_v2_service_iam_member" "mutation" {
+  project  = var.project_id
+  location = var.region
+  name     = "llm-security-gateway"
+  role     = "roles/run.invoker"
+  member   = "allAuthenticatedUsers"
+}

@@ -1,0 +1,15 @@
+# root: dev
+# expect: IAM-005
+# what: an authoritative whole-policy resource, which replaces every existing grant (including
+#       Google-managed service agents) and can lock the team out of its own project.
+data "google_iam_policy" "mutation" {
+  binding {
+    role    = "roles/bigquery.jobUser"
+    members = ["serviceAccount:perf-sa@${var.project_id}.iam.gserviceaccount.com"]
+  }
+}
+
+resource "google_project_iam_policy" "mutation" {
+  project     = var.project_id
+  policy_data = data.google_iam_policy.mutation.policy_data
+}

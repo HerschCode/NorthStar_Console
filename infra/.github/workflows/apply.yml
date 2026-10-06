@@ -1,0 +1,117 @@
+name: apply
+
+# Manual only. Applies envs/dev as the Terraform apply identity, which is the most powerful
+# identity in the stack, so this job is deliberately hard to reach:
+#
+#   1. it can only be started by hand (workflow_dispatch) and only on main;
+#   2. it runs in the protected GitHub environment `dev-apply` (Settings > Environments): require
+#      a reviewer, and restrict deployment branches to `main`;
+#   3. the workload identity grant for the apply service account is pinned to that environment, so
+#      Google mints a token only for a job that passed those rules (a different branch, workflow or
+#      environment gets nothing);
+#   4. the policy gate runs on the plan BEFORE apply, and the reviewed plan is the one applied.
+#
+# It is a deliberate NO-OP until the bootstrap root has been applied and the repository variables
+# exist: the `preflight` job succeeds (green) with an annotation saying what is missing or that the
+# ref is not main, and the `apply` job is skipped. Nothing here can touch a project by accident.
+#
+# Required repository VARIABLES: see plan.yml, plus GCP_TF_APPLY_SA.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-dev-apply
+  cancel-in-progress: false # never interrupt an apply half-way
+
+env:
+  TF_IN_AUTOMATION: "1"
+  CHECKPOINT_DISABLE: "1"
+  TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+  TF_VAR_project_number: ${{ vars.GCP_PROJECT_NUMBER }}
+  TF_VAR_region: ${{ vars.GCP_REGION || 'us-central1' }}
+  TF_VAR_neon_host: ${{ vars.NEON_HOST }}
+  TF_VAR_alert_emails: ${{ vars.ALERT_EMAILS || '[]' }}
+  TF_VAR_use_http_startup_probes: ${{ vars.USE_HTTP_STARTUP_PROBES || 'false' }}
+  TF_VAR_pipeline_schedule_paused: ${{ vars.PIPELINE_SCHEDULE_PAUSED || 'true' }}
+
+jobs:
+  preflight:
+    name: preflight (may this run, and are cloud credentials configured?)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+          APPLY_SA: ${{ vars.GCP_TF_APPLY_SA }}
+          STATE_BUCKET: ${{ vars.GCP_TF_STATE_BUCKET }}
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::notice title=apply skipped::Apply only runs from main (this is $GITHUB_REF). The apply identity's workload identity grant is pinned to a protected environment on main."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          missing=""
+          [ -n "$PROJECT_ID" ]   || missing="$missing GCP_PROJECT_ID"
+          [ -n "$WIF_PROVIDER" ] || missing="$missing GCP_WIF_PROVIDER"
+          [ -n "$APPLY_SA" ]     || missing="$missing GCP_TF_APPLY_SA"
+          [ -n "$STATE_BUCKET" ] || missing="$missing GCP_TF_STATE_BUCKET"
+          if [ -n "$missing" ]; then
+            echo "::notice title=apply skipped (expected until the first apply)::Repository variables not set:$missing. Nothing was planned or applied. See docs/runbook.md, steps 4 and 5."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  apply:
+    name: terraform apply (protected environment)
+    needs: preflight
+    if: ${{ needs.preflight.outputs.configured == 'true' }}
+    runs-on: ubuntu-24.04
+    environment: dev-apply # must match terraform_apply_environment in envs/bootstrap
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned tools
+        run: |
+          bash scripts/install-tools.sh terraform conftest
+          echo "$PWD/.tools/bin" >> "$GITHUB_PATH"
+
+      - name: Authenticate to Google Cloud (workload identity federation, no keys)
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_TF_APPLY_SA }}
+
+      - name: terraform init
+        working-directory: envs/dev
+        run: |
+          terraform init -input=false -no-color \
+            -backend-config="bucket=${{ vars.GCP_TF_STATE_BUCKET }}" \
+            -backend-config="prefix=northstar/dev"
+
+      - name: terraform plan
+        working-directory: envs/dev
+        run: |
+          terraform plan -input=false -no-color -out=tfplan.bin
+          terraform show -no-color tfplan.bin
+          terraform show -json tfplan.bin > plan.json
+
+      - name: Policy gate (a violation stops the apply)
+        working-directory: envs/dev
+        run: conftest test plan.json -p ../../policies --no-color
+
+      - name: terraform apply (exactly the plan that passed the gate)
+        working-directory: envs/dev
+        run: terraform apply -input=false -no-color tfplan.bin
