@@ -22,6 +22,14 @@ Phases 5-7 are depth that can be added while you apply; Phase 8 (packaging) shou
 | 7 Security depth | Mar–Apr | ML supply chain, OWASP/ATLAS mapping in CI, independent test | Cybersec for AI |
 | 8 Packaging | from Dec, ongoing | Demo, video, write-ups, resume bullets | All |
 
+## Build status (no-GCP track)
+| Phase | Built in this repo | Verified how | Still needs |
+|---|---|---|---|
+| 4 MLOps | `src/mlops` (registry with aliases/rollback/audit log, promotion gate, retrain cycle with drift trigger and shadow compare, model cards, restricted model loader), `scripts/mlops_cycle.py`, `performance-mlops.yml` | 8 tests + a runnable demo loop on synthetic data; the committed model loads under the allowlist | Wire `train_fn` to the real DB-backed training (needs Neon loaded); run on a schedule |
+| 5 Data eng | `src/dataeng` (partitioned Parquet + DuckDB, replayable log, idempotent consumer with checkpointing and incremental case metrics), Airflow DAG | 3 tests (duplicates, late events, crash before commit); DAG only compiles | Real BPI 2019 load, dbt incremental models, Airflow actually run |
+| 6 Evaluation | conformal prediction (class-conditional), group+temporal split with leakage assertion, claim-gate polarity check (opt-in) | tests incl. coverage holding and breaking under shift; polarity measured on the 32-answer set (wrong-fact pass 25%->16%, correct pass 72%->66%) | Re-run PO-grouped evaluations on the real event log; independent labels |
+| 7 Security | model manifest + CI check, restricted unpickler, system threat model with OWASP LLM 2025 mapping | malicious-pickle test; manifest check passes | Artifact signing, independent test, scheduled garak/AgentDojo, corpus poisoning controls |
+
 ## Phase 1: Consolidate
 1. Merge `feat/google-id-token-auth` (gateway, assistant): service-to-service identity needed for private Cloud Run. Also `ci/manual-deploy-workflow`.
 2. Hoist the 11 nested workflows to root `.github/workflows/` with `paths:` filters and `working-directory`; keep the weekly security cron.
